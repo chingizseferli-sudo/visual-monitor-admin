@@ -11,6 +11,7 @@ import {
 import useDialogState from '@/hooks/use-dialog-state'
 import { Button } from '@/components/ui/button'
 import { CustomerSidebar } from '@/components/layout/customer-sidebar'
+import { CustomerNotifications } from '@/components/layout/customer-notifications'
 import { SignOutDialog } from '@/components/sign-out-dialog'
 
 export function CustomerLayout() {
@@ -38,16 +39,19 @@ export function CustomerLayout() {
                   </div>
                 </div>
               </div>
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                className='shrink-0 gap-2 rounded-lg border-slate-200 bg-white'
-                onClick={() => setOpenSignOut(true)}
-              >
-                <LogOut className='size-4' />
-                Çıxış
-              </Button>
+              <div className='flex shrink-0 items-center gap-2'>
+                <CustomerNotifications />
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  className='gap-2 rounded-lg border-slate-200 bg-white'
+                  onClick={() => setOpenSignOut(true)}
+                >
+                  <LogOut className='size-4' />
+                  Çıxış
+                </Button>
+              </div>
             </header>
             <div className='mx-auto w-full max-w-7xl'>
               <Outlet />
