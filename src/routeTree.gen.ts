@@ -10,30 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as HealthRouteImport } from './routes/health'
-import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as NewsIndexRouteImport } from './routes/news/index'
-import { Route as NewsSlugRouteImport } from './routes/news/$slug'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
 import { Route as errors403RouteImport } from './routes/(errors)/403'
 import { Route as errors401RouteImport } from './routes/(errors)/401'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
-import { Route as authSignIn2RouteImport } from './routes/(auth)/sign-in-2'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
 import { Route as authOtpRouteImport } from './routes/(auth)/otp'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
-import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_authenticated/route'
-import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
 import { Route as authMonitorRouteRouteImport } from './routes/(auth)/monitor/route'
 import { Route as authAdminRouteRouteImport } from './routes/(auth)/admin/route'
 import { Route as authMonitorIndexRouteImport } from './routes/(auth)/monitor/index'
 import { Route as authAdminIndexRouteImport } from './routes/(auth)/admin/index'
-import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/clerk/_authenticated/user-management'
-import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-up'
-import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
 import { Route as authMonitorResultsRouteImport } from './routes/(auth)/monitor/results'
 import { Route as authMonitorProfileRouteImport } from './routes/(auth)/monitor/profile'
 import { Route as authMonitorMonitorsRouteImport } from './routes/(auth)/monitor/monitors'
@@ -43,13 +34,9 @@ import { Route as authAdminChangeMonitorRouteImport } from './routes/(auth)/admi
 import { Route as authAdminSettingsRouteRouteImport } from './routes/(auth)/admin/settings/route'
 import { Route as authAdminMonitorRouteRouteImport } from './routes/(auth)/admin/monitor/route'
 import { Route as authAdminUsersIndexRouteImport } from './routes/(auth)/admin/users/index'
-import { Route as authAdminTasksIndexRouteImport } from './routes/(auth)/admin/tasks/index'
 import { Route as authAdminSettingsIndexRouteImport } from './routes/(auth)/admin/settings/index'
 import { Route as authAdminNewsIndexRouteImport } from './routes/(auth)/admin/news/index'
 import { Route as authAdminMonitorIndexRouteImport } from './routes/(auth)/admin/monitor/index'
-import { Route as authAdminHelpCenterIndexRouteImport } from './routes/(auth)/admin/help-center/index'
-import { Route as authAdminChatsIndexRouteImport } from './routes/(auth)/admin/chats/index'
-import { Route as authAdminAppsIndexRouteImport } from './routes/(auth)/admin/apps/index'
 import { Route as authAdminUsersUserIdRouteImport } from './routes/(auth)/admin/users/$userId'
 import { Route as authAdminSettingsNotificationsRouteImport } from './routes/(auth)/admin/settings/notifications'
 import { Route as authAdminSettingsDisplayRouteImport } from './routes/(auth)/admin/settings/display'
@@ -73,24 +60,9 @@ const HealthRoute = HealthRouteImport.update({
   path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClerkRouteRoute = ClerkRouteRouteImport.update({
-  id: '/clerk',
-  path: '/clerk',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NewsIndexRoute = NewsIndexRouteImport.update({
-  id: '/news/',
-  path: '/news/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NewsSlugRoute = NewsSlugRouteImport.update({
-  id: '/news/$slug',
-  path: '/news/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const errors503Route = errors503RouteImport.update({
@@ -123,11 +95,6 @@ const authSignUpRoute = authSignUpRouteImport.update({
   path: '/sign-up',
   getParentRoute: () => rootRouteImport,
 } as any)
-const authSignIn2Route = authSignIn2RouteImport.update({
-  id: '/(auth)/sign-in-2',
-  path: '/sign-in-2',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const authSignInRoute = authSignInRouteImport.update({
   id: '/(auth)/sign-in',
   path: '/sign-in',
@@ -148,14 +115,6 @@ const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClerkAuthenticatedRouteRoute = ClerkAuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => ClerkRouteRoute,
-} as any)
-const ClerkauthRouteRoute = ClerkauthRouteRouteImport.update({
-  id: '/(auth)',
-  getParentRoute: () => ClerkRouteRoute,
-} as any)
 const authMonitorRouteRoute = authMonitorRouteRouteImport.update({
   id: '/(auth)/monitor',
   path: '/monitor',
@@ -175,22 +134,6 @@ const authAdminIndexRoute = authAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => authAdminRouteRoute,
-} as any)
-const ClerkAuthenticatedUserManagementRoute =
-  ClerkAuthenticatedUserManagementRouteImport.update({
-    id: '/user-management',
-    path: '/user-management',
-    getParentRoute: () => ClerkAuthenticatedRouteRoute,
-  } as any)
-const ClerkauthSignUpRoute = ClerkauthSignUpRouteImport.update({
-  id: '/sign-up',
-  path: '/sign-up',
-  getParentRoute: () => ClerkauthRouteRoute,
-} as any)
-const ClerkauthSignInRoute = ClerkauthSignInRouteImport.update({
-  id: '/sign-in',
-  path: '/sign-in',
-  getParentRoute: () => ClerkauthRouteRoute,
 } as any)
 const authMonitorResultsRoute = authMonitorResultsRouteImport.update({
   id: '/results',
@@ -237,11 +180,6 @@ const authAdminUsersIndexRoute = authAdminUsersIndexRouteImport.update({
   path: '/users/',
   getParentRoute: () => authAdminRouteRoute,
 } as any)
-const authAdminTasksIndexRoute = authAdminTasksIndexRouteImport.update({
-  id: '/tasks/',
-  path: '/tasks/',
-  getParentRoute: () => authAdminRouteRoute,
-} as any)
 const authAdminSettingsIndexRoute = authAdminSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -256,22 +194,6 @@ const authAdminMonitorIndexRoute = authAdminMonitorIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => authAdminMonitorRouteRoute,
-} as any)
-const authAdminHelpCenterIndexRoute =
-  authAdminHelpCenterIndexRouteImport.update({
-    id: '/help-center/',
-    path: '/help-center/',
-    getParentRoute: () => authAdminRouteRoute,
-  } as any)
-const authAdminChatsIndexRoute = authAdminChatsIndexRouteImport.update({
-  id: '/chats/',
-  path: '/chats/',
-  getParentRoute: () => authAdminRouteRoute,
-} as any)
-const authAdminAppsIndexRoute = authAdminAppsIndexRouteImport.update({
-  id: '/apps/',
-  path: '/apps/',
-  getParentRoute: () => authAdminRouteRoute,
 } as any)
 const authAdminUsersUserIdRoute = authAdminUsersUserIdRouteImport.update({
   id: '/users/$userId',
@@ -369,7 +291,6 @@ const authAdminMonitorMonitorsMonitorIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/clerk': typeof ClerkauthRouteRouteWithChildren
   '/health': typeof HealthRoute
   '/admin': typeof authAdminRouteRouteWithChildren
   '/monitor': typeof authMonitorRouteRouteWithChildren
@@ -377,15 +298,12 @@ export interface FileRoutesByFullPath {
   '/otp': typeof authOtpRoute
   '/reset-password': typeof authResetPasswordRoute
   '/sign-in': typeof authSignInRoute
-  '/sign-in-2': typeof authSignIn2Route
   '/sign-up': typeof authSignUpRoute
   '/401': typeof errors401Route
   '/403': typeof errors403Route
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
-  '/news/$slug': typeof NewsSlugRoute
-  '/news/': typeof NewsIndexRoute
   '/admin/monitor': typeof authAdminMonitorRouteRouteWithChildren
   '/admin/settings': typeof authAdminSettingsRouteRouteWithChildren
   '/admin/change-monitor': typeof authAdminChangeMonitorRoute
@@ -394,9 +312,6 @@ export interface FileRoutesByFullPath {
   '/monitor/monitors': typeof authMonitorMonitorsRoute
   '/monitor/profile': typeof authMonitorProfileRoute
   '/monitor/results': typeof authMonitorResultsRoute
-  '/clerk/sign-in': typeof ClerkauthSignInRoute
-  '/clerk/sign-up': typeof ClerkauthSignUpRoute
-  '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/admin/': typeof authAdminIndexRoute
   '/monitor/': typeof authMonitorIndexRoute
   '/admin/errors/$error': typeof authAdminErrorsErrorRoute
@@ -412,13 +327,9 @@ export interface FileRoutesByFullPath {
   '/admin/settings/display': typeof authAdminSettingsDisplayRoute
   '/admin/settings/notifications': typeof authAdminSettingsNotificationsRoute
   '/admin/users/$userId': typeof authAdminUsersUserIdRoute
-  '/admin/apps/': typeof authAdminAppsIndexRoute
-  '/admin/chats/': typeof authAdminChatsIndexRoute
-  '/admin/help-center/': typeof authAdminHelpCenterIndexRoute
   '/admin/monitor/': typeof authAdminMonitorIndexRoute
   '/admin/news/': typeof authAdminNewsIndexRoute
   '/admin/settings/': typeof authAdminSettingsIndexRoute
-  '/admin/tasks/': typeof authAdminTasksIndexRoute
   '/admin/users/': typeof authAdminUsersIndexRoute
   '/admin/monitor/monitors/$monitorId': typeof authAdminMonitorMonitorsMonitorIdRoute
   '/admin/news/$id/edit': typeof authAdminNewsIdEditRoute
@@ -427,29 +338,22 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/clerk': typeof ClerkauthRouteRouteWithChildren
   '/health': typeof HealthRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/reset-password': typeof authResetPasswordRoute
   '/sign-in': typeof authSignInRoute
-  '/sign-in-2': typeof authSignIn2Route
   '/sign-up': typeof authSignUpRoute
   '/401': typeof errors401Route
   '/403': typeof errors403Route
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
-  '/news/$slug': typeof NewsSlugRoute
-  '/news': typeof NewsIndexRoute
   '/admin/change-monitor': typeof authAdminChangeMonitorRoute
   '/monitor/alerts': typeof authMonitorAlertsRoute
   '/monitor/monitors': typeof authMonitorMonitorsRoute
   '/monitor/profile': typeof authMonitorProfileRoute
   '/monitor/results': typeof authMonitorResultsRoute
-  '/clerk/sign-in': typeof ClerkauthSignInRoute
-  '/clerk/sign-up': typeof ClerkauthSignUpRoute
-  '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/admin': typeof authAdminIndexRoute
   '/monitor': typeof authMonitorIndexRoute
   '/admin/errors/$error': typeof authAdminErrorsErrorRoute
@@ -464,13 +368,9 @@ export interface FileRoutesByTo {
   '/admin/settings/display': typeof authAdminSettingsDisplayRoute
   '/admin/settings/notifications': typeof authAdminSettingsNotificationsRoute
   '/admin/users/$userId': typeof authAdminUsersUserIdRoute
-  '/admin/apps': typeof authAdminAppsIndexRoute
-  '/admin/chats': typeof authAdminChatsIndexRoute
-  '/admin/help-center': typeof authAdminHelpCenterIndexRoute
   '/admin/monitor': typeof authAdminMonitorIndexRoute
   '/admin/news': typeof authAdminNewsIndexRoute
   '/admin/settings': typeof authAdminSettingsIndexRoute
-  '/admin/tasks': typeof authAdminTasksIndexRoute
   '/admin/users': typeof authAdminUsersIndexRoute
   '/admin/monitor/monitors/$monitorId': typeof authAdminMonitorMonitorsMonitorIdRoute
   '/admin/news/$id/edit': typeof authAdminNewsIdEditRoute
@@ -480,25 +380,19 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/clerk': typeof ClerkRouteRouteWithChildren
   '/health': typeof HealthRoute
   '/(auth)/admin': typeof authAdminRouteRouteWithChildren
   '/(auth)/monitor': typeof authMonitorRouteRouteWithChildren
-  '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
-  '/clerk/_authenticated': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/otp': typeof authOtpRoute
   '/(auth)/reset-password': typeof authResetPasswordRoute
   '/(auth)/sign-in': typeof authSignInRoute
-  '/(auth)/sign-in-2': typeof authSignIn2Route
   '/(auth)/sign-up': typeof authSignUpRoute
   '/(errors)/401': typeof errors401Route
   '/(errors)/403': typeof errors403Route
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
-  '/news/$slug': typeof NewsSlugRoute
-  '/news/': typeof NewsIndexRoute
   '/(auth)/admin/monitor': typeof authAdminMonitorRouteRouteWithChildren
   '/(auth)/admin/settings': typeof authAdminSettingsRouteRouteWithChildren
   '/(auth)/admin/change-monitor': typeof authAdminChangeMonitorRoute
@@ -507,9 +401,6 @@ export interface FileRoutesById {
   '/(auth)/monitor/monitors': typeof authMonitorMonitorsRoute
   '/(auth)/monitor/profile': typeof authMonitorProfileRoute
   '/(auth)/monitor/results': typeof authMonitorResultsRoute
-  '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
-  '/clerk/(auth)/sign-up': typeof ClerkauthSignUpRoute
-  '/clerk/_authenticated/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/(auth)/admin/': typeof authAdminIndexRoute
   '/(auth)/monitor/': typeof authMonitorIndexRoute
   '/(auth)/admin/errors/$error': typeof authAdminErrorsErrorRoute
@@ -525,13 +416,9 @@ export interface FileRoutesById {
   '/(auth)/admin/settings/display': typeof authAdminSettingsDisplayRoute
   '/(auth)/admin/settings/notifications': typeof authAdminSettingsNotificationsRoute
   '/(auth)/admin/users/$userId': typeof authAdminUsersUserIdRoute
-  '/(auth)/admin/apps/': typeof authAdminAppsIndexRoute
-  '/(auth)/admin/chats/': typeof authAdminChatsIndexRoute
-  '/(auth)/admin/help-center/': typeof authAdminHelpCenterIndexRoute
   '/(auth)/admin/monitor/': typeof authAdminMonitorIndexRoute
   '/(auth)/admin/news/': typeof authAdminNewsIndexRoute
   '/(auth)/admin/settings/': typeof authAdminSettingsIndexRoute
-  '/(auth)/admin/tasks/': typeof authAdminTasksIndexRoute
   '/(auth)/admin/users/': typeof authAdminUsersIndexRoute
   '/(auth)/admin/monitor/monitors/$monitorId': typeof authAdminMonitorMonitorsMonitorIdRoute
   '/(auth)/admin/news/$id/edit': typeof authAdminNewsIdEditRoute
@@ -542,7 +429,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/clerk'
     | '/health'
     | '/admin'
     | '/monitor'
@@ -550,15 +436,12 @@ export interface FileRouteTypes {
     | '/otp'
     | '/reset-password'
     | '/sign-in'
-    | '/sign-in-2'
     | '/sign-up'
     | '/401'
     | '/403'
     | '/404'
     | '/500'
     | '/503'
-    | '/news/$slug'
-    | '/news/'
     | '/admin/monitor'
     | '/admin/settings'
     | '/admin/change-monitor'
@@ -567,9 +450,6 @@ export interface FileRouteTypes {
     | '/monitor/monitors'
     | '/monitor/profile'
     | '/monitor/results'
-    | '/clerk/sign-in'
-    | '/clerk/sign-up'
-    | '/clerk/user-management'
     | '/admin/'
     | '/monitor/'
     | '/admin/errors/$error'
@@ -585,13 +465,9 @@ export interface FileRouteTypes {
     | '/admin/settings/display'
     | '/admin/settings/notifications'
     | '/admin/users/$userId'
-    | '/admin/apps/'
-    | '/admin/chats/'
-    | '/admin/help-center/'
     | '/admin/monitor/'
     | '/admin/news/'
     | '/admin/settings/'
-    | '/admin/tasks/'
     | '/admin/users/'
     | '/admin/monitor/monitors/$monitorId'
     | '/admin/news/$id/edit'
@@ -600,29 +476,22 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/clerk'
     | '/health'
     | '/forgot-password'
     | '/otp'
     | '/reset-password'
     | '/sign-in'
-    | '/sign-in-2'
     | '/sign-up'
     | '/401'
     | '/403'
     | '/404'
     | '/500'
     | '/503'
-    | '/news/$slug'
-    | '/news'
     | '/admin/change-monitor'
     | '/monitor/alerts'
     | '/monitor/monitors'
     | '/monitor/profile'
     | '/monitor/results'
-    | '/clerk/sign-in'
-    | '/clerk/sign-up'
-    | '/clerk/user-management'
     | '/admin'
     | '/monitor'
     | '/admin/errors/$error'
@@ -637,13 +506,9 @@ export interface FileRouteTypes {
     | '/admin/settings/display'
     | '/admin/settings/notifications'
     | '/admin/users/$userId'
-    | '/admin/apps'
-    | '/admin/chats'
-    | '/admin/help-center'
     | '/admin/monitor'
     | '/admin/news'
     | '/admin/settings'
-    | '/admin/tasks'
     | '/admin/users'
     | '/admin/monitor/monitors/$monitorId'
     | '/admin/news/$id/edit'
@@ -652,25 +517,19 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/clerk'
     | '/health'
     | '/(auth)/admin'
     | '/(auth)/monitor'
-    | '/clerk/(auth)'
-    | '/clerk/_authenticated'
     | '/(auth)/forgot-password'
     | '/(auth)/otp'
     | '/(auth)/reset-password'
     | '/(auth)/sign-in'
-    | '/(auth)/sign-in-2'
     | '/(auth)/sign-up'
     | '/(errors)/401'
     | '/(errors)/403'
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
-    | '/news/$slug'
-    | '/news/'
     | '/(auth)/admin/monitor'
     | '/(auth)/admin/settings'
     | '/(auth)/admin/change-monitor'
@@ -679,9 +538,6 @@ export interface FileRouteTypes {
     | '/(auth)/monitor/monitors'
     | '/(auth)/monitor/profile'
     | '/(auth)/monitor/results'
-    | '/clerk/(auth)/sign-in'
-    | '/clerk/(auth)/sign-up'
-    | '/clerk/_authenticated/user-management'
     | '/(auth)/admin/'
     | '/(auth)/monitor/'
     | '/(auth)/admin/errors/$error'
@@ -697,13 +553,9 @@ export interface FileRouteTypes {
     | '/(auth)/admin/settings/display'
     | '/(auth)/admin/settings/notifications'
     | '/(auth)/admin/users/$userId'
-    | '/(auth)/admin/apps/'
-    | '/(auth)/admin/chats/'
-    | '/(auth)/admin/help-center/'
     | '/(auth)/admin/monitor/'
     | '/(auth)/admin/news/'
     | '/(auth)/admin/settings/'
-    | '/(auth)/admin/tasks/'
     | '/(auth)/admin/users/'
     | '/(auth)/admin/monitor/monitors/$monitorId'
     | '/(auth)/admin/news/$id/edit'
@@ -713,7 +565,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ClerkRouteRoute: typeof ClerkRouteRouteWithChildren
   HealthRoute: typeof HealthRoute
   authAdminRouteRoute: typeof authAdminRouteRouteWithChildren
   authMonitorRouteRoute: typeof authMonitorRouteRouteWithChildren
@@ -721,15 +572,12 @@ export interface RootRouteChildren {
   authOtpRoute: typeof authOtpRoute
   authResetPasswordRoute: typeof authResetPasswordRoute
   authSignInRoute: typeof authSignInRoute
-  authSignIn2Route: typeof authSignIn2Route
   authSignUpRoute: typeof authSignUpRoute
   errors401Route: typeof errors401Route
   errors403Route: typeof errors403Route
   errors404Route: typeof errors404Route
   errors500Route: typeof errors500Route
   errors503Route: typeof errors503Route
-  NewsSlugRoute: typeof NewsSlugRoute
-  NewsIndexRoute: typeof NewsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -741,32 +589,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clerk': {
-      id: '/clerk'
-      path: '/clerk'
-      fullPath: '/clerk'
-      preLoaderRoute: typeof ClerkRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/news/': {
-      id: '/news/'
-      path: '/news'
-      fullPath: '/news/'
-      preLoaderRoute: typeof NewsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/news/$slug': {
-      id: '/news/$slug'
-      path: '/news/$slug'
-      fullPath: '/news/$slug'
-      preLoaderRoute: typeof NewsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(errors)/503': {
@@ -811,13 +638,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authSignUpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(auth)/sign-in-2': {
-      id: '/(auth)/sign-in-2'
-      path: '/sign-in-2'
-      fullPath: '/sign-in-2'
-      preLoaderRoute: typeof authSignIn2RouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(auth)/sign-in': {
       id: '/(auth)/sign-in'
       path: '/sign-in'
@@ -846,20 +666,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clerk/_authenticated': {
-      id: '/clerk/_authenticated'
-      path: ''
-      fullPath: '/clerk'
-      preLoaderRoute: typeof ClerkAuthenticatedRouteRouteImport
-      parentRoute: typeof ClerkRouteRoute
-    }
-    '/clerk/(auth)': {
-      id: '/clerk/(auth)'
-      path: ''
-      fullPath: '/clerk'
-      preLoaderRoute: typeof ClerkauthRouteRouteImport
-      parentRoute: typeof ClerkRouteRoute
-    }
     '/(auth)/monitor': {
       id: '/(auth)/monitor'
       path: '/monitor'
@@ -887,27 +693,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof authAdminIndexRouteImport
       parentRoute: typeof authAdminRouteRoute
-    }
-    '/clerk/_authenticated/user-management': {
-      id: '/clerk/_authenticated/user-management'
-      path: '/user-management'
-      fullPath: '/clerk/user-management'
-      preLoaderRoute: typeof ClerkAuthenticatedUserManagementRouteImport
-      parentRoute: typeof ClerkAuthenticatedRouteRoute
-    }
-    '/clerk/(auth)/sign-up': {
-      id: '/clerk/(auth)/sign-up'
-      path: '/sign-up'
-      fullPath: '/clerk/sign-up'
-      preLoaderRoute: typeof ClerkauthSignUpRouteImport
-      parentRoute: typeof ClerkauthRouteRoute
-    }
-    '/clerk/(auth)/sign-in': {
-      id: '/clerk/(auth)/sign-in'
-      path: '/sign-in'
-      fullPath: '/clerk/sign-in'
-      preLoaderRoute: typeof ClerkauthSignInRouteImport
-      parentRoute: typeof ClerkauthRouteRoute
     }
     '/(auth)/monitor/results': {
       id: '/(auth)/monitor/results'
@@ -972,13 +757,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authAdminUsersIndexRouteImport
       parentRoute: typeof authAdminRouteRoute
     }
-    '/(auth)/admin/tasks/': {
-      id: '/(auth)/admin/tasks/'
-      path: '/tasks'
-      fullPath: '/admin/tasks/'
-      preLoaderRoute: typeof authAdminTasksIndexRouteImport
-      parentRoute: typeof authAdminRouteRoute
-    }
     '/(auth)/admin/settings/': {
       id: '/(auth)/admin/settings/'
       path: '/'
@@ -999,27 +777,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/monitor/'
       preLoaderRoute: typeof authAdminMonitorIndexRouteImport
       parentRoute: typeof authAdminMonitorRouteRoute
-    }
-    '/(auth)/admin/help-center/': {
-      id: '/(auth)/admin/help-center/'
-      path: '/help-center'
-      fullPath: '/admin/help-center/'
-      preLoaderRoute: typeof authAdminHelpCenterIndexRouteImport
-      parentRoute: typeof authAdminRouteRoute
-    }
-    '/(auth)/admin/chats/': {
-      id: '/(auth)/admin/chats/'
-      path: '/chats'
-      fullPath: '/admin/chats/'
-      preLoaderRoute: typeof authAdminChatsIndexRouteImport
-      parentRoute: typeof authAdminRouteRoute
-    }
-    '/(auth)/admin/apps/': {
-      id: '/(auth)/admin/apps/'
-      path: '/apps'
-      fullPath: '/admin/apps/'
-      preLoaderRoute: typeof authAdminAppsIndexRouteImport
-      parentRoute: typeof authAdminRouteRoute
     }
     '/(auth)/admin/users/$userId': {
       id: '/(auth)/admin/users/$userId'
@@ -1143,49 +900,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ClerkauthRouteRouteChildren {
-  ClerkauthSignInRoute: typeof ClerkauthSignInRoute
-  ClerkauthSignUpRoute: typeof ClerkauthSignUpRoute
-}
-
-const ClerkauthRouteRouteChildren: ClerkauthRouteRouteChildren = {
-  ClerkauthSignInRoute: ClerkauthSignInRoute,
-  ClerkauthSignUpRoute: ClerkauthSignUpRoute,
-}
-
-const ClerkauthRouteRouteWithChildren = ClerkauthRouteRoute._addFileChildren(
-  ClerkauthRouteRouteChildren,
-)
-
-interface ClerkAuthenticatedRouteRouteChildren {
-  ClerkAuthenticatedUserManagementRoute: typeof ClerkAuthenticatedUserManagementRoute
-}
-
-const ClerkAuthenticatedRouteRouteChildren: ClerkAuthenticatedRouteRouteChildren =
-  {
-    ClerkAuthenticatedUserManagementRoute:
-      ClerkAuthenticatedUserManagementRoute,
-  }
-
-const ClerkAuthenticatedRouteRouteWithChildren =
-  ClerkAuthenticatedRouteRoute._addFileChildren(
-    ClerkAuthenticatedRouteRouteChildren,
-  )
-
-interface ClerkRouteRouteChildren {
-  ClerkauthRouteRoute: typeof ClerkauthRouteRouteWithChildren
-  ClerkAuthenticatedRouteRoute: typeof ClerkAuthenticatedRouteRouteWithChildren
-}
-
-const ClerkRouteRouteChildren: ClerkRouteRouteChildren = {
-  ClerkauthRouteRoute: ClerkauthRouteRouteWithChildren,
-  ClerkAuthenticatedRouteRoute: ClerkAuthenticatedRouteRouteWithChildren,
-}
-
-const ClerkRouteRouteWithChildren = ClerkRouteRoute._addFileChildren(
-  ClerkRouteRouteChildren,
-)
-
 interface authAdminMonitorMonitorsRouteChildren {
   authAdminMonitorMonitorsMonitorIdRoute: typeof authAdminMonitorMonitorsMonitorIdRoute
   authAdminMonitorMonitorsIndexRoute: typeof authAdminMonitorMonitorsIndexRoute
@@ -1276,10 +990,6 @@ interface authAdminRouteRouteChildren {
   authAdminIndexRoute: typeof authAdminIndexRoute
   authAdminErrorsErrorRoute: typeof authAdminErrorsErrorRoute
   authAdminUsersUserIdRoute: typeof authAdminUsersUserIdRoute
-  authAdminAppsIndexRoute: typeof authAdminAppsIndexRoute
-  authAdminChatsIndexRoute: typeof authAdminChatsIndexRoute
-  authAdminHelpCenterIndexRoute: typeof authAdminHelpCenterIndexRoute
-  authAdminTasksIndexRoute: typeof authAdminTasksIndexRoute
   authAdminUsersIndexRoute: typeof authAdminUsersIndexRoute
 }
 
@@ -1291,10 +1001,6 @@ const authAdminRouteRouteChildren: authAdminRouteRouteChildren = {
   authAdminIndexRoute: authAdminIndexRoute,
   authAdminErrorsErrorRoute: authAdminErrorsErrorRoute,
   authAdminUsersUserIdRoute: authAdminUsersUserIdRoute,
-  authAdminAppsIndexRoute: authAdminAppsIndexRoute,
-  authAdminChatsIndexRoute: authAdminChatsIndexRoute,
-  authAdminHelpCenterIndexRoute: authAdminHelpCenterIndexRoute,
-  authAdminTasksIndexRoute: authAdminTasksIndexRoute,
   authAdminUsersIndexRoute: authAdminUsersIndexRoute,
 }
 
@@ -1323,7 +1029,6 @@ const authMonitorRouteRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ClerkRouteRoute: ClerkRouteRouteWithChildren,
   HealthRoute: HealthRoute,
   authAdminRouteRoute: authAdminRouteRouteWithChildren,
   authMonitorRouteRoute: authMonitorRouteRouteWithChildren,
@@ -1331,15 +1036,12 @@ const rootRouteChildren: RootRouteChildren = {
   authOtpRoute: authOtpRoute,
   authResetPasswordRoute: authResetPasswordRoute,
   authSignInRoute: authSignInRoute,
-  authSignIn2Route: authSignIn2Route,
   authSignUpRoute: authSignUpRoute,
   errors401Route: errors401Route,
   errors403Route: errors403Route,
   errors404Route: errors404Route,
   errors500Route: errors500Route,
   errors503Route: errors503Route,
-  NewsSlugRoute: NewsSlugRoute,
-  NewsIndexRoute: NewsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
