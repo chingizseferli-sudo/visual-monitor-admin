@@ -826,7 +826,7 @@ function getWatchDiagnostic(source: ChangeSource, event?: ChangeEvent | null, ha
     return {
       label: 'Dəyişiklik tapılıb',
       tone: 'success' as const,
-      reason: 'Bu izləmə üçün dəyişiklik event-i var.',
+      reason: 'Bu izləmə üçün dəyişiklik hadisəsi var.',
     }
   }
 
@@ -834,7 +834,7 @@ function getWatchDiagnostic(source: ChangeSource, event?: ChangeEvent | null, ha
     return {
       label: 'Snapshot var',
       tone: 'info' as const,
-      reason: 'Bot seçilmiş hissəni oxuyub. Hələ yeni dəyişiklik event-i yaranmayıb.',
+      reason: 'Bot seçilmiş hissəni oxuyub. Hələ yeni dəyişiklik hadisəsi yaranmayıb.',
     }
   }
 
@@ -864,34 +864,34 @@ function getDiagnosticBadgeClass(tone: 'success' | 'info' | 'warning' | 'danger'
 function getWatchStatusBadge(source: ChangeSource, latestEvent?: ChangeEvent | null, hasSnapshot = false) {
   if (source.last_error || source.status === 'error') {
     return {
-      label: 'Error',
+      label: 'Xəta',
       className: 'border-red-200 bg-red-50 text-red-700',
     }
   }
 
   if ((source.consecutive_fail_count || 0) > 0 || !source.selector?.trim() || (!source.last_checked_at && source.status === 'active')) {
     return {
-      label: 'Warning',
+      label: 'Xəbərdarlıq',
       className: 'border-amber-200 bg-amber-50 text-amber-700',
     }
   }
 
   if (latestEvent) {
     return {
-      label: 'Changed',
+      label: 'Dəyişib',
       className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     }
   }
 
   if (hasSnapshot || source.last_checked_at || source.last_success_at) {
     return {
-      label: 'No Changes',
+      label: 'Dəyişiklik yoxdur',
       className: 'border-sky-200 bg-sky-50 text-sky-700',
     }
   }
 
   return {
-    label: 'Healthy',
+    label: 'Sağlam',
     className: 'border-slate-200 bg-slate-50 text-slate-700',
   }
 }
@@ -950,12 +950,12 @@ function getEventItemCompare(event: ChangeEvent, snapshots: Record<string, Chang
       url: '',
     })),
     removed: Array.from({ length: parseSummaryCount(event.diff_summary, 'Silinən') }, (_, index) => ({
-      title: `Silinən item ${index + 1}`,
+      title: `Silinən element ${index + 1}`,
       url: '',
     })),
     changed: Array.from({ length: parseSummaryCount(event.diff_summary, 'Dəyişən') }, (_, index) => ({
-      before: { title: `Əvvəlki item ${index + 1}`, url: '' },
-      after: { title: `Dəyişən item ${index + 1}`, url: '' },
+      before: { title: `Əvvəlki element ${index + 1}`, url: '' },
+      after: { title: `Dəyişən element ${index + 1}`, url: '' },
     })),
   }
 }
@@ -1130,7 +1130,7 @@ function ChangeMonitorPage() {
       return
     }
     if (alertsRes.error) {
-      setError(`Dəyişiklik alertləri oxunmadı: ${alertsRes.error.message}`)
+      setError(`Dəyişiklik bildirişləri oxunmadı: ${alertsRes.error.message}`)
       return
     }
 
@@ -1323,7 +1323,7 @@ function ChangeMonitorPage() {
 
     if (!data?.html) {
       setVisualHtml('')
-      setVisualMessage(data?.error || 'Sayt göstərilə bilmədi.')
+      setVisualMessage(data?.error || 'Sayt pəncərədə göstərilə bilmədi.')
       setVisualLoading(false)
       return
     }
@@ -1490,7 +1490,7 @@ function ChangeMonitorPage() {
       .in('id', snapshotIds)
 
     if (snapshotError) {
-      setDetailError('Snapshot data could not be loaded: ' + snapshotError.message)
+      setDetailError('Snapshot məlumatı oxunmadı: ' + snapshotError.message)
       setDetailLoading(false)
       return
     }
@@ -1575,7 +1575,7 @@ function ChangeMonitorPage() {
         .limit(1)
         .maybeSingle()
 
-      if (alertError) throw new Error(`Alert məlumatı oxunmadı: ${alertError.message}`)
+      if (alertError) throw new Error(`Bildiriş məlumatı oxunmadı: ${alertError.message}`)
 
       setExpandedDetails((current) => ({
         ...current,
@@ -1640,7 +1640,7 @@ function ChangeMonitorPage() {
     }
 
     if (!eventData) {
-      setDetailError('Bu izləmə üçün hələ dəyişiklik event-i yoxdur.')
+      setDetailError('Bu izləmə üçün hələ dəyişiklik hadisəsi yoxdur.')
       setDetailLoading(false)
       return
     }
@@ -1650,7 +1650,7 @@ function ChangeMonitorPage() {
 
     const snapshotIds = [event.old_snapshot_id, event.new_snapshot_id].filter(Boolean) as string[]
     if (snapshotIds.length === 0) {
-      setDetailError('Bu event üçün snapshot məlumatı tapılmadı.')
+      setDetailError('Bu hadisə üçün snapshot məlumatı tapılmadı.')
       setDetailLoading(false)
       return
     }
@@ -1812,7 +1812,7 @@ function ChangeMonitorPage() {
       const source = alert.source_id ? sourceMap.get(alert.source_id) || null : null
       const event = (alert.event_id ? eventMap.get(alert.event_id) : null) ||
         (alert.source_id ? latestEventBySource.get(alert.source_id) || null : null)
-      const summary = event?.diff_summary?.trim() || alert.error || source?.last_error || 'Yeni dəyişiklik alert-i var.'
+      const summary = event?.diff_summary?.trim() || alert.error || source?.last_error || 'Yeni dəyişiklik bildirişi var.'
 
       return {
         alert,
@@ -1905,7 +1905,7 @@ function ChangeMonitorPage() {
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>Dəyişiklik monitoru</h1>
           <p className='text-muted-foreground'>
-            Manual URL və CSS selector əsasında yaradılan izləmələr.
+            URL və CSS selector ilə izlənən vacib sayt hissələri.
           </p>
         </div>
         <div className='flex flex-wrap items-center gap-2'>
@@ -1930,7 +1930,7 @@ function ChangeMonitorPage() {
                 <div className='flex items-center justify-between gap-3 border-b bg-slate-50 px-4 py-3'>
                   <div>
                     <div className='text-sm font-semibold'>Dəyişiklik bildirişləri</div>
-                    <div className='text-xs text-muted-foreground'>Son alertlər və yeni dəyişikliklər</div>
+                    <div className='text-xs text-muted-foreground'>Son bildirişlər və yeni dəyişikliklər</div>
                   </div>
                   <Button variant='ghost' size='sm' onClick={markAllNotificationsRead} disabled={notificationItems.length === 0}>
                     Hamısı oxundu
@@ -2042,7 +2042,7 @@ function ChangeMonitorPage() {
                   ? 'Məlumatlar yüklənir...'
                   : `${filteredSources.length} / ${sources.length} izləmə göstərilir · ${activeFilterLabel}${
                       latestAlert
-                        ? ` · son alert: ${getStatusLabel(latestAlert.status)} (${formatDate(latestAlert.sent_at || latestAlert.created_at)})`
+                        ? ` · son bildiriş: ${getStatusLabel(latestAlert.status)} (${formatDate(latestAlert.sent_at || latestAlert.created_at)})`
                         : ''
                     }`}
               </CardDescription>
@@ -2062,7 +2062,7 @@ function ChangeMonitorPage() {
         <CardContent className='min-w-0 overflow-hidden'>
           {loading ? (
             <div className='rounded-lg border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground'>
-              Change Monitor izləmələri yüklənir...
+              İzləmələr yüklənir...
             </div>
           ) : sources.length === 0 ? (
             <div className='rounded-lg border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground'>
@@ -2220,7 +2220,7 @@ function ChangeMonitorPage() {
                           {formatDate(source.last_changed_at)}
                         </TableCell>
                         <TableCell className='px-2 py-2 align-top'>
-                          <span className='rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground' title='Yüklənən son event-lər üzrə say'>
+                          <span className='rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground' title='Son dəyişiklik hadisələrinin sayı'>
                             {recentChangeCount}
                           </span>
                         </TableCell>
@@ -2267,7 +2267,7 @@ function ChangeMonitorPage() {
                             <div className='min-w-0 overflow-hidden border-b bg-muted/20 p-3'>
                               {expandedLoading[source.id] ? (
                                 <div className='rounded-lg border bg-background px-4 py-4 text-center text-sm text-muted-foreground'>
-                                  Nəticə yüklənir...
+                                  İzləmə nəticəsi yüklənir...
                                 </div>
                               ) : expandedErrors[source.id] ? (
                                 <div className='rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800'>
@@ -2296,7 +2296,7 @@ function ChangeMonitorPage() {
                                         <div>
                                           <div className='text-sm font-semibold'>Dəyişiklik tarixçəsi</div>
                                           <div className='text-xs text-muted-foreground'>
-                                            Telegram yalnız yeni paylaşımlar üçün göndərilir. Silinən və dəyişən item-lər yalnız admin tarixçəsində saxlanılır.
+                                            Telegram yalnız yeni paylaşımlar üçün göndərilir. Silinən və dəyişən elementlər admin tarixçəsində saxlanılır.
                                           </div>
                                         </div>
                                       </div>
@@ -2347,7 +2347,7 @@ function ChangeMonitorPage() {
                                                     <div className='text-xs font-semibold text-red-700'>Silinənlər</div>
                                                     {itemCompare.removed.slice(0, 3).map((item, index) => (
                                                       <div key={`${item.url || item.title}-removed-${index}`} className='truncate text-xs text-muted-foreground' title={item.title || item.url}>
-                                                        {item.title || item.url || 'Silinən item'}
+                                                        {item.title || item.url || 'Silinən element'}
                                                       </div>
                                                     ))}
                                                   </div>
@@ -2357,7 +2357,7 @@ function ChangeMonitorPage() {
                                                     <div className='text-xs font-semibold text-amber-700'>Dəyişənlər</div>
                                                     {itemCompare.changed.slice(0, 3).map((item, index) => (
                                                       <div key={`${item.after.url || item.after.title}-changed-${index}`} className='truncate text-xs text-muted-foreground' title={item.after.title || item.after.url}>
-                                                        {item.after.title || item.after.url || 'Dəyişən item'}
+                                                        {item.after.title || item.after.url || 'Dəyişən element'}
                                                       </div>
                                                     ))}
                                                   </div>
@@ -2376,7 +2376,7 @@ function ChangeMonitorPage() {
                                         <div>
                                           <div className='text-sm font-semibold'>İzləmə nəticəsi</div>
                                           <div className='text-xs text-muted-foreground'>
-                                            Visual və Text rejimlərində bax.
+                                            Seçilmiş hissəyə vizual və mətn rejimində bax.
                                           </div>
                                         </div>
                                         <div className='flex flex-wrap items-center gap-2'>
@@ -2396,7 +2396,7 @@ function ChangeMonitorPage() {
                                                   : 'bg-background text-muted-foreground hover:bg-muted'
                                               }`}
                                             >
-                                              {mode === 'visual' ? 'Visual' : 'Text'}
+                                              {mode === 'visual' ? 'Vizual' : 'Mətn'}
                                             </button>
                                           ))}
                                           <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${latestInlineEvent ? 'border-emerald-200 bg-emerald-100 text-emerald-700' : 'border-sky-200 bg-sky-50 text-sky-700'}`}>
@@ -2409,7 +2409,7 @@ function ChangeMonitorPage() {
                                         <div className='mt-3 min-w-0 rounded-lg border bg-white p-4'>
                                           <div className='mb-3 flex flex-wrap items-center justify-between gap-2 border-b pb-2'>
                                             <div>
-                                              <div className='text-sm font-semibold'>Visual görünüş</div>
+                                              <div className='text-sm font-semibold'>Vizual görünüş</div>
                                               <div className='text-xs text-muted-foreground'>
                                                 Seçilmiş hissənin oxunaqlı görünüşü. Yeni/dəyişənlər yaşıl göstərilir.
                                               </div>
@@ -2421,7 +2421,7 @@ function ChangeMonitorPage() {
                                                 </a>
                                               ) : null}
                                               <span className='rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700'>
-                                                {currentSnapshotItems.length || splitSnapshotLines(displayNewSnapshot.content_text).length} item
+                                                {currentSnapshotItems.length || splitSnapshotLines(displayNewSnapshot.content_text).length} element
                                               </span>
                                             </div>
                                           </div>
@@ -2468,7 +2468,7 @@ function ChangeMonitorPage() {
                                       ) : expandedViewMode === 'text' ? (
                                         <div className='mt-3 rounded-lg border bg-white p-4'>
                                           <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
-                                            <div className='text-sm font-semibold'>Text görünüşü</div>
+                                            <div className='text-sm font-semibold'>Mətn görünüşü</div>
                                             <span className='rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700'>
                                               {currentSnapshotItems.length || splitSnapshotLines(displayNewSnapshot.content_text).length} sətir
                                             </span>
@@ -2501,9 +2501,9 @@ function ChangeMonitorPage() {
                                     </div>
                                   ) : source.content_hash ? (
                                     <div className='rounded-lg border border-amber-200 bg-amber-50 p-3'>
-                                      <div className='text-sm font-semibold text-amber-950'>Snapshot var, amma məzmun oxunmadı</div>
+                                      <div className='text-sm font-semibold text-amber-950'>Snapshot var, amma izlənilən məzmun oxunmadı</div>
                                       <div className='mt-2 text-sm text-amber-800'>
-                                        Səhifəni yenilə və ya Supabase-də change_snapshots cədvəlində snapshot row-u olub-olmadığını yoxla.
+                                        Səhifəni yenilə və ya change_snapshots cədvəlində bu izləmə üçün snapshot məzmununun olub-olmadığını yoxla.
                                       </div>
                                     </div>
                                   ) : null}
@@ -2528,13 +2528,13 @@ function ChangeMonitorPage() {
           <DialogHeader>
             <DialogTitle>{detailSource?.name || (detailSource ? getDomain(detailSource) : 'İzləmə detalları')}</DialogTitle>
             <DialogDescription>
-              Son dəyişiklik event-i üzrə əvvəlki və cari snapshot müqayisəsi.
+              Son dəyişiklik üzrə əvvəlki və cari snapshot müqayisəsi.
             </DialogDescription>
           </DialogHeader>
 
           {detailLoading ? (
             <div className='rounded-lg border bg-muted/30 px-4 py-10 text-center text-sm text-muted-foreground'>
-              Diff məlumatları yüklənir...
+              Müqayisə məlumatları yüklənir...
             </div>
           ) : detailError ? (
             <div className='rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800'>
@@ -2548,20 +2548,20 @@ function ChangeMonitorPage() {
             <div className='space-y-4'>
               <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-5'>
                 <KpiCard
-                  title='Previous snapshot'
+                  title='Əvvəlki snapshot'
                   value={(detailOldSnapshot.content_text || '').length}
                   description='simvol'
                   tone='muted'
                 />
                 <KpiCard
-                  title='Current snapshot'
+                  title='Cari snapshot'
                   value={(detailNewSnapshot.content_text || '').length}
                   description='simvol'
                   tone='info'
                 />
-                <KpiCard title='Added' value={diffResult.added} description='sətir' tone='success' />
-                <KpiCard title='Removed' value={diffResult.removed} description='sətir' tone='danger' />
-                <KpiCard title='Modified' value={diffResult.modified} description='sətir' />
+                <KpiCard title='Əlavə olunan' value={diffResult.added} description='sətir' tone='success' />
+                <KpiCard title='Silinən' value={diffResult.removed} description='sətir' tone='danger' />
+                <KpiCard title='Dəyişən' value={diffResult.modified} description='sətir' />
               </div>
 
               <div className='grid gap-3 text-sm lg:grid-cols-2'>
@@ -2581,7 +2581,7 @@ function ChangeMonitorPage() {
                 <div className='grid gap-3 lg:grid-cols-2'>
                   {addedLinkItems.length > 0 ? (
                     <div className='rounded-lg border border-emerald-200 bg-emerald-50 p-3'>
-                      <div className='font-semibold text-emerald-900'>New links</div>
+                      <div className='font-semibold text-emerald-900'>Yeni linklər</div>
                       <div className='mt-2 max-h-48 space-y-2 overflow-auto text-sm'>
                         {addedLinkItems.map((item) => (
                           <div key={item.url} className='break-words'>
@@ -2597,7 +2597,7 @@ function ChangeMonitorPage() {
 
                   {removedLinkItems.length > 0 ? (
                     <div className='rounded-lg border border-red-200 bg-red-50 p-3'>
-                      <div className='font-semibold text-red-900'>Removed links</div>
+                      <div className='font-semibold text-red-900'>Silinən linklər</div>
                       <div className='mt-2 max-h-48 space-y-2 overflow-auto text-sm'>
                         {removedLinkItems.map((item) => (
                           <div key={item.url} className='break-words'>
@@ -2615,8 +2615,8 @@ function ChangeMonitorPage() {
 
               <div className='rounded-xl border bg-background'>
                 <div className='grid border-b bg-muted/50 text-sm font-semibold md:grid-cols-2'>
-                  <div className='border-b p-3 md:border-b-0 md:border-r'>Previous snapshot</div>
-                  <div className='p-3'>Current snapshot</div>
+                  <div className='border-b p-3 md:border-b-0 md:border-r'>Əvvəlki snapshot</div>
+                  <div className='p-3'>Cari snapshot</div>
                 </div>
 
                 <div className='max-h-[62vh] overflow-auto'>
@@ -2704,7 +2704,7 @@ function ChangeMonitorPage() {
                   Brauzerdə aç
                 </Button>
                 <Button type='button' variant='outline' onClick={() => loadVisualPage()} disabled={saving || visualLoading}>
-                  {visualLoading ? 'Açılır...' : 'Daxildə aç'}
+                  {visualLoading ? 'Açılır...' : 'Selector pəncərəsində aç'}
                 </Button>
               </div>
             </div>
@@ -2839,7 +2839,7 @@ function ChangeMonitorPage() {
                   className='h-full w-full bg-white'
                 />
               ) : (
-                <div className='p-6 text-sm text-muted-foreground'>Sayt göstərilə bilmədi.</div>
+                <div className='p-6 text-sm text-muted-foreground'>Sayt pəncərədə göstərilə bilmədi.</div>
               )}
             </div>
           </div>
@@ -2903,45 +2903,3 @@ function KpiCard({
 export const Route = createFileRoute('/(auth)/admin/change-monitor')({
   component: ChangeMonitorPage,
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
