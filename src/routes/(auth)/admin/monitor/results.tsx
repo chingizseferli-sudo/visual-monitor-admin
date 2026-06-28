@@ -240,13 +240,19 @@ function ResultsPage() {
     loadData();
   }, []);
 
-  if (loading) return <div className="p-6">Yüklənir...</div>;
+  if (loading) {
+    return (
+      <div className="flex min-h-[320px] items-center justify-center p-6 text-sm text-muted-foreground">
+        Nəticələr yüklənir...
+      </div>
+    );
+  }
 
   return (
-    <div className="grid gap-6 p-6">
+    <div className="grid gap-4 p-4 md:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Nəticələr</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Nəticələr</h1>
         <p className="text-muted-foreground">
           Monitor açar sözlərinə uyğun tapılan xəbərlər
         </p>
@@ -262,29 +268,29 @@ function ResultsPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="text-sm text-muted-foreground">Ümumi uyğunluq</div>
           <div className="text-2xl font-bold">{stats.total}</div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="text-sm text-muted-foreground">Göstərilən</div>
           <div className="text-2xl font-bold">{stats.shown}</div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="text-sm text-muted-foreground">Bu gün</div>
           <div className="text-2xl font-bold">{stats.today}</div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="text-sm text-muted-foreground">Monitor sayı</div>
           <div className="text-2xl font-bold">{stats.monitors}</div>
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-3">
+      <div className="grid gap-3 rounded-lg border bg-card p-3 md:grid-cols-3">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -317,7 +323,7 @@ function ResultsPage() {
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
+      <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
@@ -396,11 +402,11 @@ function ResultsPage() {
 
             {rows.length === 0 && (
               <tr>
-                <td
-                  colSpan={8}
-                  className="p-10 text-center text-muted-foreground"
-                >
-                  Nəticə tapılmadı.
+                <td colSpan={8} className="p-8 text-center">
+                  <div className="font-medium">Nəticə tapılmadı</div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    Filtrləri dəyişin və ya monitorların yeni uyğun xəbər tapmasını gözləyin.
+                  </div>
                 </td>
               </tr>
             )}

@@ -854,7 +854,11 @@ function DashboardPage() {
   }, [])
 
   if (loading) {
-    return <div className='p-6'>Yüklənir...</div>
+    return (
+      <div className='flex min-h-[320px] items-center justify-center p-6 text-sm text-muted-foreground'>
+        İdarə paneli yüklənir...
+      </div>
+    )
   }
 
   const cards: KpiCard[] = [
@@ -926,9 +930,9 @@ function DashboardPage() {
   ]
 
   return (
-    <div className='grid gap-6 p-6'>
-      <div className='rounded-2xl border bg-card p-6 shadow-sm'>
-        <h1 className='text-3xl font-bold tracking-tight'>
+    <div className='grid gap-4 p-4 md:p-6'>
+      <div className='rounded-lg border bg-card p-4 shadow-sm'>
+        <h1 className='text-2xl font-bold tracking-tight'>
           Analytics Dashboard
         </h1>
         <p className='mt-2 max-w-3xl text-muted-foreground'>

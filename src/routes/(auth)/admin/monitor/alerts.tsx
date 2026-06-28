@@ -226,14 +226,18 @@ function AlertsPage() {
   }, []);
 
   if (loading) {
-    return <div className="p-6">Yüklənir...</div>;
+    return (
+      <div className="flex min-h-[320px] items-center justify-center p-6 text-sm text-muted-foreground">
+        Bildirişlər yüklənir...
+      </div>
+    );
   }
 
   return (
-    <div className="grid gap-6 p-6">
+    <div className="grid gap-4 p-4 md:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Bildirişlər</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Bildirişlər</h1>
         <p className="text-muted-foreground">
           Monitor uyğunluqları üzrə yaradılan bildirişlər
         </p>
@@ -249,34 +253,34 @@ function AlertsPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-5">
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="text-sm text-muted-foreground">Ümumi</div>
           <div className="text-2xl font-bold">{stats.total}</div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="text-sm text-muted-foreground">Göstərilən</div>
           <div className="text-2xl font-bold">{stats.shown}</div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="text-sm text-muted-foreground">Yeni</div>
           <div className="text-2xl font-bold text-orange-600">{stats.new}</div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="text-sm text-muted-foreground">Oxunmuş</div>
           <div className="text-2xl font-bold">{stats.read}</div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
           <div className="text-sm text-muted-foreground">Telegram</div>
           <div className="text-2xl font-bold">{stats.telegram}</div>
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-4">
+      <div className="grid gap-3 rounded-lg border bg-card p-3 md:grid-cols-4">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -317,7 +321,7 @@ function AlertsPage() {
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
+      <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>

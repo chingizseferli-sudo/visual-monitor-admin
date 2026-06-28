@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
 
@@ -1584,7 +1584,11 @@ function SourcesPage() {
   }, [])
 
   if (loading) {
-    return <div className='p-6'>Yüklənir...</div>
+    return (
+      <div className='flex min-h-[320px] items-center justify-center p-6 text-sm text-muted-foreground'>
+        Mənbələr yüklənir...
+      </div>
+    )
   }
 
   const detailHealth = detailSource
@@ -1607,9 +1611,9 @@ function SourcesPage() {
   const detailItemById = new Map(detailItems.map((item) => [item.id, item]))
 
   return (
-    <div className='grid max-w-full gap-6 overflow-hidden p-6'>
+    <div className='grid max-w-full gap-4 overflow-hidden p-4 md:p-6'>
       <div>
-        <h1 className='text-3xl font-bold tracking-tight'>Mənbələr</h1>
+        <h1 className='text-2xl font-bold tracking-tight'>Mənbələr</h1>
         <p className='text-muted-foreground'>
           Discovery botun tapdığı və monitor tərəfindən izlənən saytlar
         </p>

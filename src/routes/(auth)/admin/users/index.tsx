@@ -234,13 +234,17 @@ function UsersPage() {
   }, [])
 
   if (loading) {
-    return <div className='p-6'>Yüklənir...</div>
+    return (
+      <div className='flex min-h-[320px] items-center justify-center p-6 text-sm text-muted-foreground'>
+        İstifadəçilər yüklənir...
+      </div>
+    )
   }
 
   return (
-    <div className='grid gap-6 p-6'>
+    <div className='grid gap-4 p-4 md:p-6'>
       <div>
-        <h1 className='text-3xl font-bold tracking-tight'>
+        <h1 className='text-2xl font-bold tracking-tight'>
           Müştəri idarəetməsi
         </h1>
         <p className='text-muted-foreground'>
@@ -255,14 +259,14 @@ function UsersPage() {
         </div>
       ) : null}
 
-      <div className='grid gap-4 md:grid-cols-4'>
+      <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
         <button
           type='button'
           onClick={() => {
             setStatusFilter('all')
             resetFilteredView()
           }}
-          className='rounded-xl border border-sky-100 bg-sky-50 p-4 text-left shadow-sm'
+          className='rounded-lg border border-sky-100 bg-sky-50 p-3 text-left shadow-sm'
         >
           <div className='text-sm text-muted-foreground'>Ümumi istifadəçi</div>
           <div className='text-2xl font-bold text-sky-700'>{stats.total}</div>
@@ -273,7 +277,7 @@ function UsersPage() {
             setStatusFilter('problem')
             resetFilteredView()
           }}
-          className='rounded-xl border border-orange-100 bg-orange-50 p-4 text-left shadow-sm'
+          className='rounded-lg border border-orange-100 bg-orange-50 p-3 text-left shadow-sm'
         >
           <div className='text-sm text-muted-foreground'>Müdaxilə lazımdır</div>
           <div className='text-2xl font-bold text-orange-700'>
@@ -286,7 +290,7 @@ function UsersPage() {
             setStatusFilter('telegram')
             resetFilteredView()
           }}
-          className='rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-left shadow-sm'
+          className='rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-left shadow-sm'
         >
           <div className='text-sm text-muted-foreground'>Telegram bağlı</div>
           <div className='text-2xl font-bold text-emerald-700'>
@@ -299,7 +303,7 @@ function UsersPage() {
             setStatusFilter('has_monitor')
             resetFilteredView()
           }}
-          className='rounded-xl border border-violet-100 bg-violet-50 p-4 text-left shadow-sm'
+          className='rounded-lg border border-violet-100 bg-violet-50 p-3 text-left shadow-sm'
         >
           <div className='text-sm text-muted-foreground'>Monitoru olan</div>
           <div className='text-2xl font-bold text-violet-700'>
@@ -308,7 +312,7 @@ function UsersPage() {
         </button>
       </div>
 
-      <div className='grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[1fr_auto]'>
+      <div className='grid gap-3 rounded-lg border bg-card p-3 md:grid-cols-[1fr_auto]' >
         <input
           value={search}
           onChange={(event) => {
@@ -342,7 +346,7 @@ function UsersPage() {
             key={row.user_id}
             to='/admin/users/$userId'
             params={{ userId: row.user_id }}
-            className='rounded-xl border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:bg-muted/20'
+            className='rounded-lg border bg-card p-3 shadow-sm transition hover:border-primary/40 hover:bg-muted/20'
           >
             <div className='grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr_auto] lg:items-center'>
               <div>
@@ -416,8 +420,11 @@ function UsersPage() {
         ))}
 
         {filteredRows.length === 0 ? (
-          <div className='rounded-xl border bg-card p-10 text-center text-muted-foreground'>
-            İstifadəçi tapılmadı.
+          <div className='rounded-lg border bg-card p-8 text-center'>
+            <div className='font-medium'>İstifadəçi tapılmadı</div>
+            <div className='mt-1 text-sm text-muted-foreground'>
+              Axtarışı və ya status filtrini dəyişib yenidən yoxlayın.
+            </div>
           </div>
         ) : null}
       </div>

@@ -1,4 +1,4 @@
-﻿import { Fragment, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -1900,10 +1900,10 @@ function ChangeMonitorPage() {
   void openSourceDetails
 
   return (
-    <div className='max-w-full space-y-6 overflow-x-hidden p-6'>
+    <div className='max-w-full space-y-4 overflow-x-hidden p-4 md:p-6'>
       <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
         <div>
-          <h1 className='text-3xl font-bold tracking-tight'>Dəyişiklik monitoru</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>Dəyişiklik monitoru</h1>
           <p className='text-muted-foreground'>
             Manual URL və CSS selector əsasında yaradılan izləmələr.
           </p>
