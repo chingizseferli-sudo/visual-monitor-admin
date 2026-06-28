@@ -213,14 +213,14 @@ async function fetchAlertsData(): Promise<AlertsData> {
 
   if (error) {
     console.error("User alerts error:", error);
-    return { alerts: [], errorMessage: "Bildirişlər yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin." };
+    return { alerts: [], errorMessage: "Bildirişləri yükləmək mümkün olmadı." };
   }
 
   return { alerts: (data || []) as unknown as AlertRow[], errorMessage: "" };
 }
 
 function AlertsPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: customerQueryKeys.alerts(),
     queryFn: fetchAlertsData,
     staleTime: 30 * 1000,
@@ -312,6 +312,29 @@ function AlertsPage() {
     );
   }
 
+  if (errorMessage) {
+    return (
+      <div className="grid gap-4 p-4 md:p-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Bildirişlərim</h1>
+          <p className="text-muted-foreground">Monitorlarınıza aid xəbər bildirişləri</p>
+        </div>
+
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+          <div className="font-medium">{errorMessage}</div>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="mt-4 inline-flex items-center justify-center rounded-lg border border-destructive/30 bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isFetching ? "Yüklənir..." : "Yenidən cəhd et"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4 p-4 md:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -329,12 +352,6 @@ function AlertsPage() {
           CSV ixrac et
         </button>
       </div>
-
-      {errorMessage ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : null}
 
       <div className="grid gap-3 md:grid-cols-5">
         <div className="rounded-lg border bg-card p-4">
