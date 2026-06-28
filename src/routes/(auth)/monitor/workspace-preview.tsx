@@ -6,7 +6,6 @@ import {
   Bell,
   CheckCircle2,
   ExternalLink,
-  Hash,
   Loader2,
   Newspaper,
   Radio,

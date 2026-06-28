@@ -4,6 +4,7 @@ import { Link, useLocation } from '@tanstack/react-router'
 import {
   BarChart3,
   Bell,
+  Eye,
   LayoutDashboard,
   LogOut,
   Radio,
@@ -46,6 +47,11 @@ const customerNavItems = [
     title: 'İş masası',
     url: '/monitor/workspace-preview',
     icon: ShieldCheck,
+  },
+  {
+    title: 'Veb izləmə',
+    url: '/monitor/watch-monitor',
+    icon: Eye,
   },
   {
     title: 'Nəticələr',

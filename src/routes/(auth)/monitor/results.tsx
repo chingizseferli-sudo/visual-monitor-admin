@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, Clock3, Download, ExternalLink, FileCode2, FileJson2, FileText, Hash, Loader2, Search } from "lucide-react";
+import { Download, ExternalLink, FileCode2, FileJson2, FileText, Loader2, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { customerQueryKeys } from "@/lib/query-keys";
