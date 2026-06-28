@@ -598,8 +598,8 @@ function MonitorsPage() {
 
   return (
     <>
-      <div className="grid gap-4 p-4 md:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="grid gap-4 p-4 md:p-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Monitorlarım</h1>
           <p className="text-muted-foreground">Açar sözlər, Telegram və son nəticələr</p>
@@ -912,8 +912,11 @@ function MonitorsPage() {
         ))}
 
         {rows.length === 0 && (
-          <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-            Monitor tapılmadı. Yuxarıdakı formadan ilk monitorunu yarat.
+          <div className="rounded-lg border bg-card p-8 text-center">
+            <div className="font-medium">Monitor tapılmadı</div>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              İlk monitorunuzu yaradın, açar sözləri əlavə edin və nəticələri bu paneldən izləyin.
+            </p>
           </div>
         )}
       </div>

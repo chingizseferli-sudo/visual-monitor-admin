@@ -148,10 +148,10 @@ function UserMonitorDashboard() {
   }
 
   return (
-    <div className="grid gap-5 p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="grid gap-4 p-4 md:p-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Monitorinq panelim</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Monitorinq panelim</h1>
           <p className="text-muted-foreground">Monitorlar, açar sözlər və son uyğun xəbərlər</p>
         </div>
 
@@ -184,8 +184,14 @@ function UserMonitorDashboard() {
         </div>
 
         {recentMatches.length === 0 ? (
-          <div className="p-10 text-center text-muted-foreground">
-            Hələ nəticə yoxdur.
+          <div className="grid gap-2 p-8 text-center">
+            <div className="font-medium">Hələ nəticə yoxdur</div>
+            <p className="mx-auto max-w-md text-sm text-muted-foreground">
+              Monitorlarınız yeni uyğun xəbər tapdıqda son nəticələr burada görünəcək.
+            </p>
+            <Link to="/monitor/monitors" className="mx-auto mt-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted">
+              Monitorları yoxla
+            </Link>
           </div>
         ) : (
           <div className="grid gap-0">

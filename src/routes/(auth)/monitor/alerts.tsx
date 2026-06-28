@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bell, CheckCircle2, Download, ExternalLink, Loader2, Send, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -328,10 +328,10 @@ function AlertsPage() {
   }
 
   return (
-    <div className="grid gap-5 p-6">
+    <div className="grid gap-4 p-4 md:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Bildirişlərim</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Bildirişlərim</h1>
           <p className="text-muted-foreground">Monitorlarınıza aid xəbər bildirişləri</p>
         </div>
         <button
@@ -512,11 +512,14 @@ function AlertsPage() {
         })}
 
         {paginatedAlerts.length === 0 && (
-          <div className="rounded-lg border bg-card p-10 text-center">
-            <div className="font-medium">Bildiriş tapılmadı.</div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Filtrləri dəyişin və ya yeni monitor nəticəsi yaranmasını gözləyin.
+          <div className="rounded-lg border bg-card p-8 text-center">
+            <div className="font-medium">Bildiriş tapılmadı</div>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              Filtrləri dəyişin və ya yeni monitor nəticəsinə görə bildiriş yaranmasını gözləyin.
             </p>
+            <Link to="/monitor/results" className="mt-3 inline-flex rounded-lg border px-3 py-2 text-sm hover:bg-muted">
+              Nəticələrə bax
+            </Link>
           </div>
         )}
       </div>

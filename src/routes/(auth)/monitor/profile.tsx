@@ -83,6 +83,20 @@ async function loadOptionalPlan(userId: string): Promise<{ plan: PlanInfo | null
   return { plan: planResult.data as PlanInfo, available: true };
 }
 
+function formatRole(role: string) {
+  if (role === "customer") return "İstifadəçi";
+  if (role === "admin") return "Admin";
+  if (role === "superadmin") return "Superadmin";
+  return role || "-";
+}
+
+function formatStatus(status: string) {
+  if (status === "active") return "Aktiv";
+  if (status === "blocked") return "Bloklanıb";
+  if (status === "inactive") return "Passiv";
+  return status || "-";
+}
+
 function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -158,7 +172,7 @@ function ProfilePage() {
   if (!profileState) {
     return (
       <div className="grid gap-4 p-6">
-        <h1 className="text-3xl font-bold tracking-tight">İstifadəçi profili və ayarları</h1>
+        <h1 className="text-2xl font-bold tracking-tight">İstifadəçi profili və ayarları</h1>
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {errorMessage || "Profil məlumatları yüklənmədi."}
         </div>
@@ -169,9 +183,9 @@ function ProfilePage() {
   const planLimit = profileState.plan?.max_watches ?? null;
 
   return (
-    <div className="grid gap-5 p-6">
+    <div className="grid gap-4 p-4 md:p-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">İstifadəçi profili və ayarları</h1>
+        <h1 className="text-2xl font-bold tracking-tight">İstifadəçi profili və ayarları</h1>
         <p className="text-muted-foreground">Hesab, plan və bildiriş məlumatlarınız</p>
       </div>
 
@@ -199,12 +213,12 @@ function ProfilePage() {
 
             <div className="rounded-lg border bg-background p-4">
               <div className="text-sm text-muted-foreground">Rol</div>
-              <div className="mt-2 font-medium">{profileState.role}</div>
+              <div className="mt-2 font-medium">{formatRole(profileState.role)}</div>
             </div>
 
             <div className="rounded-lg border bg-background p-4">
               <div className="text-sm text-muted-foreground">Status</div>
-              <div className="mt-2 font-medium">{profileState.status}</div>
+              <div className="mt-2 font-medium">{formatStatus(profileState.status)}</div>
             </div>
 
             <div className="rounded-lg border bg-background p-4">
