@@ -335,24 +335,228 @@ function ResultsPage() {
       return;
     }
 
-    const tableRows = mappedRows
+    const generatedAt = new Date().toLocaleString("az-AZ", {
+      timeZone: "Asia/Baku",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const articleCards = mappedRows
       .map(
-        (row) => `
-          <tr>
-            <td>${escapeHtml(row.monitor)}</td>
-            <td>${escapeHtml(row.keyword)}</td>
-            <td>${escapeHtml(row.title)}</td>
-            <td>${escapeHtml(row.source)}</td>
-            <td><a href="${escapeHtml(row.url)}">${escapeHtml(row.url)}</a></td>
-            <td>${escapeHtml(row.published_at)}</td>
-            <td>${escapeHtml(row.detected_at)}</td>
-          </tr>`
+        (row, index) => `
+          <article class="result-card">
+            <div class="result-index">${index + 1}</div>
+            <div class="result-body">
+              <div class="result-meta">
+                <span>${escapeHtml(row.source)}</span>
+                <span>${escapeHtml(row.keyword)}</span>
+                <span>${escapeHtml(row.detected_at)}</span>
+              </div>
+              <h2>${escapeHtml(row.title)}</h2>
+              <div class="result-monitor">Monitor: ${escapeHtml(row.monitor)}</div>
+              <a class="result-link" href="${escapeHtml(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.url)}</a>
+            </div>
+          </article>`
       )
       .join("");
 
     downloadFile(
       "tapilan-xeberler.html",
-      `<!doctype html><html lang="az"><head><meta charset="utf-8"><title>Tapılan xəbərlər</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#172033}table{width:100%;border-collapse:collapse}th,td{border:1px solid #dbe3ef;padding:10px;text-align:left;vertical-align:top}th{background:#f4f7fb}</style></head><body><h1>Tapılan xəbərlər</h1><p>${escapeHtml(exportRangeLabels[exportRange])} üzrə ${mappedRows.length} nəticə</p><table><thead><tr><th>Monitor</th><th>Açar söz</th><th>Başlıq</th><th>Mənbə</th><th>Link</th><th>Dərc tarixi</th><th>Tapılma vaxtı</th></tr></thead><tbody>${tableRows}</tbody></table></body></html>`,
+      `<!doctype html>
+<html lang="az">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tapılan xəbərlər | Vizual.Az</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #142033;
+      --muted: #5f6f89;
+      --line: #dbe4f0;
+      --soft: #f5f8fc;
+      --brand: #165dff;
+      --brand-soft: #eaf2ff;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--soft);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      line-height: 1.5;
+    }
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 32px auto;
+    }
+    .report-header {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+      padding: 28px;
+      box-shadow: 0 18px 55px rgba(20, 32, 51, 0.08);
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--brand);
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      background: var(--brand);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      font-weight: 900;
+    }
+    h1 {
+      margin: 18px 0 8px;
+      font-size: clamp(32px, 5vw, 56px);
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+    .subtitle {
+      margin: 0;
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+    .summary-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      padding: 16px;
+    }
+    .summary-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .summary-value {
+      margin-top: 6px;
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .results {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .result-card {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 14px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--card);
+      padding: 18px;
+      break-inside: avoid;
+    }
+    .result-index {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-weight: 900;
+    }
+    .result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .result-meta span {
+      border-radius: 999px;
+      background: #eef4fb;
+      padding: 6px 10px;
+    }
+    .result-card h2 {
+      margin: 12px 0 8px;
+      font-size: 20px;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+    .result-monitor {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .result-link {
+      display: block;
+      margin-top: 10px;
+      color: var(--brand);
+      font-size: 14px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+    .empty {
+      margin-top: 18px;
+      border: 1px dashed var(--line);
+      border-radius: 20px;
+      background: white;
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .footer {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+    @media (max-width: 720px) {
+      .page { width: min(100% - 20px, 1120px); margin: 16px auto; }
+      .report-header { padding: 20px; border-radius: 20px; }
+      .summary { grid-template-columns: 1fr; }
+      .result-card { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { background: white; }
+      .page { width: 100%; margin: 0; }
+      .report-header, .result-card, .summary-card { box-shadow: none; }
+      .result-link { color: #0f3fb8; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="report-header">
+      <div class="brand"><span class="brand-mark">V</span> Vizual.Az</div>
+      <h1>Tapılan xəbərlər</h1>
+      <p class="subtitle">Açar sözlərinizə uyğun tapılan media materiallarının ixrac hesabatı.</p>
+      <div class="summary">
+        <div class="summary-card"><div class="summary-label">Interval</div><div class="summary-value">${escapeHtml(exportRangeLabels[exportRange])}</div></div>
+        <div class="summary-card"><div class="summary-label">Nəticə sayı</div><div class="summary-value">${mappedRows.length}</div></div>
+        <div class="summary-card"><div class="summary-label">Hazırlanma vaxtı</div><div class="summary-value">${escapeHtml(generatedAt)}</div></div>
+      </div>
+    </section>
+    ${mappedRows.length > 0 ? `<section class="results">${articleCards}</section>` : `<div class="empty">Seçilən interval üzrə ixrac ediləcək nəticə yoxdur.</div>`}
+    <div class="footer">Bu hesabat Vizual.Az platformasından ixrac edilib.</div>
+  </main>
+</body>
+</html>`,
       "text/html;charset=utf-8"
     );
   }
