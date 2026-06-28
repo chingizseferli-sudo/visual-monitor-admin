@@ -30,8 +30,11 @@ const formSchema = z.object({
     .min(7, 'Şifrə ən azı 7 simvol olmalıdır.'),
 })
 
+type AuthMode = 'customer' | 'admin'
+
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
+  mode?: AuthMode
 }
 
 type UserProfile = {
@@ -41,9 +44,24 @@ type UserProfile = {
   status: string | null
 }
 
+function isAdminRole(role: string) {
+  return role === 'admin' || role === 'superadmin'
+}
+
+function getSafeRedirect(mode: AuthMode, redirectTo: string | undefined) {
+  if (mode === 'admin') {
+    return redirectTo && redirectTo.startsWith('/admin') && redirectTo !== '/admin/sign-in'
+      ? redirectTo
+      : '/admin'
+  }
+
+  return redirectTo && redirectTo.startsWith('/monitor') ? redirectTo : '/monitor'
+}
+
 export function UserAuthForm({
   className,
   redirectTo,
+  mode = 'customer',
   ...props
 }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -95,14 +113,23 @@ export function UserAuthForm({
     }
 
     const role = profile.role || 'customer'
-    const isAdmin = role === 'admin' || role === 'superadmin'
-    const fallbackPath = isAdmin ? '/admin' : '/monitor'
-    const safeRedirect =
-      redirectTo &&
-      ((isAdmin && redirectTo.startsWith('/admin')) ||
-        (!isAdmin && redirectTo.startsWith('/monitor')))
-        ? redirectTo
-        : fallbackPath
+    const adminRole = isAdminRole(role)
+
+    if (mode === 'customer' && adminRole) {
+      await supabase.auth.signOut()
+      setIsLoading(false)
+      toast.error('Bu giriş yalnız istifadəçilər üçündür. Admin panelə ayrıca admin girişi ilə daxil olun.')
+      return
+    }
+
+    if (mode === 'admin' && !adminRole) {
+      await supabase.auth.signOut()
+      setIsLoading(false)
+      toast.error('Bu giriş yalnız admin hesabları üçündür.')
+      return
+    }
+
+    const safeRedirect = getSafeRedirect(mode, redirectTo)
 
     setIsLoading(false)
     toast.success('Giriş uğurludur.')

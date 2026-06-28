@@ -12,6 +12,7 @@ function AdminLayout() {
     <ProtectedRoute
       allowedRoles={["admin", "superadmin"]}
       unauthorizedRedirect="/monitor"
+      unauthenticatedRedirect="/admin/sign-in"
     >
       <AuthenticatedLayout />
     </ProtectedRoute>

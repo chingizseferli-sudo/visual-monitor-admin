@@ -8,12 +8,14 @@ import {
 type ProtectedRouteProps = {
   allowedRoles: string[]
   unauthorizedRedirect?: '/monitor' | '/sign-in'
+  unauthenticatedRedirect?: '/sign-in' | '/admin/sign-in'
   children: React.ReactNode
 }
 
 export function ProtectedRoute({
   allowedRoles,
   unauthorizedRedirect = '/sign-in',
+  unauthenticatedRedirect = '/sign-in',
   children,
 }: ProtectedRouteProps) {
   const navigate = useNavigate()
@@ -46,7 +48,7 @@ export function ProtectedRoute({
       sessionProfile.error ||
       !sessionProfile.profile
     ) {
-      void navigate({ to: '/sign-in', replace: true })
+      void navigate({ to: unauthenticatedRedirect, replace: true })
       return
     }
 
@@ -55,7 +57,7 @@ export function ProtectedRoute({
     if (!allowedRoles.includes(role)) {
       void navigate({ to: unauthorizedRedirect, replace: true })
     }
-  }, [allowedRoles, isChecking, navigate, sessionProfile, unauthorizedRedirect])
+  }, [allowedRoles, isChecking, navigate, sessionProfile, unauthenticatedRedirect, unauthorizedRedirect])
 
   if (isChecking || !sessionProfile) {
     return <div className='p-6 text-sm text-muted-foreground'>Sessiya yoxlanılır...</div>

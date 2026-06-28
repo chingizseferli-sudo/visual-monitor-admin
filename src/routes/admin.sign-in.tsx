@@ -6,12 +6,12 @@ const searchSchema = z.object({
   redirect: z.string().optional(),
 })
 
-function CustomerSignInRoute() {
+function AdminSignInRoute() {
   const { redirect } = Route.useSearch()
-  return <SignIn mode='customer' redirectTo={redirect} />
+  return <SignIn mode='admin' redirectTo={redirect} />
 }
 
-export const Route = createFileRoute('/(auth)/sign-in')({
-  component: CustomerSignInRoute,
+export const Route = createFileRoute('/admin/sign-in')({
+  component: AdminSignInRoute,
   validateSearch: searchSchema,
 })

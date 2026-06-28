@@ -21,10 +21,11 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     }
 
     auth.reset()
-    // Preserve current location for redirect after sign-in
     const currentPath = location.href
+    const isAdminArea = currentPath.startsWith('/admin')
+
     navigate({
-      to: '/sign-in',
+      to: isAdminArea ? '/admin/sign-in' : '/sign-in',
       search: { redirect: currentPath },
       replace: true,
     })
