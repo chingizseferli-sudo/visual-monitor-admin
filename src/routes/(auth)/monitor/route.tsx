@@ -8,7 +8,7 @@ export const Route = createFileRoute("/(auth)/monitor")({
 
 function MonitorLayout() {
   return (
-    <ProtectedRoute allowedRoles={["customer"]}>
+    <ProtectedRoute allowedRoles={["customer", "admin", "superadmin"]}>
       <CustomerLayout />
     </ProtectedRoute>
   );
