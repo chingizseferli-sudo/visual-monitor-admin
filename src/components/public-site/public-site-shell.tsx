@@ -23,7 +23,7 @@ export function PublicHeader() {
 
         <div className="flex items-center gap-2">
           <Link to="/sign-in" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white">
-            Login
+            İstifadəçi girişi
           </Link>
           <Link to="/demo" className="rounded-lg bg-[#1463ff] px-4 py-2 text-sm font-bold text-white shadow-[0_12px_26px_rgba(20,99,255,0.22)] hover:bg-blue-700">
             Demo istə
@@ -40,8 +40,8 @@ export function PublicFooter() {
       <div className="mx-auto flex max-w-7xl flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <p>© 2026 Vizual.Az. Communication Intelligence Platform.</p>
         <div className="flex justify-center gap-4">
-          <Link to="/sign-in" className="font-semibold text-slate-700 hover:text-slate-950">Login</Link>
-          <Link to="/sign-up" className="font-semibold text-slate-700 hover:text-slate-950">Register</Link>
+          <Link to="/sign-in" className="font-semibold text-slate-700 hover:text-slate-950">İstifadəçi girişi</Link>
+          <Link to="/contact" className="font-semibold text-slate-700 hover:text-slate-950">Demo istə</Link>
         </div>
       </div>
     </footer>

@@ -71,7 +71,7 @@ function IndexPage() {
             <h1 className="mt-6 max-w-4xl text-5xl font-black tracking-tight text-slate-950 md:text-7xl">Vizual.Az</h1>
             <p className="mt-5 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">Monitor. Understand. Decide.</p>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-              Media, vebsayt dəyişiklikləri və kommunikasiya siqnallarını bir platformada izləyin. Public website məlumat üçündür; iş mühiti login-dən sonra başlayır.
+              Media, vebsayt dəyişiklikləri və kommunikasiya siqnallarını bir platformada izləyin. Public website məlumat üçündür; istifadəçi workspace-i girişdən sonra başlayır.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/demo" className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#1463ff] px-5 text-sm font-bold text-white shadow-[0_16px_34px_rgba(20,99,255,0.24)] hover:bg-blue-700">
@@ -79,7 +79,7 @@ function IndexPage() {
                 <ChevronRight className="h-4 w-4" />
               </Link>
               <Link to="/sign-in" className="inline-flex h-12 items-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-bold text-slate-800 hover:bg-slate-50">
-                Workspace-ə daxil ol
+                İstifadəçi girişinə keç
               </Link>
             </div>
           </div>
