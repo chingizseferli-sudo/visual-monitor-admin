@@ -180,12 +180,15 @@ function ProfilePage() {
   }
 
   const planLimit = profileState.plan?.max_watches ?? null;
+  const hasReachedPlanLimit = typeof planLimit === "number" && profileState.monitorCount >= planLimit;
 
   return (
     <div className="grid gap-4 p-4 md:p-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">İstifadəçi profili və ayarları</h1>
-        <p className="text-muted-foreground">Hesab, plan və bildiriş məlumatlarınız</p>
+        <p className="text-muted-foreground">
+          Hesab məlumatlarınızı, plan limitlərinizi və bildiriş bağlantınızı burada izləyə bilərsiniz.
+        </p>
       </div>
 
       {errorMessage ? (
@@ -200,6 +203,9 @@ function ProfilePage() {
             <ShieldCheck className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Hesab məlumatları</h2>
           </div>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Bu məlumatlar hesabınızın platformada hansı rol və statusla istifadə olunduğunu göstərir.
+          </p>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border bg-background p-4">
@@ -211,12 +217,12 @@ function ProfilePage() {
             </div>
 
             <div className="rounded-lg border bg-background p-4">
-              <div className="text-sm text-muted-foreground">Rol</div>
+              <div className="text-sm text-muted-foreground">Hesab rolu</div>
               <div className="mt-2 font-medium">{formatRole(profileState.role)}</div>
             </div>
 
             <div className="rounded-lg border bg-background p-4">
-              <div className="text-sm text-muted-foreground">Status</div>
+              <div className="text-sm text-muted-foreground">Hesab statusu</div>
               <div className="mt-2 font-medium">{formatStatus(profileState.status)}</div>
             </div>
 
@@ -235,18 +241,24 @@ function ProfilePage() {
             <Bell className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Telegram</h2>
           </div>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Telegram bildirişləri yeni uyğun nəticələr barədə daha tez xəbərdar olmaq üçündür.
+          </p>
 
           {profileState.telegramChatId ? (
             <div className="rounded-lg border bg-background p-4">
               <div className="text-sm text-muted-foreground">Bağlantı statusu</div>
-              <div className="mt-2 font-medium text-emerald-700">Aktivdir</div>
-              <div className="mt-1 break-all text-sm text-muted-foreground">
-                Chat ID: {profileState.telegramChatId}
-              </div>
+              <div className="mt-2 font-medium text-emerald-700">Telegram bildirişləri aktivdir.</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Uyğun nəticələr tapıldıqda bildirişlər Telegram kanalınıza göndərilə bilər.
+              </p>
             </div>
           ) : (
-            <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-              Telegram bağlantısı ayrıca aktivləşdiriləcək.
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <div className="font-medium">Telegram bildirişləri hələ aktiv deyil.</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Aktivləşdirildikdən sonra vacib nəticələr barədə Telegram üzərindən xəbər ala biləcəksiniz.
+              </p>
             </div>
           )}
         </section>
@@ -258,30 +270,42 @@ function ProfilePage() {
             <CreditCard className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Plan və limitlər</h2>
           </div>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Planınız neçə monitor yarada biləcəyinizi, yoxlama tezliyini və nəticə tarixçəsinin nə qədər saxlanacağını
+            müəyyən edir.
+          </p>
 
           {profileState.planAvailable && profileState.plan ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border bg-background p-4">
-                <div className="text-sm text-muted-foreground">Plan</div>
-                <div className="mt-2 font-medium">{profileState.plan.name || "-"}</div>
-              </div>
-              <div className="rounded-lg border bg-background p-4">
-                <div className="text-sm text-muted-foreground">Monitor limiti</div>
-                <div className="mt-2 font-medium">{planLimit ?? "Limitsiz"}</div>
-              </div>
-              <div className="rounded-lg border bg-background p-4">
-                <div className="text-sm text-muted-foreground">Minimum interval</div>
-                <div className="mt-2 font-medium">
-                  {profileState.plan.minimum_interval_minutes
-                    ? `${profileState.plan.minimum_interval_minutes} dəq`
-                    : "-"}
+            <div className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm text-muted-foreground">Cari plan</div>
+                  <div className="mt-2 font-medium">{profileState.plan.name || "-"}</div>
+                </div>
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm text-muted-foreground">Monitor limiti</div>
+                  <div className="mt-2 font-medium">{planLimit ?? "Limitsiz"}</div>
+                </div>
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm text-muted-foreground">Ən qısa yoxlama intervalı</div>
+                  <div className="mt-2 font-medium">
+                    {profileState.plan.minimum_interval_minutes
+                      ? `${profileState.plan.minimum_interval_minutes} dəq`
+                      : "-"}
+                  </div>
+                </div>
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm text-muted-foreground">Nəticə tarixçəsi</div>
+                  <div className="mt-2 font-medium">
+                    {profileState.plan.history_days ? `${profileState.plan.history_days} gün` : "-"}
+                  </div>
                 </div>
               </div>
-              <div className="rounded-lg border bg-background p-4">
-                <div className="text-sm text-muted-foreground">Tarixçə</div>
-                <div className="mt-2 font-medium">
-                  {profileState.plan.history_days ? `${profileState.plan.history_days} gün` : "-"}
-                </div>
+
+              <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                {hasReachedPlanLimit
+                  ? "Monitor limitinə çatmısınız. Yeni monitor yaratmaq üçün mövcud monitorlardan birini silmək və ya planı genişləndirmək lazımdır."
+                  : "Limitə çatmadığınız müddətdə yeni monitorlar yarada bilərsiniz. Limit dolduqda sistem yeni monitor yaradılmasına icazə verməyəcək."}
               </div>
             </div>
           ) : (
@@ -298,10 +322,12 @@ function ProfilePage() {
           </div>
 
           <div className="rounded-lg border bg-background p-4">
-            <div className="text-sm text-muted-foreground">Cari monitor sayı</div>
+            <div className="text-sm text-muted-foreground">Yaradılmış monitorlar</div>
             <div className="mt-2 text-2xl font-semibold">{profileState.monitorCount}</div>
             <div className="mt-1 text-sm text-muted-foreground">
-              {planLimit ? `${planLimit} limitindən istifadə olunur` : "Limit məlumatı yoxdur"}
+              {planLimit
+                ? `${planLimit} monitor limitindən ${profileState.monitorCount} istifadə olunur`
+                : "Monitor limiti haqqında məlumat yoxdur"}
             </div>
           </div>
         </section>
