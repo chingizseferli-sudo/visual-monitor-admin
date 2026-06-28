@@ -1,46 +1,241 @@
 import type { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Bell, CheckCircle2, Newspaper, Radio, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Bell,
+  CheckCircle2,
+  ExternalLink,
+  Hash,
+  Loader2,
+  Newspaper,
+  Radio,
+  ShieldCheck,
+} from "lucide-react";
 
-const summaryItems = [
-  { label: "Yeni media materialı", value: "14", note: "Bu gün tapılan uyğun nəticələr", icon: Newspaper },
-  { label: "Vacib bildiriş", value: "2", note: "Diqqət tələb edən qeydlər", icon: Bell },
-  { label: "Aktiv monitor", value: "3", note: "Hazırda izlənən mövzular", icon: Radio },
-  { label: "Sistem statusu", value: "Normal", note: "Monitorinq sakit işləyir", icon: ShieldCheck },
-];
+import { customerQueryKeys } from "@/lib/query-keys";
+import { supabase } from "@/lib/supabase";
 
-const signals = [
-  "Qəbul prosesi mövzusu bir neçə mənbədə görünür.",
-  "Təşkilat adı bu gün 3 fərqli media materialında qeyd olunub.",
-  "Bir uyğun nəticə üzrə Telegram bildirişi göndərilib.",
-];
+type MonitorRow = {
+  id: string;
+  name: string | null;
+  status: string | null;
+  created_at: string | null;
+};
 
-const feedItems = [
-  {
-    title: "Qəbul prosesi ilə bağlı yeni açıqlama yayımlandı",
-    source: "edu.gov.az",
-    keyword: "qəbul prosesi",
-    time: "09:12",
-  },
-  {
-    title: "Universitetin beynəlxalq əməkdaşlığı haqqında xəbər dərc edilib",
-    source: "azertag.az",
-    keyword: "universitet adı",
-    time: "08:47",
-  },
-  {
-    title: "Təhsil layihəsi media gündəmində yenidən qeyd olunub",
-    source: "report.az",
-    keyword: "təhsil layihəsi",
-    time: "08:21",
-  },
-];
+type MatchRow = {
+  id: string;
+  monitor_id: string;
+  matched_keyword: string | null;
+  created_at: string | null;
+  user_monitors: {
+    name: string | null;
+  } | null;
+  monitored_items: {
+    title: string | null;
+    url: string | null;
+    published_at: string | null;
+    detected_at: string | null;
+  } | null;
+};
 
-const actions = [
-  { label: "Nəticələrə bax", description: "Tapılan media materiallarını açın", to: "/monitor/results" as const },
-  { label: "Açar sözləri yenilə", description: "Monitor mövzularını dəqiqləşdirin", to: "/monitor/monitors" as const },
-  { label: "Bildirişləri yoxla", description: "Göndərilən bildiriş tarixçəsinə baxın", to: "/monitor/alerts" as const },
-];
+type AlertRow = {
+  id: string;
+  status: string | null;
+  channel: string | null;
+  sent_at: string | null;
+  monitor_matches: {
+    matched_keyword: string | null;
+    user_monitors: {
+      name: string | null;
+    } | null;
+    monitored_items: {
+      title: string | null;
+      url: string | null;
+    } | null;
+  } | null;
+};
+
+type ProfileRow = {
+  telegram_chat_id: string | null;
+  plan_id?: string | null;
+};
+
+type PlanRow = {
+  name: string | null;
+  max_watches: number | null;
+};
+
+type WorkspaceData = {
+  monitorCount: number;
+  activeMonitorCount: number;
+  keywordCount: number;
+  resultCount: number;
+  alertCount: number;
+  recentMatches: MatchRow[];
+  recentAlerts: AlertRow[];
+  monitors: MonitorRow[];
+  telegramConnected: boolean;
+  planName: string | null;
+  maxWatches: number | null;
+  errorMessage: string;
+};
+
+const EMPTY_WORKSPACE: WorkspaceData = {
+  monitorCount: 0,
+  activeMonitorCount: 0,
+  keywordCount: 0,
+  resultCount: 0,
+  alertCount: 0,
+  recentMatches: [],
+  recentAlerts: [],
+  monitors: [],
+  telegramConnected: false,
+  planName: null,
+  maxWatches: null,
+  errorMessage: "",
+};
+
+function decodeHtml(text: string) {
+  if (typeof document === "undefined") return text;
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = text;
+  return textarea.value;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleString("az-AZ", {
+    timeZone: "Asia/Baku",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getHost(url: string | null | undefined) {
+  if (!url) return "Mənbə yoxdur";
+
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+async function fetchWorkspaceData(): Promise<WorkspaceData> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { ...EMPTY_WORKSPACE, errorMessage: "Sessiya tapılmadı. Zəhmət olmasa yenidən daxil olun." };
+  }
+
+  const [profileRes, monitorsRes] = await Promise.all([
+    supabase
+      .from("user_profiles")
+      .select("telegram_chat_id,plan_id")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("user_monitors")
+      .select("id,name,status,created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (monitorsRes.error) {
+    return { ...EMPTY_WORKSPACE, errorMessage: "Monitor məlumatlarını yükləmək mümkün olmadı." };
+  }
+
+  const monitors = (monitorsRes.data || []) as MonitorRow[];
+  const monitorIds = monitors.map((monitor) => monitor.id);
+  const profile = (profileRes.data || null) as ProfileRow | null;
+  let planName: string | null = null;
+  let maxWatches: number | null = null;
+
+  if (profile?.plan_id) {
+    const planRes = await supabase
+      .from("subscription_plans")
+      .select("name,max_watches")
+      .eq("id", profile.plan_id)
+      .maybeSingle();
+
+    if (!planRes.error && planRes.data) {
+      const plan = planRes.data as PlanRow;
+      planName = plan.name || null;
+      maxWatches = plan.max_watches ?? null;
+    }
+  }
+
+  if (monitorIds.length === 0) {
+    return {
+      ...EMPTY_WORKSPACE,
+      telegramConnected: Boolean(profile?.telegram_chat_id),
+      planName,
+      maxWatches,
+    };
+  }
+
+  const [keywordsRes, resultCountRes, matchesRes] = await Promise.all([
+    supabase
+      .from("monitor_keywords")
+      .select("id", { count: "exact", head: true })
+      .in("monitor_id", monitorIds),
+    supabase
+      .from("monitor_matches")
+      .select("id", { count: "exact", head: true })
+      .in("monitor_id", monitorIds),
+    supabase
+      .from("monitor_matches")
+      .select("id,monitor_id,matched_keyword,created_at,user_monitors(name),monitored_items(title,url,published_at,detected_at)")
+      .in("monitor_id", monitorIds)
+      .order("created_at", { ascending: false })
+      .limit(8),
+  ]);
+
+  const recentMatches = (matchesRes.data || []) as unknown as MatchRow[];
+  const matchIds = recentMatches.map((match) => match.id);
+  let alertCount = 0;
+  let recentAlerts: AlertRow[] = [];
+
+  if (matchIds.length > 0) {
+    const [alertCountRes, alertsRes] = await Promise.all([
+      supabase
+        .from("monitor_alerts")
+        .select("id", { count: "exact", head: true })
+        .in("match_id", matchIds),
+      supabase
+        .from("monitor_alerts")
+        .select("id,status,channel,sent_at,monitor_matches(matched_keyword,user_monitors(name),monitored_items(title,url))")
+        .in("match_id", matchIds)
+        .order("sent_at", { ascending: false })
+        .limit(5),
+    ]);
+
+    alertCount = alertCountRes.count || 0;
+    recentAlerts = (alertsRes.data || []) as unknown as AlertRow[];
+  }
+
+  return {
+    monitorCount: monitors.length,
+    activeMonitorCount: monitors.filter((monitor) => monitor.status !== "inactive").length,
+    keywordCount: keywordsRes.count || 0,
+    resultCount: resultCountRes.count || recentMatches.length,
+    alertCount,
+    recentMatches,
+    recentAlerts,
+    monitors,
+    telegramConnected: Boolean(profile?.telegram_chat_id),
+    planName,
+    maxWatches,
+    errorMessage: matchesRes.error ? "Son nəticələri yükləmək mümkün olmadı." : "",
+  };
+}
 
 function SectionShell({
   title,
@@ -62,22 +257,75 @@ function SectionShell({
   );
 }
 
+function SummaryCard({
+  label,
+  value,
+  note,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  note: string;
+  icon: typeof Newspaper;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-slate-500">{label}</p>
+        <Icon className="h-4 w-4 text-slate-500" />
+      </div>
+      <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
+      <p className="mt-1 text-sm text-slate-500">{note}</p>
+    </div>
+  );
+}
+
 function WorkspacePreviewPage() {
+  const { data = EMPTY_WORKSPACE, isLoading, isError, refetch } = useQuery({
+    queryKey: customerQueryKeys.workspace(),
+    queryFn: fetchWorkspaceData,
+    staleTime: 30 * 1000,
+  });
+
+  const hasNoMonitors = data.monitorCount === 0;
+  const latestMatch = data.recentMatches[0];
+  const latestMatchTime = latestMatch?.created_at ? formatDate(latestMatch.created_at) : "-";
+  const planUsage = data.maxWatches ? `${data.monitorCount} / ${data.maxWatches}` : `${data.monitorCount}`;
+  const signals = [
+    data.resultCount > 0
+      ? `${data.resultCount} uyğun media nəticəsi tapılıb.`
+      : "Hələ uyğun media nəticəsi yoxdur.",
+    data.alertCount > 0
+      ? `${data.alertCount} bildiriş qeydi mövcuddur.`
+      : "Bildiriş yaranması üçün əvvəlcə uyğun nəticə tapılmalıdır.",
+    data.activeMonitorCount > 0
+      ? `${data.activeMonitorCount} monitor aktiv izləmədədir.`
+      : "Aktiv monitor yoxdur. Monitor yaradaraq izləməyə başlayın.",
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[360px] items-center justify-center p-6 text-slate-600">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+        <span>İş masası yüklənir...</span>
+      </div>
+    );
+  }
+
   return (
     <main className="mx-auto grid w-full max-w-7xl gap-4 p-4 md:p-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
         <div className="grid gap-5 lg:grid-cols-[1.4fr_0.75fr] lg:items-end">
           <div>
             <div className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-700">
-              Workspace Preview
+              Dinamik iş masası
             </div>
             <p className="mt-4 text-sm font-semibold text-slate-500">Sabahınız xeyir.</p>
             <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-tight text-slate-950 md:text-5xl">
               Bu gün təşkilatınız haqqında nə baş verir?
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-              Bu iş masası gələcək müştəri təcrübəsi üçün ilkin baxışdır. Məqsəd gündəlik nəticələri,
-              bildirişləri və növbəti addımları admin panel hissi yaratmadan bir yerdə göstərməkdir.
+              Monitorlarınızın son vəziyyəti, tapılan nəticələr və bildirişlər burada bir səhifədə toplanır.
             </p>
           </div>
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
@@ -85,29 +333,37 @@ function WorkspacePreviewPage() {
               <CheckCircle2 className="h-4 w-4" />
               Günün statusu
             </div>
-            <p className="mt-3 text-2xl font-black text-slate-950">Normal</p>
-            <p className="mt-2 text-sm text-slate-600">Monitorinq aktivdir. Kritik problem görünmür.</p>
+            <p className="mt-3 text-2xl font-black text-slate-950">
+              {data.activeMonitorCount > 0 ? "Monitorinq aktivdir" : "Başlamağa hazırdır"}
+            </p>
+            <p className="mt-2 text-sm text-slate-600">
+              Son yoxlama: {latestMatchTime}
+            </p>
           </div>
         </div>
       </section>
 
-      <SectionShell title="Bugünkü xülasə" description="Günün əsas göstəriciləri qərarverməyə uyğun qısa formada.">
+      {isError || data.errorMessage ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <div className="font-extrabold">İş masası tam yüklənmədi.</div>
+          <p className="mt-1">{data.errorMessage || "Məlumatları yükləmək mümkün olmadı."}</p>
+          <button type="button" onClick={() => refetch()} className="mt-3 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-bold">
+            Yenidən yoxla
+          </button>
+        </div>
+      ) : null}
+
+      <SectionShell title="Bugünkü xülasə" description="Müştəri hesabınızdan oxunan real monitorinq göstəriciləri.">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {summaryItems.map((item) => (
-            <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-500">{item.label}</p>
-                <item.icon className="h-4 w-4 text-slate-500" />
-              </div>
-              <p className="mt-2 text-2xl font-black text-slate-950">{item.value}</p>
-              <p className="mt-1 text-sm text-slate-500">{item.note}</p>
-            </div>
-          ))}
+          <SummaryCard label="Yeni media materialı" value={data.resultCount} note="Tapılan uyğun nəticələr" icon={Newspaper} />
+          <SummaryCard label="Bildiriş" value={data.alertCount} note="Son nəticələr üzrə bildiriş qeydləri" icon={Bell} />
+          <SummaryCard label="Aktiv monitor" value={data.activeMonitorCount} note={`${data.monitorCount} monitor içindən`} icon={Radio} />
+          <SummaryCard label="Plan istifadəsi" value={planUsage} note={data.planName || "Plan məlumatı aktiv deyil"} icon={ShieldCheck} />
         </div>
       </SectionShell>
 
       <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-        <SectionShell title="Vacib siqnallar" description="Səhər baxışında diqqət tələb edən qısa qeydlər.">
+        <SectionShell title="Vacib siqnallar" description="Cari hesab datasına görə qısa qərar siqnalları.">
           <div className="grid gap-2">
             {signals.map((signal) => (
               <div key={signal} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-sm font-semibold text-slate-700">
@@ -118,51 +374,80 @@ function WorkspacePreviewPage() {
         </SectionShell>
 
         <SectionShell title="Media axını" description="Açar sözlər üzrə tapılmış son media materialları.">
-          <div className="grid gap-2">
-            {feedItems.map((item) => (
-              <article key={item.title} className="rounded-xl border border-slate-200 p-3 transition hover:bg-slate-50">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap gap-2 text-xs font-bold text-slate-500">
-                      <span>{item.source}</span>
-                      <span>{item.keyword}</span>
-                      <span>{item.time}</span>
+          {data.recentMatches.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center">
+              <div className="font-extrabold text-slate-950">{hasNoMonitors ? "Monitor yaradın" : "Hələ nəticə yoxdur"}</div>
+              <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+                {hasNoMonitors
+                  ? "İlk monitoru yaradın və açar söz əlavə edin. Sistem uyğun materialları tapdıqca burada göstərəcək."
+                  : "Sistem mənbələri yoxladıqca uyğun nəticələr bu axında görünəcək."}
+              </p>
+              <Link to="/monitor/monitors" className="mt-3 inline-flex rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold hover:bg-slate-50">
+                Monitorlara keç
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              {data.recentMatches.map((match) => {
+                const item = match.monitored_items;
+                const title = item?.title ? decodeHtml(item.title) : "Başlıq yoxdur";
+
+                return (
+                  <article key={match.id} className="rounded-xl border border-slate-200 p-3 transition hover:bg-slate-50">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap gap-2 text-xs font-bold text-slate-500">
+                          <span>{getHost(item?.url)}</span>
+                          <span>{match.matched_keyword || "Açar söz"}</span>
+                          <span>{formatDate(match.created_at)}</span>
+                        </div>
+                        <h3 className="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-slate-950">{title}</h3>
+                      </div>
+                      {item?.url ? (
+                        <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-white">
+                          Mənbəyə bax
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      ) : null}
                     </div>
-                    <h3 className="mt-1 line-clamp-2 text-sm font-extrabold leading-5 text-slate-950">{item.title}</h3>
-                  </div>
-                  <button type="button" className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-white">
-                    Mənbəyə bax
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </SectionShell>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <SectionShell title="Növbəti ən yaxşı addım" description="İstifadəçinin səhər iş axınında ata biləcəyi ən məntiqli addımlar.">
+        <SectionShell title="Növbəti ən yaxşı addım" description="Cari vəziyyətə uyğun praktik keçidlər.">
           <div className="grid gap-3 md:grid-cols-3">
-            {actions.map((action) => (
+            {[
+              { label: hasNoMonitors ? "İlk monitoru yarat" : "Monitorları idarə et", description: "Mövzuları və açar sözləri yeniləyin", to: "/monitor/monitors" as const },
+              { label: "Nəticələrə bax", description: "Tapılan media materiallarını açın", to: "/monitor/results" as const },
+              { label: "Bildirişləri yoxla", description: "Göndərilən bildiriş tarixçəsinə baxın", to: "/monitor/alerts" as const },
+            ].map((action) => (
               <Link key={action.label} to={action.to} className="rounded-2xl border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50/60">
-                <div className="font-extrabold text-slate-950">{action.label}</div>
+                <div className="flex items-center justify-between gap-2 font-extrabold text-slate-950">
+                  {action.label}
+                  <ArrowRight className="h-4 w-4" />
+                </div>
                 <p className="mt-1 text-sm text-slate-500">{action.description}</p>
               </Link>
             ))}
           </div>
         </SectionShell>
 
-        <SectionShell title="Workspace sağlamlığı" description="Sistemin gündəlik iş üçün hazır olub-olmadığını göstərən sakit status bloku.">
+        <SectionShell title="Workspace sağlamlığı" description="Hesabın iş üçün hazır olub-olmadığını göstərən status bloku.">
           <div className="grid gap-2">
             {[
-              ["Monitorinq", "Aktiv"],
-              ["Bildirişlər", "İşlək"],
-              ["Plan istifadəsi", "Normal"],
+              ["Monitorinq", data.activeMonitorCount > 0 ? "Aktiv" : "Monitor lazımdır"],
+              ["Telegram", data.telegramConnected ? "Aktiv" : "Aktiv deyil"],
+              ["Plan", data.planName || "Məlumat yoxdur"],
+              ["Son nəticə", latestMatchTime],
             ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2">
+              <div key={label} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2">
                 <span className="text-sm text-slate-500">{label}</span>
-                <span className="text-sm font-extrabold text-slate-950">{value}</span>
+                <span className="text-right text-sm font-extrabold text-slate-950">{value}</span>
               </div>
             ))}
           </div>
