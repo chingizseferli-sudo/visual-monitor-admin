@@ -32,6 +32,7 @@ import { Route as authAdminRouteRouteImport } from './routes/(auth)/admin/route'
 import { Route as authMonitorIndexRouteImport } from './routes/(auth)/monitor/index'
 import { Route as authAdminIndexRouteImport } from './routes/(auth)/admin/index'
 import { Route as authMonitorWorkspacePreviewRouteImport } from './routes/(auth)/monitor/workspace-preview'
+import { Route as authMonitorWorkspacePrevieRouteImport } from './routes/(auth)/monitor/workspace-previe'
 import { Route as authMonitorResultsRouteImport } from './routes/(auth)/monitor/results'
 import { Route as authMonitorProfileRouteImport } from './routes/(auth)/monitor/profile'
 import { Route as authMonitorMonitorsRouteImport } from './routes/(auth)/monitor/monitors'
@@ -176,6 +177,12 @@ const authMonitorWorkspacePreviewRoute =
   authMonitorWorkspacePreviewRouteImport.update({
     id: '/workspace-preview',
     path: '/workspace-preview',
+    getParentRoute: () => authMonitorRouteRoute,
+  } as any)
+const authMonitorWorkspacePrevieRoute =
+  authMonitorWorkspacePrevieRouteImport.update({
+    id: '/workspace-previe',
+    path: '/workspace-previe',
     getParentRoute: () => authMonitorRouteRoute,
   } as any)
 const authMonitorResultsRoute = authMonitorResultsRouteImport.update({
@@ -361,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/monitor/monitors': typeof authMonitorMonitorsRoute
   '/monitor/profile': typeof authMonitorProfileRoute
   '/monitor/results': typeof authMonitorResultsRoute
+  '/monitor/workspace-previe': typeof authMonitorWorkspacePrevieRoute
   '/monitor/workspace-preview': typeof authMonitorWorkspacePreviewRoute
   '/admin/': typeof authAdminIndexRoute
   '/monitor/': typeof authMonitorIndexRoute
@@ -410,6 +418,7 @@ export interface FileRoutesByTo {
   '/monitor/monitors': typeof authMonitorMonitorsRoute
   '/monitor/profile': typeof authMonitorProfileRoute
   '/monitor/results': typeof authMonitorResultsRoute
+  '/monitor/workspace-previe': typeof authMonitorWorkspacePrevieRoute
   '/monitor/workspace-preview': typeof authMonitorWorkspacePreviewRoute
   '/admin': typeof authAdminIndexRoute
   '/monitor': typeof authMonitorIndexRoute
@@ -464,6 +473,7 @@ export interface FileRoutesById {
   '/(auth)/monitor/monitors': typeof authMonitorMonitorsRoute
   '/(auth)/monitor/profile': typeof authMonitorProfileRoute
   '/(auth)/monitor/results': typeof authMonitorResultsRoute
+  '/(auth)/monitor/workspace-previe': typeof authMonitorWorkspacePrevieRoute
   '/(auth)/monitor/workspace-preview': typeof authMonitorWorkspacePreviewRoute
   '/(auth)/admin/': typeof authAdminIndexRoute
   '/(auth)/monitor/': typeof authMonitorIndexRoute
@@ -520,6 +530,7 @@ export interface FileRouteTypes {
     | '/monitor/monitors'
     | '/monitor/profile'
     | '/monitor/results'
+    | '/monitor/workspace-previe'
     | '/monitor/workspace-preview'
     | '/admin/'
     | '/monitor/'
@@ -569,6 +580,7 @@ export interface FileRouteTypes {
     | '/monitor/monitors'
     | '/monitor/profile'
     | '/monitor/results'
+    | '/monitor/workspace-previe'
     | '/monitor/workspace-preview'
     | '/admin'
     | '/monitor'
@@ -622,6 +634,7 @@ export interface FileRouteTypes {
     | '/(auth)/monitor/monitors'
     | '/(auth)/monitor/profile'
     | '/(auth)/monitor/results'
+    | '/(auth)/monitor/workspace-previe'
     | '/(auth)/monitor/workspace-preview'
     | '/(auth)/admin/'
     | '/(auth)/monitor/'
@@ -832,6 +845,13 @@ declare module '@tanstack/react-router' {
       path: '/workspace-preview'
       fullPath: '/monitor/workspace-preview'
       preLoaderRoute: typeof authMonitorWorkspacePreviewRouteImport
+      parentRoute: typeof authMonitorRouteRoute
+    }
+    '/(auth)/monitor/workspace-previe': {
+      id: '/(auth)/monitor/workspace-previe'
+      path: '/workspace-previe'
+      fullPath: '/monitor/workspace-previe'
+      preLoaderRoute: typeof authMonitorWorkspacePrevieRouteImport
       parentRoute: typeof authMonitorRouteRoute
     }
     '/(auth)/monitor/results': {
@@ -1153,6 +1173,7 @@ interface authMonitorRouteRouteChildren {
   authMonitorMonitorsRoute: typeof authMonitorMonitorsRoute
   authMonitorProfileRoute: typeof authMonitorProfileRoute
   authMonitorResultsRoute: typeof authMonitorResultsRoute
+  authMonitorWorkspacePrevieRoute: typeof authMonitorWorkspacePrevieRoute
   authMonitorWorkspacePreviewRoute: typeof authMonitorWorkspacePreviewRoute
   authMonitorIndexRoute: typeof authMonitorIndexRoute
 }
@@ -1162,6 +1183,7 @@ const authMonitorRouteRouteChildren: authMonitorRouteRouteChildren = {
   authMonitorMonitorsRoute: authMonitorMonitorsRoute,
   authMonitorProfileRoute: authMonitorProfileRoute,
   authMonitorResultsRoute: authMonitorResultsRoute,
+  authMonitorWorkspacePrevieRoute: authMonitorWorkspacePrevieRoute,
   authMonitorWorkspacePreviewRoute: authMonitorWorkspacePreviewRoute,
   authMonitorIndexRoute: authMonitorIndexRoute,
 }

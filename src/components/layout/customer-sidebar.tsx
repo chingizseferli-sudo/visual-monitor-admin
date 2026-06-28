@@ -43,6 +43,11 @@ const customerNavItems = [
     icon: Radio,
   },
   {
+    title: 'İş masası',
+    url: '/monitor/workspace-preview',
+    icon: ShieldCheck,
+  },
+  {
     title: 'Nəticələr',
     url: '/monitor/results',
     icon: BarChart3,
@@ -70,7 +75,7 @@ function isActivePath(href: string, url: string) {
 }
 
 function getDisplayEmail(session: CurrentProfile | null) {
-  return session?.profile?.email ?? session?.user?.email ?? '—'
+  return session?.profile?.email ?? session?.user?.email ?? '-'
 }
 
 function getDisplayRole(session: CurrentProfile | null) {
