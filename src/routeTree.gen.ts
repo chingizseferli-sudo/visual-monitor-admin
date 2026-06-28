@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NewsIndexRouteImport } from './routes/news/index'
@@ -67,6 +68,11 @@ import { Route as authAdminMonitorMonitorsIndexRouteImport } from './routes/(aut
 import { Route as authAdminNewsIdEditRouteImport } from './routes/(auth)/admin/news/$id/edit'
 import { Route as authAdminMonitorMonitorsMonitorIdRouteImport } from './routes/(auth)/admin/monitor/monitors.$monitorId'
 
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClerkRouteRoute = ClerkRouteRouteImport.update({
   id: '/clerk',
   path: '/clerk',
@@ -364,6 +370,7 @@ const authAdminMonitorMonitorsMonitorIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/clerk': typeof ClerkauthRouteRouteWithChildren
+  '/health': typeof HealthRoute
   '/admin': typeof authAdminRouteRouteWithChildren
   '/monitor': typeof authMonitorRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -421,6 +428,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/clerk': typeof ClerkauthRouteRouteWithChildren
+  '/health': typeof HealthRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/reset-password': typeof authResetPasswordRoute
@@ -473,6 +481,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/clerk': typeof ClerkRouteRouteWithChildren
+  '/health': typeof HealthRoute
   '/(auth)/admin': typeof authAdminRouteRouteWithChildren
   '/(auth)/monitor': typeof authMonitorRouteRouteWithChildren
   '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
@@ -534,6 +543,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/clerk'
+    | '/health'
     | '/admin'
     | '/monitor'
     | '/forgot-password'
@@ -591,6 +601,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/clerk'
+    | '/health'
     | '/forgot-password'
     | '/otp'
     | '/reset-password'
@@ -642,6 +653,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/clerk'
+    | '/health'
     | '/(auth)/admin'
     | '/(auth)/monitor'
     | '/clerk/(auth)'
@@ -702,6 +714,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClerkRouteRoute: typeof ClerkRouteRouteWithChildren
+  HealthRoute: typeof HealthRoute
   authAdminRouteRoute: typeof authAdminRouteRouteWithChildren
   authMonitorRouteRoute: typeof authMonitorRouteRouteWithChildren
   authForgotPasswordRoute: typeof authForgotPasswordRoute
@@ -721,6 +734,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clerk': {
       id: '/clerk'
       path: '/clerk'
@@ -1304,6 +1324,7 @@ const authMonitorRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClerkRouteRoute: ClerkRouteRouteWithChildren,
+  HealthRoute: HealthRoute,
   authAdminRouteRoute: authAdminRouteRouteWithChildren,
   authMonitorRouteRoute: authMonitorRouteRouteWithChildren,
   authForgotPasswordRoute: authForgotPasswordRoute,
