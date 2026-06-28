@@ -582,7 +582,7 @@ function MonitorsPage() {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        <span>Yüklənir...</span>
+        <span>Monitorlar yüklənir...</span>
       </div>
     );
   }
@@ -750,7 +750,7 @@ function MonitorsPage() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Monitor axtar"
+            placeholder="Monitor adı, təsvir və ya status üzrə axtar..."
             className="w-full rounded-lg border bg-background py-2 pl-9 pr-3"
           />
         </div>
@@ -914,7 +914,7 @@ function MonitorsPage() {
 
         {rows.length === 0 && (
           <div className="rounded-lg border bg-card p-8 text-center">
-            <div className="font-medium">Monitor tapılmadı</div>
+            <div className="font-medium">Seçilmiş axtarışa uyğun monitor tapılmadı</div>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
               İlk monitorunuzu yaradın, açar sözləri əlavə edin və nəticələri bu paneldən izləyin.
             </p>

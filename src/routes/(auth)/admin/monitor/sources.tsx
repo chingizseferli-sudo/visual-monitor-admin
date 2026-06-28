@@ -553,7 +553,7 @@ function getSourceQualityLabel(
 
   if (!source.last_checked_at || !data.loaded) {
     return {
-      label: 'Unknown',
+      label: 'Naməlum',
       tone: 'slate',
       reason: !source.last_checked_at
         ? 'hələ yoxlanmayıb'
@@ -576,7 +576,7 @@ function getSourceQualityLabel(
 
   if (health === 'ok' && data.items7d > 0 && data.matches7d > 0) {
     return {
-      label: 'High value',
+      label: 'Yüksək dəyər',
       tone: 'emerald',
       reason: `${data.matches7d} uyğunluq verdi`,
     }
@@ -584,7 +584,7 @@ function getSourceQualityLabel(
 
   if (source.last_success_at && failCount === 0 && data.items7d > 0) {
     return {
-      label: 'Healthy',
+      label: 'Sağlam',
       tone: 'green',
       reason: 'son 7 gündə xəbər oxunub',
     }
@@ -754,7 +754,7 @@ function getRepairCategory(
     return 'Low activity'
   }
 
-  if (!source.last_checked_at || qualityLabel === 'Unknown') return 'Unknown'
+  if (!source.last_checked_at || qualityLabel === 'Naməlum') return 'Naməlum'
 
   return 'Healthy'
 }
@@ -772,7 +772,7 @@ function getRepairSeverity(category: string): RepairSeverity {
   }
 
   if (
-    ['No candidate', 'Better method available', 'Unknown'].includes(category)
+    ['No candidate', 'Better method available', 'Naməlum'].includes(category)
   ) {
     return 'medium'
   }
@@ -780,6 +780,26 @@ function getRepairSeverity(category: string): RepairSeverity {
   return 'low'
 }
 
+function formatRepairCategory(category: string) {
+  if (category === 'Frequent failure') return 'Tez-tez xəta verir'
+  if (category === 'Blocked/rate limited') return 'Bloklanıb və ya limitlənib'
+  if (category === 'Selector problem') return 'Selector problemi'
+  if (category === 'Needs manual selector') return 'Manual selector lazımdır'
+  if (category === 'No candidate') return 'Namizəd xəbər tapılmadı'
+  if (category === 'Old news only') return 'Yalnız köhnə xəbər'
+  if (category === 'Better method available') return 'Daha stabil metod var'
+  if (category === 'Low activity') return 'Az aktiv'
+  if (category === 'Naməlum') return 'Naməlum'
+  if (category === 'Healthy') return 'Sağlam'
+
+  return category
+}
+
+function formatRepairSeverity(severity: RepairSeverity) {
+  if (severity === 'high') return 'Yüksək'
+  if (severity === 'medium') return 'Orta'
+  return 'Aşağı'
+}
 function getRepairRecommendation(category: string) {
   if (category === 'Frequent failure') {
     return 'Bərpa/test et, metod və URL yoxlanmalıdır.'
@@ -813,7 +833,7 @@ function getRepairRecommendation(category: string) {
     return 'Manual selector seç və mənbəni yenidən test et.'
   }
 
-  if (category === 'Unknown') {
+  if (category === 'Naməlum') {
     return 'İlk test və detallara bax.'
   }
 
@@ -1041,7 +1061,7 @@ function SourcesPage() {
 
   async function deleteSource(source: Source) {
     const ok = window.confirm(
-      `"${getSourceTitle(source)}" mənbəsini silmək istəyirsənNo Bu əməliyyat geri qaytarılmır.`
+      `"${getSourceTitle(source)}" mənbəsini silmək istəyirsən? Bu əməliyyat geri qaytarılmır.`
     )
 
     if (!ok) return
@@ -1067,7 +1087,7 @@ function SourcesPage() {
     }
 
     const ok = window.confirm(
-      `${selectedIds.length} mənbəni silmək istəyirsənNo Bu əməliyyat geri qaytarılmır.`
+      `${selectedIds.length} mənbəni silmək istəyirsən? Bu əməliyyat geri qaytarılmır.`
     )
 
     if (!ok) return
@@ -1626,7 +1646,7 @@ function SourcesPage() {
       <div>
         <h1 className='text-2xl font-bold tracking-tight'>Mənbələr</h1>
         <p className='text-muted-foreground'>
-          Discovery botun tapdığı və monitor tərəfindən izlənən saytlar
+          Aşkarlama botunun tapdığı və monitor tərəfindən izlənən saytlar
         </p>
       </div>
 
@@ -1777,7 +1797,7 @@ function SourcesPage() {
           }}
           className='min-w-0 rounded-lg border bg-background px-3 py-2'
         >
-          <option value='all'>Bütün discovery statusları</option>
+          <option value='all'>Bütün aşkarlama statusları</option>
           {DISCOVERY_STATUSES.map((status) => (
             <option key={status} value={status}>
               {status}
@@ -1814,12 +1834,12 @@ function SourcesPage() {
           className='min-w-0 rounded-lg border bg-background px-3 py-2'
         >
           <option value='all'>Bütün keyfiyyətlər</option>
-          <option value='High value'>High value</option>
-          <option value='Healthy'>Healthy</option>
+          <option value='Yüksək dəyər'>Yüksək dəyər</option>
+          <option value='Sağlam'>Sağlam</option>
           <option value='Az aktiv'>Az aktiv</option>
           <option value='Yoxlanmalıdır'>Yoxlanmalıdır</option>
           <option value='Problem'>Problem</option>
-          <option value='Unknown'>Unknown</option>
+          <option value='Naməlum'>Naməlum</option>
         </select>
       </div>
 
@@ -2105,14 +2125,14 @@ function SourcesPage() {
                         {quality.label}
                       </span>
                       <span className='rounded-full border px-2 py-1 text-xs'>
-                        {repair.category}
+                        {formatRepairCategory(repair.category)}
                       </span>
                       <span
                         className={`rounded-full border px-2 py-1 text-xs font-medium ${getSeverityToneClass(
                           repair.severity
                         )}`}
                       >
-                        {repair.severity}
+                        {formatRepairSeverity(repair.severity)}
                       </span>
                     </div>
                     <div className='text-muted-foreground'>
@@ -2174,8 +2194,8 @@ function SourcesPage() {
               <th className='w-[28%] p-3 text-left'>Mənbə</th>
               <th className='w-24 p-3 text-left'>Status</th>
               <th className='w-28 p-3 text-left'>Metod</th>
-              <th className='p-3 text-left'>Discovery</th>
-              <th className='p-3 text-left'>Score</th>
+              <th className='p-3 text-left'>Aşkarlama</th>
+              <th className='p-3 text-left'>Bal</th>
               <th className='w-[16%] p-3 text-left'>Səbəb</th>
               <th className='w-32 p-3 text-left'>Bot nəticəsi</th>
               <th className='w-16 p-3 text-left'>Fail</th>
@@ -2700,7 +2720,7 @@ function SourcesPage() {
                 <h3 className='font-semibold'>Son xəbərlər</h3>
                 <div className='mt-3 grid gap-2'>
                   {detailLoading ? (
-                    <div className='text-sm text-muted-foreground'>Yüklənir...</div>
+                    <div className='text-sm text-muted-foreground'>Məlumat yüklənir...</div>
                   ) : detailItems.length === 0 ? (
                     <div className='text-sm text-muted-foreground'>
                       Son xəbər yoxdur.
@@ -2739,7 +2759,7 @@ function SourcesPage() {
                 <h3 className='font-semibold'>Son uyğunluqlar</h3>
                 <div className='mt-3 grid gap-2'>
                   {detailLoading ? (
-                    <div className='text-sm text-muted-foreground'>Yüklənir...</div>
+                    <div className='text-sm text-muted-foreground'>Məlumat yüklənir...</div>
                   ) : detailMatches.length === 0 ? (
                     <div className='text-sm text-muted-foreground'>
                       Son uyğunluq yoxdur.
@@ -2894,7 +2914,7 @@ function SourcesPage() {
               </label>
 
               <label className='grid gap-2'>
-                <span className='text-sm font-medium'>Discovery status</span>
+                <span className='text-sm font-medium'>Aşkarlama statusu</span>
                 <select
                   value={editing.discovery_status || 'needs_review'}
                   onChange={(e) =>

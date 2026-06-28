@@ -404,7 +404,7 @@ function ResultsPage() {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={8} className="p-8 text-center">
-                  <div className="font-medium">Nəticə tapılmadı</div>
+                  <div className="font-medium">Seçilmiş filtrə uyğun nəticə tapılmadı</div>
                   <div className="mt-1 text-sm text-muted-foreground">
                     Filtrləri dəyişin və ya monitorların yeni uyğun xəbər tapmasını gözləyin.
                   </div>

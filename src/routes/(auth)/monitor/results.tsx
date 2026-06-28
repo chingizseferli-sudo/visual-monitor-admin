@@ -289,7 +289,7 @@ function ResultsPage() {
           className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
-          CSV ixrac
+          CSV ixrac et
         </button>
       </div>
 
@@ -337,7 +337,7 @@ function ResultsPage() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Başlıq, monitor, link və ya açar söz üzrə axtar"
+            placeholder="Başlıq, monitor, link və ya açar söz üzrə axtar..."
             className="w-full rounded-lg border bg-background py-2 pl-9 pr-3"
           />
         </div>
@@ -455,7 +455,7 @@ function ResultsPage() {
 
         {paginatedRows.length === 0 && (
           <div className="rounded-lg border bg-card p-8 text-center">
-            <div className="font-medium">Nəticə tapılmadı</div>
+            <div className="font-medium">Seçilmiş filtrə uyğun nəticə tapılmadı</div>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
               Filtrləri dəyişin, axtarışı təmizləyin və ya monitorlarınıza uyğun yeni xəbər tapılmasını gözləyin.
             </p>

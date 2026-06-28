@@ -489,7 +489,7 @@ function LogsPage() {
           }}
           className={`rounded-lg border px-4 py-2 ${tab !== 'checks' ? 'bg-primary text-primary-foreground' : ''}`}
         >
-          {tab === 'rejected' ? 'Rejectlər' : 'Discovery'}
+          {tab === 'rejected' ? 'Rədd edilənlər' : 'Aşkarlama'}
         </button>
       </div>
 

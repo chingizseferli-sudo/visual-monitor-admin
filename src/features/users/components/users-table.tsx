@@ -101,7 +101,7 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
     >
       <DataTableToolbar
         table={table}
-        searchPlaceholder='Filter users...'
+        searchPlaceholder='İstifadəçi üzrə axtar...'
         searchKey='username'
         filters={[
           {
@@ -116,7 +116,7 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
           },
           {
             columnId: 'role',
-            title: 'Role',
+            title: 'Rol',
             options: roles.map((role) => ({ ...role })),
           },
         ]}

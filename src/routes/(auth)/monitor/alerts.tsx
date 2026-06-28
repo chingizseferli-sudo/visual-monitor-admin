@@ -342,7 +342,7 @@ function AlertsPage() {
           className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
-          CSV ixrac
+          CSV ixrac et
         </button>
       </div>
 
@@ -514,7 +514,7 @@ function AlertsPage() {
 
         {paginatedAlerts.length === 0 && (
           <div className="rounded-lg border bg-card p-8 text-center">
-            <div className="font-medium">Bildiriş tapılmadı</div>
+            <div className="font-medium">Seçilmiş filtrə uyğun bildiriş tapılmadı</div>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
               Filtrləri dəyişin və ya yeni monitor nəticəsinə görə bildiriş yaranmasını gözləyin.
             </p>
