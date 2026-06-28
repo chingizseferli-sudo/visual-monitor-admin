@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Bell, CalendarDays, CreditCard, Loader2, Mail, Radio, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -47,13 +47,13 @@ function formatDate(value: string | null) {
 function getRoleLabel(role: string | null) {
   if (role === "superadmin") return "Superadmin";
   if (role === "admin") return "Admin";
-  if (role === "customer") return "Ä°stifadÉ™Ã§i";
-  return "Ä°stifadÉ™Ã§i";
+  if (role === "customer") return "İstifadəçi";
+  return "İstifadəçi";
 }
 
 function getStatusLabel(status: string | null) {
   if (status === "active") return "Aktiv";
-  if (status === "blocked") return "BloklanÄ±b";
+  if (status === "blocked") return "Bloklanıb";
   return status || "-";
 }
 
@@ -99,7 +99,7 @@ function ProfilePage() {
 
     if (userError || !user) {
       setProfileState(null);
-      setErrorMessage("Sessiya tapÄ±lmadÄ±. ZÉ™hmÉ™t olmasa yenidÉ™n daxil olun.");
+      setErrorMessage("Sessiya tapılmadı. Zəhmət olmasa yenidən daxil olun.");
       setLoading(false);
       return;
     }
@@ -119,7 +119,7 @@ function ProfilePage() {
 
     if (profileResult.error) {
       console.error("Customer profile load error:", profileResult.error);
-      setErrorMessage("Profil mÉ™lumatlarÄ± tam yÃ¼klÉ™nmÉ™di. Æsas hesab mÉ™lumatlarÄ± gÃ¶stÉ™rilir.");
+      setErrorMessage("Profil məlumatları tam yüklənmədi. Əsas hesab məlumatları göstərilir.");
     }
 
     if (monitorCountResult.error) {
@@ -150,7 +150,7 @@ function ProfilePage() {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        <span>Profil mÉ™lumatlarÄ± yÃ¼klÉ™nir...</span>
+        <span>Profil məlumatları yüklənir...</span>
       </div>
     );
   }
@@ -158,9 +158,9 @@ function ProfilePage() {
   if (!profileState) {
     return (
       <div className="grid gap-4 p-6">
-        <h1 className="text-3xl font-bold tracking-tight">Ä°stifadÉ™Ã§i profili vÉ™ ayarlarÄ±</h1>
+        <h1 className="text-3xl font-bold tracking-tight">İstifadəçi profili və ayarları</h1>
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          {errorMessage || "Profil mÉ™lumatlarÄ± yÃ¼klÉ™nmÉ™di."}
+          {errorMessage || "Profil məlumatları yüklənmədi."}
         </div>
       </div>
     );
@@ -171,8 +171,8 @@ function ProfilePage() {
   return (
     <div className="grid gap-5 p-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Ä°stifadÉ™Ã§i profili vÉ™ ayarlarÄ±</h1>
-        <p className="text-muted-foreground">Hesab, plan vÉ™ bildiriÅŸ mÉ™lumatlarÄ±nÄ±z</p>
+        <h1 className="text-3xl font-bold tracking-tight">İstifadəçi profili və ayarları</h1>
+        <p className="text-muted-foreground">Hesab, plan və bildiriş məlumatlarınız</p>
       </div>
 
       {errorMessage ? (
@@ -185,7 +185,7 @@ function ProfilePage() {
         <section className="rounded-lg border bg-card p-5 lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Hesab mÉ™lumatlarÄ±</h2>
+            <h2 className="text-lg font-semibold">Hesab məlumatları</h2>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -225,7 +225,7 @@ function ProfilePage() {
 
           {profileState.telegramChatId ? (
             <div className="rounded-lg border bg-background p-4">
-              <div className="text-sm text-muted-foreground">BaÄŸlantÄ± statusu</div>
+              <div className="text-sm text-muted-foreground">Bağlantı statusu</div>
               <div className="mt-2 font-medium text-emerald-700">Aktivdir</div>
               <div className="mt-1 break-all text-sm text-muted-foreground">
                 Chat ID: {profileState.telegramChatId}
@@ -233,7 +233,7 @@ function ProfilePage() {
             </div>
           ) : (
             <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-              Telegram baÄŸlantÄ±sÄ± ayrÄ±ca aktivlÉ™ÅŸdirilÉ™cÉ™k.
+              Telegram bağlantısı ayrıca aktivləşdiriləcək.
             </div>
           )}
         </section>
@@ -243,7 +243,7 @@ function ProfilePage() {
         <section className="rounded-lg border bg-card p-5 lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Plan vÉ™ limitlÉ™r</h2>
+            <h2 className="text-lg font-semibold">Plan və limitlər</h2>
           </div>
 
           {profileState.planAvailable && profileState.plan ? (
@@ -260,20 +260,20 @@ function ProfilePage() {
                 <div className="text-sm text-muted-foreground">Minimum interval</div>
                 <div className="mt-2 font-medium">
                   {profileState.plan.minimum_interval_minutes
-                    ? `${profileState.plan.minimum_interval_minutes} dÉ™q`
+                    ? `${profileState.plan.minimum_interval_minutes} dəq`
                     : "-"}
                 </div>
               </div>
               <div className="rounded-lg border bg-background p-4">
-                <div className="text-sm text-muted-foreground">TarixÃ§É™</div>
+                <div className="text-sm text-muted-foreground">Tarixçə</div>
                 <div className="mt-2 font-medium">
-                  {profileState.plan.history_days ? `${profileState.plan.history_days} gÃ¼n` : "-"}
+                  {profileState.plan.history_days ? `${profileState.plan.history_days} gün` : "-"}
                 </div>
               </div>
             </div>
           ) : (
             <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-              Plan mÉ™lumatÄ± hÉ™lÉ™ aktiv deyil.
+              Plan məlumatı hələ aktiv deyil.
             </div>
           )}
         </section>
@@ -281,14 +281,14 @@ function ProfilePage() {
         <section className="rounded-lg border bg-card p-5">
           <div className="mb-4 flex items-center gap-2">
             <Radio className="h-5 w-5 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Ä°stifadÉ™</h2>
+            <h2 className="text-lg font-semibold">İstifadə</h2>
           </div>
 
           <div className="rounded-lg border bg-background p-4">
-            <div className="text-sm text-muted-foreground">Cari monitor sayÄ±</div>
+            <div className="text-sm text-muted-foreground">Cari monitor sayı</div>
             <div className="mt-2 text-2xl font-semibold">{profileState.monitorCount}</div>
             <div className="mt-1 text-sm text-muted-foreground">
-              {planLimit ? `${planLimit} limitindÉ™n istifadÉ™ olunur` : "Limit mÉ™lumatÄ± yoxdur"}
+              {planLimit ? `${planLimit} limitindən istifadə olunur` : "Limit məlumatı yoxdur"}
             </div>
           </div>
         </section>

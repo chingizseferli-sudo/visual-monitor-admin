@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Activity,
   Bell,
@@ -91,7 +91,7 @@ async function loadMonitorPlanLimits(userId: string): Promise<PlanLimitState> {
     available: false,
     name: null,
     maxWatches: null,
-    warning: "Plan mÉ™lumatÄ± hÉ™lÉ™ aktiv deyil.",
+    warning: "Plan məlumatı hələ aktiv deyil.",
   };
 
   const profilePlan = await supabase
@@ -159,7 +159,7 @@ function MonitorsPage() {
     available: false,
     name: null,
     maxWatches: null,
-    warning: "Plan mÉ™lumatÄ± hÉ™lÉ™ aktiv deyil.",
+    warning: "Plan məlumatı hələ aktiv deyil.",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -187,7 +187,7 @@ function MonitorsPage() {
 
     if (!user) {
       setLoading(false);
-      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
+      setMessage("İstifadəçi sessiyası tapılmadı.");
       return;
     }
 
@@ -210,7 +210,7 @@ function MonitorsPage() {
     ]);
 
     if (profileRes.error) {
-      console.error("Profil oxuma xÉ™tasÄ±:", profileRes.error);
+      console.error("Profil oxuma xətası:", profileRes.error);
       setProfile(null);
     } else {
       setProfile((profileRes.data || null) as UserProfile | null);
@@ -219,12 +219,12 @@ function MonitorsPage() {
     setPlanLimits(planRes);
 
     if (monitorRes.error) {
-      console.error("Monitor oxuma xÉ™tasÄ±:", monitorRes.error);
+      console.error("Monitor oxuma xətası:", monitorRes.error);
       setMonitors([]);
       setKeywords([]);
       setMatches([]);
       setLoading(false);
-      setMessage(`Monitorlar oxunmadÄ±: ${monitorRes.error.message}`);
+      setMessage(`Monitorlar oxunmadı: ${monitorRes.error.message}`);
       return;
     }
 
@@ -254,15 +254,15 @@ function MonitorsPage() {
     ]);
 
     if (keywordsRes.error) {
-      console.error("Keyword oxuma xÉ™tasÄ±:", keywordsRes.error);
+      console.error("Keyword oxuma xətası:", keywordsRes.error);
       setKeywords([]);
-      setMessage(`AÃ§ar sÃ¶zlÉ™r oxunmadÄ±: ${keywordsRes.error.message}`);
+      setMessage(`Açar sözlər oxunmadı: ${keywordsRes.error.message}`);
     } else {
       setKeywords((keywordsRes.data || []) as Keyword[]);
     }
 
     if (matchesRes.error) {
-      console.error("NÉ™ticÉ™ oxuma xÉ™tasÄ±:", matchesRes.error);
+      console.error("Nəticə oxuma xətası:", matchesRes.error);
       setMatches([]);
     } else {
       setMatches((matchesRes.data || []) as Match[]);
@@ -314,7 +314,7 @@ function MonitorsPage() {
     const incoming = uniqueKeywords(parseKeywordInput(value));
 
     if (incoming.length === 0) {
-      setMessage("AÃ§ar sÃ¶z yazÄ±lmalÄ±dÄ±r.");
+      setMessage("Açar söz yazılmalıdır.");
       return false;
     }
 
@@ -327,7 +327,7 @@ function MonitorsPage() {
     const fresh = incoming.filter((item) => !existing.has(item.toLocaleLowerCase("az-AZ")));
 
     if (fresh.length === 0) {
-      setMessage("Bu aÃ§ar sÃ¶zlÉ™r artÄ±q É™lavÉ™ edilib.");
+      setMessage("Bu açar sözlər artıq əlavə edilib.");
       return false;
     }
 
@@ -343,13 +343,13 @@ function MonitorsPage() {
       .select("id,monitor_id,keyword,match_type,created_at");
 
     if (error) {
-      console.error("AÃ§ar sÃ¶z É™lavÉ™ xÉ™tasÄ±:", error);
-      setMessage(`AÃ§ar sÃ¶z É™lavÉ™ olunmadÄ±: ${error.message}`);
+      console.error("Açar söz əlavə xətası:", error);
+      setMessage(`Açar söz əlavə olunmadı: ${error.message}`);
       return false;
     }
 
     setKeywords((prev) => [...((data || []) as Keyword[]), ...prev]);
-    setMessage(`${fresh.length} aÃ§ar sÃ¶z É™lavÉ™ olundu.`);
+    setMessage(`${fresh.length} açar söz əlavə olundu.`);
     return true;
   }
 
@@ -357,7 +357,7 @@ function MonitorsPage() {
     const name = newMonitorName.trim();
 
     if (!name) {
-      setMessage("Monitor adÄ± yazÄ±lmalÄ±dÄ±r.");
+      setMessage("Monitor adı yazılmalıdır.");
       return;
     }
 
@@ -369,7 +369,7 @@ function MonitorsPage() {
 
     if (!user) {
       setSaving(false);
-      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
+      setMessage("İstifadəçi sessiyası tapılmadı.");
       return;
     }
 
@@ -377,7 +377,7 @@ function MonitorsPage() {
       setSaving(false);
       setMessage(
         planLimits.name
-          ? planLimits.name + " planÄ± Ã¼zrÉ™ monitor limiti dolub: " + monitors.length + "/" + planLimits.maxWatches + "."
+          ? planLimits.name + " planı üzrə monitor limiti dolub: " + monitors.length + "/" + planLimits.maxWatches + "."
           : "Monitor limiti dolub: " + monitors.length + "/" + planLimits.maxWatches + "."
       );
       return;
@@ -393,12 +393,12 @@ function MonitorsPage() {
 
     if (error || !created) {
       setSaving(false);
-      console.error("Monitor yaratma xÉ™tasÄ±:", error);
+      console.error("Monitor yaratma xətası:", error);
       const isLimitError = error?.message?.includes("PLAN_WATCH_LIMIT_REACHED");
       setMessage(
         isLimitError
-          ? "Plan limitiniz dolub. Yeni monitor yaratmaq Ã¼Ã§Ã¼n mÃ¶vcud monitorlardan birini silin vÉ™ ya planÄ±nÄ±zÄ± yÃ¼ksÉ™ldin."
-          : `Monitor yaradÄ±lmadÄ±: ${error?.message || "NamÉ™lum xÉ™ta"}`
+          ? "Plan limitiniz dolub. Yeni monitor yaratmaq üçün mövcud monitorlardan birini silin və ya planınızı yüksəldin."
+          : `Monitor yaradılmadı: ${error?.message || "Naməlum xəta"}`
       );
       return;
     }
@@ -408,7 +408,7 @@ function MonitorsPage() {
     if (newMonitorKeywords.trim()) {
       await addKeywordsToMonitor(created.id, newMonitorKeywords);
     } else {
-      setMessage("Monitor yaradÄ±ldÄ±.");
+      setMessage("Monitor yaradıldı.");
     }
 
     setNewMonitorName("");
@@ -430,20 +430,20 @@ function MonitorsPage() {
   }
 
   async function deleteKeyword(keywordId: string, keyword: string) {
-    const confirmed = window.confirm(`"${keyword}" aÃ§ar sÃ¶zÃ¼ silinsin?`);
+    const confirmed = window.confirm(`"${keyword}" açar sözü silinsin?`);
 
     if (!confirmed) return;
 
     const { error } = await supabase.from("monitor_keywords").delete().eq("id", keywordId);
 
     if (error) {
-      console.error("AÃ§ar sÃ¶z silmÉ™ xÉ™tasÄ±:", error);
-      setMessage(`AÃ§ar sÃ¶z silinmÉ™di: ${error.message}`);
+      console.error("Açar söz silmə xətası:", error);
+      setMessage(`Açar söz silinmədi: ${error.message}`);
       return;
     }
 
     setKeywords((prev) => prev.filter((item) => item.id !== keywordId));
-    setMessage(`AÃ§ar sÃ¶z silindi: ${keyword}`);
+    setMessage(`Açar söz silindi: ${keyword}`);
   }
 
   function startEditMonitor(monitor: Monitor) {
@@ -463,7 +463,7 @@ function MonitorsPage() {
     const name = editMonitorName.trim();
 
     if (!name) {
-      setMessage("Monitor adÄ± yazÄ±lmalÄ±dÄ±r.");
+      setMessage("Monitor adı yazılmalıdır.");
       return;
     }
 
@@ -475,7 +475,7 @@ function MonitorsPage() {
 
     if (!user) {
       setActionMonitorId(null);
-      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
+      setMessage("İstifadəçi sessiyası tapılmadı.");
       return;
     }
 
@@ -495,8 +495,8 @@ function MonitorsPage() {
     setActionMonitorId(null);
 
     if (error || !data) {
-      console.error("Monitor yenilÉ™mÉ™ xÉ™tasÄ±:", error);
-      setMessage(`Monitor yenilÉ™nmÉ™di: ${error?.message || "Ä°cazÉ™ verilmÉ™di"}`);
+      console.error("Monitor yeniləmə xətası:", error);
+      setMessage(`Monitor yenilənmədi: ${error?.message || "İcazə verilmədi"}`);
       return;
     }
 
@@ -504,7 +504,7 @@ function MonitorsPage() {
       prev.map((item) => (item.id === monitor.id ? (data as Monitor) : item))
     );
     cancelEditMonitor();
-    setMessage("Monitor yenilÉ™ndi.");
+    setMessage("Monitor yeniləndi.");
   }
 
   async function deleteMonitor(monitor: Monitor) {
@@ -516,7 +516,7 @@ function MonitorsPage() {
 
     if (!user) {
       setActionMonitorId(null);
-      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
+      setMessage("İstifadəçi sessiyası tapılmadı.");
       return;
     }
 
@@ -529,8 +529,8 @@ function MonitorsPage() {
     setActionMonitorId(null);
 
     if (error) {
-      console.error("Monitor silmÉ™ xÉ™tasÄ±:", error);
-      setMessage(`Monitor silinmÉ™di: ${error.message}`);
+      console.error("Monitor silmə xətası:", error);
+      setMessage(`Monitor silinmədi: ${error.message}`);
       return;
     }
 
@@ -551,7 +551,7 @@ function MonitorsPage() {
 
     if (!user) {
       setActionMonitorId(null);
-      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
+      setMessage("İstifadəçi sessiyası tapılmadı.");
       return;
     }
 
@@ -564,8 +564,8 @@ function MonitorsPage() {
     setActionMonitorId(null);
 
     if (error) {
-      console.error("Monitor status xÉ™tasÄ±:", error);
-      setMessage(`Monitor statusu dÉ™yiÅŸmÉ™di: ${error.message}`);
+      console.error("Monitor status xətası:", error);
+      setMessage(`Monitor statusu dəyişmədi: ${error.message}`);
       return;
     }
 
@@ -581,7 +581,7 @@ function MonitorsPage() {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        <span>YÃ¼klÉ™nir...</span>
+        <span>Yüklənir...</span>
       </div>
     );
   }
@@ -601,8 +601,8 @@ function MonitorsPage() {
       <div className="grid gap-4 p-4 md:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">MonitorlarÄ±m</h1>
-          <p className="text-muted-foreground">AÃ§ar sÃ¶zlÉ™r, Telegram vÉ™ son nÉ™ticÉ™lÉ™r</p>
+          <h1 className="text-2xl font-bold tracking-tight">Monitorlarım</h1>
+          <p className="text-muted-foreground">Açar sözlər, Telegram və son nəticələr</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -614,11 +614,11 @@ function MonitorsPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
               <Send className="h-4 w-4" />
-              Telegram-a qoÅŸ
+              Telegram-a qoş
             </a>
           ) : (
             <span className="rounded-lg border px-4 py-2 text-sm text-muted-foreground">
-              Telegram bot adÄ± aktiv deyil
+              Telegram bot adı aktiv deyil
             </span>
           )}
         </div>
@@ -631,15 +631,15 @@ function MonitorsPage() {
       <div className="grid gap-3 md:grid-cols-4">
         <StatBox label="Monitor" value={stats.monitors} icon={Activity} />
         <StatBox label="Aktiv" value={stats.active} icon={CheckCircle2} />
-        <StatBox label="AÃ§ar sÃ¶z" value={stats.keywords} icon={Hash} />
-        <StatBox label="NÉ™ticÉ™" value={stats.matches} icon={Bell} />
+        <StatBox label="Açar söz" value={stats.keywords} icon={Hash} />
+        <StatBox label="Nəticə" value={stats.matches} icon={Bell} />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[0.85fr_1.15fr]">
         <section className="rounded-lg border bg-card p-3">
           <div className="mb-3">
             <h2 className="text-base font-semibold">Yeni monitor</h2>
-            <p className="text-sm text-muted-foreground">MÃ¶vzu adÄ± vÉ™ aÃ§ar sÃ¶z siyahÄ±sÄ±</p>
+            <p className="text-sm text-muted-foreground">Mövzu adı və açar söz siyahısı</p>
           </div>
 
           <div
@@ -649,9 +649,9 @@ function MonitorsPage() {
                 : "mb-4 rounded-lg border bg-background p-3 text-sm text-muted-foreground"
             }
           >
-            <div className="font-medium text-foreground">Plan istifadÉ™si</div>
+            <div className="font-medium text-foreground">Plan istifadəsi</div>
             <div className="mt-1">
-              Cari monitor sayÄ±: {monitors.length}
+              Cari monitor sayı: {monitors.length}
               {planLimits.maxWatches !== null ? " / " + planLimits.maxWatches : ""}
             </div>
             <div className="mt-1">
@@ -660,7 +660,7 @@ function MonitorsPage() {
                 : planLimits.warning || "Plan limiti aktiv deyil."}
             </div>
             {monitorLimitReached ? (
-              <div className="mt-1 font-medium">Yeni monitor yaratmaq Ã¼Ã§Ã¼n limit boÅŸalmalÄ±dÄ±r.</div>
+              <div className="mt-1 font-medium">Yeni monitor yaratmaq üçün limit boşalmalıdır.</div>
             ) : null}
           </div>
 
@@ -668,21 +668,21 @@ function MonitorsPage() {
             <input
               value={newMonitorName}
               onChange={(event) => setNewMonitorName(event.target.value)}
-              placeholder="Monitor adÄ±"
+              placeholder="Monitor adı"
               className="rounded-lg border bg-background px-3 py-2"
             />
 
             <input
               value={newMonitorDescription}
               onChange={(event) => setNewMonitorDescription(event.target.value)}
-              placeholder="QÄ±sa tÉ™svir"
+              placeholder="Qısa təsvir"
               className="rounded-lg border bg-background px-3 py-2"
             />
 
             <textarea
               value={newMonitorKeywords}
               onChange={(event) => setNewMonitorKeywords(event.target.value)}
-              placeholder="AÃ§ar sÃ¶zlÉ™ri vergÃ¼l vÉ™ ya yeni sÉ™trlÉ™ yaz"
+              placeholder="Açar sözləri vergül və ya yeni sətrlə yaz"
               className="min-h-20 rounded-lg border bg-background px-3 py-2 text-sm"
             />
 
@@ -702,7 +702,7 @@ function MonitorsPage() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold">Telegram statusu</h2>
-              <p className="text-sm text-muted-foreground">BildiriÅŸlÉ™rin gÃ¶ndÉ™rilÉ™cÉ™yi hesab</p>
+              <p className="text-sm text-muted-foreground">Bildirişlərin göndəriləcəyi hesab</p>
             </div>
 
             <span
@@ -712,7 +712,7 @@ function MonitorsPage() {
                   : "rounded-full border px-3 py-1 text-sm text-muted-foreground"
               }
             >
-              {telegramConnected ? "QoÅŸulub" : "QoÅŸulmayÄ±b"}
+              {telegramConnected ? "Qoşulub" : "Qoşulmayıb"}
             </span>
           </div>
 
@@ -720,7 +720,7 @@ function MonitorsPage() {
             <div className="rounded-lg border bg-background p-3 text-sm">
               <div className="text-muted-foreground">Telegram chat</div>
               <div className="mt-1 font-medium">
-                {profile?.telegram_chat_id || "HÉ™lÉ™ aktiv deyil"}
+                {profile?.telegram_chat_id || "Hələ aktiv deyil"}
               </div>
             </div>
 
@@ -732,11 +732,11 @@ function MonitorsPage() {
                 className="inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
               >
                 <Send className="h-4 w-4" />
-                Telegram-a qoÅŸ
+                Telegram-a qoş
               </a>
             ) : (
               <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                VITE_TELEGRAM_BOT_USERNAME env dÉ™yÉ™ri É™lavÉ™ olunmalÄ±dÄ±r.
+                VITE_TELEGRAM_BOT_USERNAME env dəyəri əlavə olunmalıdır.
               </div>
             )}
           </div>
@@ -766,20 +766,20 @@ function MonitorsPage() {
                       value={editMonitorName}
                       onChange={(event) => setEditMonitorName(event.target.value)}
                       className="rounded-lg border bg-background px-3 py-2 text-sm"
-                      placeholder="Monitor adÄ±"
+                      placeholder="Monitor adı"
                     />
                     <input
                       value={editMonitorDescription}
                       onChange={(event) => setEditMonitorDescription(event.target.value)}
                       className="rounded-lg border bg-background px-3 py-2 text-sm"
-                      placeholder="QÄ±sa tÉ™svir"
+                      placeholder="Qısa təsvir"
                     />
                   </div>
                 ) : (
                   <>
                     <h2 className="text-base font-semibold">{monitor.name}</h2>
                     <p className="text-sm text-muted-foreground">
-                      {monitor.description || "TÉ™svir yoxdur"}
+                      {monitor.description || "Təsvir yoxdur"}
                     </p>
                   </>
                 )}
@@ -793,14 +793,14 @@ function MonitorsPage() {
               </div>
 
               <div>
-                <div className="text-xs text-muted-foreground">NÉ™ticÉ™</div>
+                <div className="text-xs text-muted-foreground">Nəticə</div>
                 <div className="mt-1 text-lg font-semibold">{monitor.resultCount}</div>
               </div>
 
               <div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock3 className="h-3.5 w-3.5" />
-                  Son uyÄŸunluq
+                  Son uyğunluq
                 </div>
                 <div className="mt-1 text-sm">{formatDate(monitor.lastMatch)}</div>
               </div>
@@ -822,7 +822,7 @@ function MonitorsPage() {
                       disabled={actionMonitorId === monitor.id}
                       className="rounded-lg border px-2.5 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-60"
                     >
-                      LÉ™ÄŸv et
+                      Ləğv et
                     </button>
                   </>
                 ) : (
@@ -833,7 +833,7 @@ function MonitorsPage() {
                       className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium hover:bg-muted"
                     >
                       <Pencil className="h-4 w-4" />
-                      RedaktÉ™ et
+                      Redaktə et
                     </button>
                     <button
                       type="button"
@@ -866,7 +866,7 @@ function MonitorsPage() {
                       [monitor.id]: event.target.value,
                     }))
                   }
-                  placeholder="Yeni aÃ§ar sÃ¶zlÉ™r"
+                  placeholder="Yeni açar sözlər"
                   className="min-h-14 rounded-lg border bg-background px-3 py-2 text-sm"
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && event.ctrlKey) addKeyword(monitor.id);
@@ -879,13 +879,13 @@ function MonitorsPage() {
                   className="inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
                 >
                   <Plus className="h-4 w-4" />
-                  ÆlavÉ™ et
+                  Əlavə et
                 </button>
               </div>
 
               {monitor.keywords.length === 0 ? (
                 <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
-                  AÃ§ar sÃ¶z yoxdur.
+                  Açar söz yoxdur.
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -913,7 +913,7 @@ function MonitorsPage() {
 
         {rows.length === 0 && (
           <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-            Monitor tapÄ±lmadÄ±. YuxarÄ±dakÄ± formadan ilk monitorunu yarat.
+            Monitor tapılmadı. Yuxarıdakı formadan ilk monitorunu yarat.
           </div>
         )}
       </div>
@@ -927,10 +927,10 @@ function MonitorsPage() {
         title='Monitoru sil'
         desc={
           deleteCandidate
-            ? '"' + deleteCandidate.name + '" monitoru silinsin? Bu É™mÉ™liyyat geri qaytarÄ±lmÄ±r.'
+            ? '"' + deleteCandidate.name + '" monitoru silinsin? Bu əməliyyat geri qaytarılmır.'
             : 'Monitor silinsin?'
         }
-        cancelBtnText='LÉ™ÄŸv et'
+        cancelBtnText='Ləğv et'
         confirmText='Sil'
         destructive
         isLoading={deleteCandidate ? actionMonitorId === deleteCandidate.id : false}

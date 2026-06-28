@@ -1,4 +1,4 @@
-﻿import { Outlet } from '@tanstack/react-router'
+import { Outlet } from '@tanstack/react-router'
 import { LogOut } from 'lucide-react'
 import { getCookie } from '@/lib/cookies'
 import { LayoutProvider } from '@/context/layout-provider'
@@ -28,10 +28,10 @@ export function CustomerLayout() {
                 <SidebarTrigger variant='outline' />
                 <div className='min-w-0'>
                   <div className='truncate text-sm font-semibold'>
-                    Ä°stifadÉ™Ã§i paneli
+                    İstifadəçi paneli
                   </div>
                   <div className='truncate text-xs text-muted-foreground'>
-                    Monitorlar, nÉ™ticÉ™lÉ™r vÉ™ bildiriÅŸlÉ™r
+                    Monitorlar, nəticələr və bildirişlər
                   </div>
                 </div>
               </div>
@@ -43,7 +43,7 @@ export function CustomerLayout() {
                 onClick={() => setOpenSignOut(true)}
               >
                 <LogOut className='size-4' />
-                Ã‡Ä±xÄ±ÅŸ
+                Çıxış
               </Button>
             </header>
             <Outlet />

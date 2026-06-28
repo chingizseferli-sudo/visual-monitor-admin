@@ -195,7 +195,7 @@ describe('UserAuthForm', () => {
     await vi.waitFor(() => {
       expect(mocks.signOut).toHaveBeenCalledOnce()
       expect(mocks.toastError).toHaveBeenCalledWith(
-        'Profil tapÄ±lmadÄ±. AdminlÉ™ É™laqÉ™ saxlayÄ±n.'
+        'Profil tapılmadı. Adminlə əlaqə saxlayın.'
       )
       expect(mocks.navigate).not.toHaveBeenCalled()
     })
@@ -209,7 +209,7 @@ describe('UserAuthForm', () => {
 
     await vi.waitFor(() => {
       expect(mocks.signOut).toHaveBeenCalledOnce()
-      expect(mocks.toastError).toHaveBeenCalledWith('Hesab bloklanÄ±b.')
+      expect(mocks.toastError).toHaveBeenCalledWith('Hesab bloklanıb.')
       expect(mocks.navigate).not.toHaveBeenCalled()
     })
   })

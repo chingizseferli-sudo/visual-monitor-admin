@@ -1,4 +1,4 @@
-﻿import { useNavigate, useLocation } from '@tanstack/react-router'
+import { useNavigate, useLocation } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth-store'
 import { supabase } from '@/lib/supabase'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -34,9 +34,9 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
-      title='Ã‡Ä±xÄ±ÅŸ'
-      desc='Ã‡Ä±xmaq istÉ™diyinizÉ™ É™minsiniz? HesabÄ±nÄ±za yenidÉ™n daxil olmalÄ± olacaqsÄ±nÄ±z.'
-      confirmText='Ã‡Ä±xÄ±ÅŸ'
+      title='Çıxış'
+      desc='Çıxmaq istədiyinizə əminsiniz? Hesabınıza yenidən daxil olmalı olacaqsınız.'
+      confirmText='Çıxış'
       destructive
       handleConfirm={handleSignOut}
       className='sm:max-w-sm'
