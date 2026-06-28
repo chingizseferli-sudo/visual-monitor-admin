@@ -108,18 +108,18 @@ export function CustomerSidebar() {
 
   return (
     <>
-      <Sidebar collapsible='icon'>
+      <Sidebar collapsible='icon' className='border-slate-200 bg-white/95'>
         <SidebarHeader>
-          <div className='flex items-center gap-2 rounded-lg px-2 py-2'>
-            <div className='flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
-              <ShieldCheck className='size-5' />
+          <div className='flex items-center gap-2 rounded-2xl px-2 py-2'>
+            <div className='grid size-10 place-items-center rounded-xl bg-gradient-to-br from-sky-500 to-violet-600 text-sm font-black text-white'>
+              V
             </div>
             <div className='grid min-w-0 group-data-[collapsible=icon]:hidden'>
-              <span className='truncate text-sm font-semibold'>
-                Visual Monitor
+              <span className='truncate text-sm font-extrabold text-slate-950'>
+                Vizual.Az
               </span>
-              <span className='truncate text-xs text-muted-foreground'>
-                İstifadəçi paneli
+              <span className='truncate text-xs text-slate-500'>
+                İstifadəçi workspace-i
               </span>
             </div>
           </div>
@@ -127,7 +127,7 @@ export function CustomerSidebar() {
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Monitorinq</SidebarGroupLabel>
+            <SidebarGroupLabel className='text-slate-500'>Monitorinq</SidebarGroupLabel>
             <SidebarMenu>
               {customerNavItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
@@ -135,6 +135,7 @@ export function CustomerSidebar() {
                     asChild
                     isActive={isActivePath(href, item.url)}
                     tooltip={item.title}
+                    className='rounded-xl'
                   >
                     <Link
                       to={item.url}
@@ -154,19 +155,19 @@ export function CustomerSidebar() {
         </SidebarContent>
 
         <SidebarFooter>
-          <div className='grid gap-2 rounded-lg border bg-background p-2 group-data-[collapsible=icon]:hidden'>
+          <div className='grid gap-2 rounded-2xl border border-slate-200 bg-[#f7f9fd] p-3 group-data-[collapsible=icon]:hidden'>
             <div className='min-w-0'>
-              <div className='truncate text-sm font-medium'>
+              <div className='truncate text-sm font-semibold text-slate-950'>
                 {getDisplayRole(sessionProfile)}
               </div>
-              <div className='truncate text-xs text-muted-foreground'>
+              <div className='truncate text-xs text-slate-500'>
                 {getDisplayEmail(sessionProfile)}
               </div>
             </div>
             <button
               type='button'
               onClick={() => setOpenSignOut(true)}
-              className='inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted'
+              className='inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50'
             >
               <LogOut className='size-4' />
               Çıxış

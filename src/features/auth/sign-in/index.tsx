@@ -15,17 +15,22 @@ export function SignIn() {
 
   return (
     <AuthLayout>
-      <Card className='max-w-sm gap-4'>
-        <CardHeader>
-          <CardTitle className='text-lg tracking-tight'>Daxil ol</CardTitle>
-          <CardDescription>
-            Hesabınıza daxil olmaq üçün email və şifrənizi yazın.{' '}
-            <br className='max-sm:hidden' /> Hesabınız yoxdur?{' '}
+      <Card className='gap-4 rounded-3xl border-slate-200 bg-white/95 shadow-[0_28px_70px_rgba(22,42,84,0.16)]'>
+        <CardHeader className='space-y-3'>
+          <div className='inline-flex w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#1463ff]'>
+            İstifadəçi workspace-i
+          </div>
+          <CardTitle className='text-2xl font-black tracking-tight text-slate-950'>
+            Hesabınıza daxil olun
+          </CardTitle>
+          <CardDescription className='leading-6'>
+            Monitorlarınızı, nəticələri və bildirişləri görmək üçün email və şifrənizi yazın.
+            Hesabınız yoxdur?{' '}
             <Link
-              to='/sign-up'
-              className='text-nowrap underline underline-offset-4 hover:text-primary'
+              to='/contact'
+              className='font-semibold text-[#1463ff] underline underline-offset-4 hover:text-blue-700'
             >
-              Hesab yaradın
+              Demo üçün əlaqə saxlayın
             </Link>
           </CardDescription>
         </CardHeader>
@@ -33,22 +38,8 @@ export function SignIn() {
           <UserAuthForm redirectTo={redirect} />
         </CardContent>
         <CardFooter>
-          <p className='px-8 text-center text-sm text-muted-foreground'>
-            Daxil olmaqla{' '}
-            <a
-              href='/terms'
-              className='underline underline-offset-4 hover:text-primary'
-            >
-              İstifadə şərtləri
-            </a>{' '}
-            və{' '}
-            <a
-              href='/privacy'
-              className='underline underline-offset-4 hover:text-primary'
-            >
-              Məxfilik siyasəti
-            </a>{' '}
-            ilə razılaşırsınız.
+          <p className='px-2 text-center text-xs leading-5 text-muted-foreground'>
+            Giriş mövcud Supabase Auth axını ilə qorunur. Daxil olduqdan sonra rolunuza uyğun sahəyə yönləndiriləcəksiniz.
           </p>
         </CardFooter>
       </Card>
