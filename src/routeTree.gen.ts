@@ -9,7 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SolutionsRouteImport } from './routes/solutions'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as DemoRouteImport } from './routes/demo'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as BlogRouteImport } from './routes/blog'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
@@ -56,9 +62,39 @@ import { Route as authAdminMonitorMonitorsIndexRouteImport } from './routes/(aut
 import { Route as authAdminNewsIdEditRouteImport } from './routes/(auth)/admin/news/$id/edit'
 import { Route as authAdminMonitorMonitorsMonitorIdRouteImport } from './routes/(auth)/admin/monitor/monitors.$monitorId'
 
+const SolutionsRoute = SolutionsRouteImport.update({
+  id: '/solutions',
+  path: '/solutions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -298,7 +334,13 @@ const authAdminMonitorMonitorsMonitorIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/blog': typeof BlogRoute
+  '/contact': typeof ContactRoute
+  '/demo': typeof DemoRoute
   '/health': typeof HealthRoute
+  '/pricing': typeof PricingRoute
+  '/solutions': typeof SolutionsRoute
   '/admin': typeof authAdminRouteRouteWithChildren
   '/monitor': typeof authMonitorRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -346,7 +388,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/blog': typeof BlogRoute
+  '/contact': typeof ContactRoute
+  '/demo': typeof DemoRoute
   '/health': typeof HealthRoute
+  '/pricing': typeof PricingRoute
+  '/solutions': typeof SolutionsRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/reset-password': typeof authResetPasswordRoute
@@ -389,7 +437,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/blog': typeof BlogRoute
+  '/contact': typeof ContactRoute
+  '/demo': typeof DemoRoute
   '/health': typeof HealthRoute
+  '/pricing': typeof PricingRoute
+  '/solutions': typeof SolutionsRoute
   '/(auth)/admin': typeof authAdminRouteRouteWithChildren
   '/(auth)/monitor': typeof authMonitorRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
@@ -439,7 +493,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
+    | '/blog'
+    | '/contact'
+    | '/demo'
     | '/health'
+    | '/pricing'
+    | '/solutions'
     | '/admin'
     | '/monitor'
     | '/forgot-password'
@@ -487,7 +547,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
+    | '/blog'
+    | '/contact'
+    | '/demo'
     | '/health'
+    | '/pricing'
+    | '/solutions'
     | '/forgot-password'
     | '/otp'
     | '/reset-password'
@@ -529,7 +595,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
+    | '/blog'
+    | '/contact'
+    | '/demo'
     | '/health'
+    | '/pricing'
+    | '/solutions'
     | '/(auth)/admin'
     | '/(auth)/monitor'
     | '/(auth)/forgot-password'
@@ -578,7 +650,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  BlogRoute: typeof BlogRoute
+  ContactRoute: typeof ContactRoute
+  DemoRoute: typeof DemoRoute
   HealthRoute: typeof HealthRoute
+  PricingRoute: typeof PricingRoute
+  SolutionsRoute: typeof SolutionsRoute
   authAdminRouteRoute: typeof authAdminRouteRouteWithChildren
   authMonitorRouteRoute: typeof authMonitorRouteRouteWithChildren
   authForgotPasswordRoute: typeof authForgotPasswordRoute
@@ -595,11 +673,53 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/solutions': {
+      id: '/solutions'
+      path: '/solutions'
+      fullPath: '/solutions'
+      preLoaderRoute: typeof SolutionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/health': {
       id: '/health'
       path: '/health'
       fullPath: '/health'
       preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -1051,7 +1171,13 @@ const authMonitorRouteRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  BlogRoute: BlogRoute,
+  ContactRoute: ContactRoute,
+  DemoRoute: DemoRoute,
   HealthRoute: HealthRoute,
+  PricingRoute: PricingRoute,
+  SolutionsRoute: SolutionsRoute,
   authAdminRouteRoute: authAdminRouteRouteWithChildren,
   authMonitorRouteRoute: authMonitorRouteRouteWithChildren,
   authForgotPasswordRoute: authForgotPasswordRoute,
