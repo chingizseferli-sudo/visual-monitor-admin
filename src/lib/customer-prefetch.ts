@@ -180,7 +180,7 @@ async function prefetchResultsData() {
     .limit(300)
 
   if (error) {
-    return { rows: [], errorMessage: 'Nəticələr yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin.' }
+    return { rows: [], errorMessage: 'Nəticələri yükləmək mümkün olmadı.' }
   }
 
   return { rows: data || [], errorMessage: '' }
@@ -213,7 +213,7 @@ async function prefetchAlertsData() {
     .limit(300)
 
   if (error) {
-    return { alerts: [], errorMessage: 'Bildirişlər yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin.' }
+    return { alerts: [], errorMessage: 'Bildirişləri yükləmək mümkün olmadı.' }
   }
 
   return { alerts: data || [], errorMessage: '' }
