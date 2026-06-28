@@ -379,7 +379,7 @@ function MonitorsPage() {
     }
 
     setKeywords((prev) => [...((data || []) as Keyword[]), ...prev]);
-    setMessage(`${fresh.length} açar söz əlavə olundu.`);
+    setMessage(`${fresh.length} açar söz əlavə olundu. Sistem mənbələri mütəmadi yoxlayacaq.`);
     return true;
   }
 
@@ -438,8 +438,9 @@ function MonitorsPage() {
 
     if (newMonitorKeywords.trim()) {
       await addKeywordsToMonitor(created.id, newMonitorKeywords);
+      setMessage("Monitor yaradıldı və açar sözlər əlavə olundu. Sistem mənbələri mütəmadi yoxlayacaq.");
     } else {
-      setMessage("Monitor yaradıldı.");
+      setMessage("Monitor yaradıldı. Növbəti addım: Açar söz əlavə edin.");
     }
 
     setNewMonitorName("");
@@ -637,7 +638,9 @@ function MonitorsPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Monitorlarım</h1>
-          <p className="text-muted-foreground">Açar sözlər, Telegram və son nəticələr</p>
+          <p className="text-muted-foreground">
+            Monitor bir mövzu, təşkilat və ya şəxs üzrə açar sözləri izləyən qaydadır.
+          </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -674,7 +677,18 @@ function MonitorsPage() {
         <section className="rounded-lg border bg-card p-3">
           <div className="mb-3">
             <h2 className="text-base font-semibold">Yeni monitor</h2>
-            <p className="text-sm text-muted-foreground">Mövzu adı və açar söz siyahısı</p>
+            <p className="text-sm text-muted-foreground">
+              Monitor yaradın, açar sözləri əlavə edin və sistem uyğun media materiallarını tapdıqca nəticələri izləyin.
+            </p>
+          </div>
+
+          <div className="mb-4 rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+            <div className="font-medium text-foreground">Necə işləyir?</div>
+            <ol className="mt-2 grid gap-1">
+              <li>1. Monitor üçün aydın ad yazın.</li>
+              <li>2. Bir və ya bir neçə açar söz əlavə edin.</li>
+              <li>3. Sistem mənbələri mütəmadi yoxlayacaq və uyğun nəticələri burada göstərəcək.</li>
+            </ol>
           </div>
 
           <div
@@ -703,23 +717,26 @@ function MonitorsPage() {
             <input
               value={newMonitorName}
               onChange={(event) => setNewMonitorName(event.target.value)}
-              placeholder="Monitor adı"
+              placeholder="Monitor adı, məsələn: ADA Universiteti"
               className="rounded-lg border bg-background px-3 py-2"
             />
 
             <input
               value={newMonitorDescription}
               onChange={(event) => setNewMonitorDescription(event.target.value)}
-              placeholder="Qısa təsvir"
+              placeholder="Qısa təsvir, məsələn: universitetlə bağlı media izləmə"
               className="rounded-lg border bg-background px-3 py-2"
             />
 
             <textarea
               value={newMonitorKeywords}
               onChange={(event) => setNewMonitorKeywords(event.target.value)}
-              placeholder="Açar sözləri vergül və ya yeni sətrlə yaz"
+              placeholder="Açar sözləri vergül və ya yeni sətrlə yaz: universitet adı, şirkət, brend, şəxs, layihə, dəqiq ifadə"
               className="min-h-20 rounded-lg border bg-background px-3 py-2 text-sm"
             />
+            <div className="rounded-lg border bg-background p-3 text-xs text-muted-foreground">
+              Nümunələr: “Bakı Dövlət Universiteti”, “Mərkəzi Bank”, “Azercell”, “rektor adı”, “yeni layihə”, “dəqiq sitat”. Bir neçə açar sözü vergül və ya ayrı sətirlə əlavə edə bilərsiniz.
+            </div>
 
             <button
               type="button"
@@ -901,7 +918,7 @@ function MonitorsPage() {
                       [monitor.id]: event.target.value,
                     }))
                   }
-                  placeholder="Yeni açar sözlər"
+                  placeholder="Yeni açar sözlər: təşkilat, brend, şəxs, layihə və ya dəqiq ifadə"
                   className="min-h-14 rounded-lg border bg-background px-3 py-2 text-sm"
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && event.ctrlKey) addKeyword(monitor.id);
@@ -919,8 +936,14 @@ function MonitorsPage() {
               </div>
 
               {monitor.keywords.length === 0 ? (
-                <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
-                  Açar söz yoxdur.
+                <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                  <div className="font-medium text-foreground">Bu monitorda hələ açar söz yoxdur.</div>
+                  <p className="mt-1">
+                    Nəticələrin gəlməsi üçün ən azı bir açar söz əlavə edin. Sistem mənbələri mütəmadi yoxlayır; uyğun nəticələr aşkar olunduqca burada görünəcək.
+                  </p>
+                  <p className="mt-2 text-xs">
+                    Nümunə: universitet adı, şirkət adı, brend, şəxs, layihə və ya dəqiq ifadə.
+                  </p>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -950,7 +973,7 @@ function MonitorsPage() {
           <div className="rounded-lg border bg-card p-8 text-center">
             <div className="font-medium">Seçilmiş axtarışa uyğun monitor tapılmadı</div>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              İlk monitorunuzu yaradın, açar sözləri əlavə edin və nəticələri bu paneldən izləyin.
+              İlk monitorunuzu yaradın, açar sözləri əlavə edin və nəticələri bu paneldən izləyin. Sistem mənbələri mütəmadi yoxladığı üçün nəticələr bir qədər sonra görünə bilər.
             </p>
           </div>
         )}
