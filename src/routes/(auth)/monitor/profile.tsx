@@ -171,7 +171,7 @@ function ProfilePage() {
   if (!profileState) {
     return (
       <div className="grid gap-4 p-6">
-        <h1 className="text-2xl font-bold tracking-tight">İstifadəçi profili və ayarları</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Profil və ayarlar</h1>
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {errorMessage || "Profil məlumatları yüklənmədi."}
         </div>
@@ -185,9 +185,9 @@ function ProfilePage() {
   return (
     <div className="grid gap-4 p-4 md:p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">İstifadəçi profili və ayarları</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Profil və ayarlar</h1>
         <p className="text-muted-foreground">
-          Hesab məlumatlarınızı, plan limitlərinizi və bildiriş bağlantınızı burada izləyə bilərsiniz.
+          Hesab məlumatları, plan istifadəsi və bildiriş bağlantısı bu bölmədə idarə olunur.
         </p>
       </div>
 

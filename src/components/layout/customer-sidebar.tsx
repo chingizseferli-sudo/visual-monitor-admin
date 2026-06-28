@@ -38,7 +38,7 @@ const customerNavItems = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Monitorlarım',
+    title: 'Monitorlar',
     url: '/monitor/monitors',
     icon: Radio,
   },
@@ -53,7 +53,7 @@ const customerNavItems = [
     icon: Bell,
   },
   {
-    title: 'Profil / Ayarlar',
+    title: 'Profil',
     url: '/monitor/profile',
     icon: UserRound,
   },

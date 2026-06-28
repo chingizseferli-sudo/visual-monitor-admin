@@ -316,9 +316,9 @@ function AlertsPage() {
     return (
       <div className="grid gap-4 p-4 md:p-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Bildirişlərim</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Bildirişlər</h1>
           <p className="text-muted-foreground">
-            Bildirişlər uyğun nəticələr üzrə yaradılan və göndərilən xəbərdarlıq tarixçəsidir.
+            Vacib uyğunluqlar üzrə yaradılan və göndərilən bildirişlərin tarixçəsi burada görünür.
           </p>
         </div>
 
@@ -341,9 +341,9 @@ function AlertsPage() {
     <div className="grid gap-4 p-4 md:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Bildirişlərim</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Bildirişlər</h1>
           <p className="text-muted-foreground">
-            Bildirişlər uyğun nəticələr üzrə yaradılan və göndərilən xəbərdarlıq tarixçəsidir.
+            Vacib uyğunluqlar üzrə yaradılan və göndərilən bildirişlərin tarixçəsi burada görünür.
           </p>
         </div>
         <button

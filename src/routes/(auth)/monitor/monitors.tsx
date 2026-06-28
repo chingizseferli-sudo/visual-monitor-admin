@@ -637,9 +637,9 @@ function MonitorsPage() {
       <div className="grid gap-4 p-4 md:p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Monitorlarım</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Monitorlar</h1>
           <p className="text-muted-foreground">
-            Monitor bir mövzu, təşkilat və ya şəxs üzrə açar sözləri izləyən qaydadır.
+            Monitorlar sistemin izlədiyi mövzu, təşkilat, şəxs və ya brend üzrə açar söz qaydalarıdır.
           </p>
         </div>
 

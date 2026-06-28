@@ -201,7 +201,7 @@ function UserMonitorDashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Monitorinq panelim</h1>
           <p className="text-muted-foreground">
-            Monitorlarınız, açar sözləriniz, tapılan media materialları və göndərilmiş bildirişlər.
+            Cari vəziyyəti görün, növbəti addımı seçin və monitorinq nəticələrinə tez keçin.
           </p>
         </div>
 

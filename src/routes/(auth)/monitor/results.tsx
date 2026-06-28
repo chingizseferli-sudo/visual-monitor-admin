@@ -271,9 +271,9 @@ function ResultsPage() {
     <div className="grid gap-4 p-4 md:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Nəticələrim</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Nəticələr</h1>
           <p className="text-muted-foreground">
-            Nəticələr sistemin açar sözlərinizə əsasən tapdığı media materiallarıdır.
+            Açar sözlərinizə uyğun tapılan media materialları və onların mənbə linkləri burada toplanır.
           </p>
         </div>
         <button
