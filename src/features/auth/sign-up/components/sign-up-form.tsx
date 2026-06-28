@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
+import { getAuthErrorMessage } from '../../auth-messages'
 
 const formSchema = z
   .object({
@@ -63,7 +64,7 @@ export function SignUpForm({
 
     if (error) {
       setIsLoading(false)
-      toast.error(error.message)
+      toast.error(getAuthErrorMessage(error.message))
       return
     }
 
@@ -129,7 +130,7 @@ export function SignUpForm({
         />
         <Button className='mt-2' disabled={isLoading}>
           {isLoading ? <Loader2 className='animate-spin' /> : <UserPlus />}
-          Hesab yarat
+          {isLoading ? 'Hesab yaradılır...' : 'Hesab yarat'}
         </Button>
 
         <div className='relative my-2'>

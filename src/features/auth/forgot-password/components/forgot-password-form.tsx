@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { getAuthErrorMessage } from '../../auth-messages'
 
 const formSchema = z.object({
   email: z.email({
@@ -44,7 +45,7 @@ export function ForgotPasswordForm({
     setIsLoading(false)
 
     if (error) {
-      toast.error(error.message)
+      toast.error(getAuthErrorMessage(error.message))
       return
     }
 
@@ -73,7 +74,7 @@ export function ForgotPasswordForm({
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
-          Davam et
+          {isLoading ? 'Email göndərilir...' : 'Bərpa linki göndər'}
           {isLoading ? <Loader2 className='animate-spin' /> : <ArrowRight />}
         </Button>
       </form>

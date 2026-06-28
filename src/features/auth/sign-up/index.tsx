@@ -19,13 +19,13 @@ export function SignUp() {
             Hesab yaradın
           </CardTitle>
           <CardDescription>
-            Enter your email and password to create an account. <br />
+            Hesab yaratmaq üçün email və şifrənizi yazın. <br />
             Artıq hesabınız var?{' '}
             <Link
               to='/sign-in'
               className='underline underline-offset-4 hover:text-primary'
             >
-              Sign In
+              Daxil olun
             </Link>
           </CardDescription>
         </CardHeader>
@@ -34,21 +34,21 @@ export function SignUp() {
         </CardContent>
         <CardFooter>
           <p className='px-8 text-center text-sm text-muted-foreground'>
-            By creating an account, you agree to our{' '}
+            Hesab yaratmaqla{' '}
             <a
               href='/terms'
               className='underline underline-offset-4 hover:text-primary'
             >
-              Terms of Service
+              İstifadə şərtləri
             </a>{' '}
-            and{' '}
+            və{' '}
             <a
               href='/privacy'
               className='underline underline-offset-4 hover:text-primary'
             >
-              Privacy Policy
-            </a>
-            .
+              Məxfilik siyasəti
+            </a>{' '}
+            ilə razılaşırsınız.
           </p>
         </CardFooter>
       </Card>

@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { PasswordInput } from '@/components/password-input'
+import { getAuthErrorMessage } from '../../auth-messages'
 
 const SUCCESS_MESSAGE = 'Şifrəniz uğurla yeniləndi.'
 
@@ -58,7 +59,7 @@ export function ResetPasswordForm({
     setIsLoading(false)
 
     if (error) {
-      toast.error(error.message)
+      toast.error(getAuthErrorMessage(error.message))
       return
     }
 
@@ -101,7 +102,7 @@ export function ResetPasswordForm({
         />
         <Button className='mt-2' disabled={isLoading}>
           {isLoading ? <Loader2 className='animate-spin' /> : <KeyRound />}
-          Şifrəni yenilə
+          {isLoading ? 'Şifrə yenilənir...' : 'Şifrəni yenilə'}
         </Button>
       </form>
     </Form>

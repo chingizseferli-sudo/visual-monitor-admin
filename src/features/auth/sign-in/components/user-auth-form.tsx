@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
+import { getAuthErrorMessage } from '../../auth-messages'
 
 const formSchema = z.object({
   email: z.email({
@@ -68,7 +69,7 @@ export function UserAuthForm({
 
     if (signInError || !authData.user) {
       setIsLoading(false)
-      toast.error(signInError?.message || 'Giriş mümkün olmadı.')
+      toast.error(getAuthErrorMessage(signInError?.message))
       return
     }
 
@@ -153,7 +154,7 @@ export function UserAuthForm({
         />
         <Button className='mt-2' disabled={isLoading}>
           {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
-          Daxil ol
+          {isLoading ? 'Daxil olunur...' : 'Daxil ol'}
         </Button>
 
         <div className='relative my-2'>

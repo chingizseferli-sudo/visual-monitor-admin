@@ -19,8 +19,7 @@ export function ResetPassword() {
             Şifrəni yenilə
           </CardTitle>
           <CardDescription>
-            Enter and confirm your new password to regain access to your
-            account.
+            Hesabınıza yenidən giriş üçün yeni şifrənizi yazın və təsdiqləyin.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -28,7 +27,7 @@ export function ResetPassword() {
         </CardContent>
         <CardFooter>
           <p className='mx-auto px-8 text-center text-sm text-balance text-muted-foreground'>
-            Remembered your password?{' '}
+            Şifrənizi xatırladınız?{' '}
             <Link
               to='/sign-in'
               className='underline underline-offset-4 hover:text-primary'

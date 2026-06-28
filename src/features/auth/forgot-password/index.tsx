@@ -19,8 +19,8 @@ export function ForgotPassword() {
             Şifrəni unutmusunuz?
           </CardTitle>
           <CardDescription>
-            Enter your registered email and <br /> we will send you a link to
-            reset your password.
+            Qeydiyyatdan keçdiyiniz email ünvanını yazın. <br />
+            Şifrənizi yeniləmək üçün bərpa linki göndərəcəyik.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -28,12 +28,12 @@ export function ForgotPassword() {
         </CardContent>
         <CardFooter>
           <p className='mx-auto px-8 text-center text-sm text-balance text-muted-foreground'>
-            Don't have an account?{' '}
+            Hesabınız yoxdur?{' '}
             <Link
               to='/sign-up'
               className='underline underline-offset-4 hover:text-primary'
             >
-              Sign up
+              Hesab yaradın
             </Link>
             .
           </p>
