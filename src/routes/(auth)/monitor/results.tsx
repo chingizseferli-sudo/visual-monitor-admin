@@ -164,7 +164,7 @@ async function fetchResultsData(): Promise<ResultsData> {
 
   if (error) {
     console.error("User results error:", error);
-    return { rows: [], errorMessage: "Nəticələr yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin." };
+    return { rows: [], errorMessage: "Nəticələri yükləmək mümkün olmadı." };
   }
 
   return { rows: (data || []) as unknown as ResultRow[], errorMessage: "" };
@@ -272,7 +272,9 @@ function ResultsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Nəticələrim</h1>
-          <p className="text-muted-foreground">Monitorlarınıza uyğun tapılan xəbərlər</p>
+          <p className="text-muted-foreground">
+            Nəticələr sistemin açar sözlərinizə əsasən tapdığı media materiallarıdır.
+          </p>
         </div>
         <button
           type="button"
@@ -290,6 +292,14 @@ function ResultsPage() {
           {errorMessage}
         </div>
       ) : null}
+
+      <section className="rounded-lg border bg-card p-4">
+        <h2 className="text-base font-semibold">Nəticələr nə vaxt görünür?</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Sistem mənbələri mütəmadi yoxlayır. Açar sözlərinizə uyğun yeni material tapıldıqda burada görünür.
+          Nəticələrin yaranması mənbələrin nə qədər tez yenilənməsindən asılıdır.
+        </p>
+      </section>
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-lg border bg-card p-4">
@@ -447,9 +457,10 @@ function ResultsPage() {
 
         {paginatedRows.length === 0 && (
           <div className="rounded-lg border bg-card p-8 text-center">
-            <div className="font-medium">Seçilmiş filtrə uyğun nəticə tapılmadı</div>
+            <div className="font-medium">Hələ nəticə yoxdur</div>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              Filtrləri dəyişin, axtarışı təmizləyin və ya monitorlarınıza uyğun yeni xəbər tapılmasını gözləyin.
+              Sistem mənbələri yoxladıqca uyğun media materialları burada görünəcək. Əgər uzun müddət nəticə
+              yaranmırsa, monitorlarınızdakı açar sözləri daha aydın və konkret yazmağı yoxlayın.
             </p>
             <Link to="/monitor/monitors" className="mt-3 inline-flex rounded-lg border px-3 py-2 text-sm hover:bg-muted">
               Monitorlara bax

@@ -317,7 +317,9 @@ function AlertsPage() {
       <div className="grid gap-4 p-4 md:p-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Bildirişlərim</h1>
-          <p className="text-muted-foreground">Monitorlarınıza aid xəbər bildirişləri</p>
+          <p className="text-muted-foreground">
+            Bildirişlər uyğun nəticələr üzrə yaradılan və göndərilən xəbərdarlıq tarixçəsidir.
+          </p>
         </div>
 
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
@@ -340,7 +342,9 @@ function AlertsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Bildirişlərim</h1>
-          <p className="text-muted-foreground">Monitorlarınıza aid xəbər bildirişləri</p>
+          <p className="text-muted-foreground">
+            Bildirişlər uyğun nəticələr üzrə yaradılan və göndərilən xəbərdarlıq tarixçəsidir.
+          </p>
         </div>
         <button
           type="button"
@@ -352,6 +356,14 @@ function AlertsPage() {
           CSV ixrac et
         </button>
       </div>
+
+      <section className="rounded-lg border bg-card p-4">
+        <h2 className="text-base font-semibold">Bildirişlər necə yaranır?</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Uyğun nəticə tapıldıqdan sonra sistem bildiriş yarada və seçilmiş kanala göndərə bilər. Bəzən nəticə
+          paneldə görünə bilər, amma bildiriş hələ göndərilməmiş ola bilər.
+        </p>
+      </section>
 
       <div className="grid gap-3 md:grid-cols-5">
         <div className="rounded-lg border bg-card p-4">
@@ -515,9 +527,10 @@ function AlertsPage() {
 
         {paginatedAlerts.length === 0 && (
           <div className="rounded-lg border bg-card p-8 text-center">
-            <div className="font-medium">Seçilmiş filtrə uyğun bildiriş tapılmadı</div>
+            <div className="font-medium">Hələ bildiriş yoxdur</div>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              Filtrləri dəyişin və ya yeni monitor nəticəsinə görə bildiriş yaranmasını gözləyin.
+              Bildirişlər uyğun nəticə tapıldıqda və göndərildikdə burada görünür. Nəticələr bölməsində material
+              ola bilər, amma bildiriş hələ yaranmamış və ya göndərilməmiş ola bilər.
             </p>
             <Link to="/monitor/results" className="mt-3 inline-flex rounded-lg border px-3 py-2 text-sm hover:bg-muted">
               Nəticələrə bax
