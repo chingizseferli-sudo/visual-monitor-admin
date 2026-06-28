@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation } from '@tanstack/react-router'
 import {
   BarChart3,
@@ -27,6 +28,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { prefetchCustomerRoute } from '@/lib/customer-prefetch'
 import { SignOutDialog } from '@/components/sign-out-dialog'
 
 const customerNavItems = [
@@ -84,6 +86,7 @@ function getDisplayRole(session: CurrentProfile | null) {
 export function CustomerSidebar() {
   const href = useLocation({ select: (location) => location.href })
   const { setOpenMobile } = useSidebar()
+  const queryClient = useQueryClient()
   const [openSignOut, setOpenSignOut] = useDialogState()
   const [sessionProfile, setSessionProfile] = useState<CurrentProfile | null>(
     null
@@ -133,7 +136,13 @@ export function CustomerSidebar() {
                     isActive={isActivePath(href, item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url} onClick={() => setOpenMobile(false)}>
+                    <Link
+                      to={item.url}
+                      preload='intent'
+                      onMouseEnter={() => prefetchCustomerRoute(queryClient, item.url)}
+                      onFocus={() => prefetchCustomerRoute(queryClient, item.url)}
+                      onClick={() => setOpenMobile(false)}
+                    >
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
