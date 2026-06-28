@@ -16,11 +16,11 @@ export function SignUp() {
       <Card className='max-w-sm gap-4'>
         <CardHeader>
           <CardTitle className='text-lg tracking-tight'>
-            Create an account
+            Hesab yaradın
           </CardTitle>
           <CardDescription>
             Enter your email and password to create an account. <br />
-            Already have an account?{' '}
+            Artıq hesabınız var?{' '}
             <Link
               to='/sign-in'
               className='underline underline-offset-4 hover:text-primary'

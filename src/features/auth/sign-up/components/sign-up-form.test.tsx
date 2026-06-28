@@ -4,10 +4,10 @@ import { type Locator, userEvent } from 'vitest/browser'
 import { SignUpForm } from './sign-up-form'
 
 const FORM_MESSAGES = {
-  emailEmpty: 'Please enter your email.',
-  passwordEmpty: 'Please enter your password.',
-  confirmPasswordEmpty: 'Please confirm your password.',
-  passwordMismatch: "Passwords don't match.",
+  emailEmpty: 'Email ünvanınızı daxil edin.',
+  passwordEmpty: 'Şifrənizi daxil edin.',
+  confirmPasswordEmpty: 'Şifrənizi təsdiqləyin.',
+  passwordMismatch: "Şifrələr uyğun gəlmir.",
 } as const
 
 const mocks = vi.hoisted(() => ({
@@ -69,9 +69,9 @@ describe('SignUpForm', () => {
 
     screen = await render(<SignUpForm />)
     emailInput = screen.getByRole('textbox', { name: /^Email$/i })
-    passwordInput = screen.getByLabelText(/^Password$/i)
-    confirmPasswordInput = screen.getByLabelText(/^Confirm Password$/i)
-    submitButton = screen.getByRole('button', { name: /^Create Account$/i })
+    passwordInput = screen.getByLabelText(/^Şifrə$/i)
+    confirmPasswordInput = screen.getByLabelText(/^Şifrəni təsdiqləyin$/i)
+    submitButton = screen.getByRole('button', { name: /^Hesab yarat$/i })
   })
 
   it('renders fields and submit button', async () => {

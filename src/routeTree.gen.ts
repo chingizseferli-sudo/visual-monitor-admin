@@ -34,6 +34,7 @@ import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/c
 import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-up'
 import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
 import { Route as authMonitorResultsRouteImport } from './routes/(auth)/monitor/results'
+import { Route as authMonitorProfileRouteImport } from './routes/(auth)/monitor/profile'
 import { Route as authMonitorMonitorsRouteImport } from './routes/(auth)/monitor/monitors'
 import { Route as authMonitorAlertsRouteImport } from './routes/(auth)/monitor/alerts'
 import { Route as authAdminNewsRouteImport } from './routes/(auth)/admin/news'
@@ -188,6 +189,11 @@ const ClerkauthSignInRoute = ClerkauthSignInRouteImport.update({
 const authMonitorResultsRoute = authMonitorResultsRouteImport.update({
   id: '/results',
   path: '/results',
+  getParentRoute: () => authMonitorRouteRoute,
+} as any)
+const authMonitorProfileRoute = authMonitorProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => authMonitorRouteRoute,
 } as any)
 const authMonitorMonitorsRoute = authMonitorMonitorsRouteImport.update({
@@ -379,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/admin/news': typeof authAdminNewsRouteWithChildren
   '/monitor/alerts': typeof authMonitorAlertsRoute
   '/monitor/monitors': typeof authMonitorMonitorsRoute
+  '/monitor/profile': typeof authMonitorProfileRoute
   '/monitor/results': typeof authMonitorResultsRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
@@ -430,6 +437,7 @@ export interface FileRoutesByTo {
   '/admin/change-monitor': typeof authAdminChangeMonitorRoute
   '/monitor/alerts': typeof authMonitorAlertsRoute
   '/monitor/monitors': typeof authMonitorMonitorsRoute
+  '/monitor/profile': typeof authMonitorProfileRoute
   '/monitor/results': typeof authMonitorResultsRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
@@ -488,6 +496,7 @@ export interface FileRoutesById {
   '/(auth)/admin/news': typeof authAdminNewsRouteWithChildren
   '/(auth)/monitor/alerts': typeof authMonitorAlertsRoute
   '/(auth)/monitor/monitors': typeof authMonitorMonitorsRoute
+  '/(auth)/monitor/profile': typeof authMonitorProfileRoute
   '/(auth)/monitor/results': typeof authMonitorResultsRoute
   '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
   '/clerk/(auth)/sign-up': typeof ClerkauthSignUpRoute
@@ -546,6 +555,7 @@ export interface FileRouteTypes {
     | '/admin/news'
     | '/monitor/alerts'
     | '/monitor/monitors'
+    | '/monitor/profile'
     | '/monitor/results'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
@@ -597,6 +607,7 @@ export interface FileRouteTypes {
     | '/admin/change-monitor'
     | '/monitor/alerts'
     | '/monitor/monitors'
+    | '/monitor/profile'
     | '/monitor/results'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
@@ -654,6 +665,7 @@ export interface FileRouteTypes {
     | '/(auth)/admin/news'
     | '/(auth)/monitor/alerts'
     | '/(auth)/monitor/monitors'
+    | '/(auth)/monitor/profile'
     | '/(auth)/monitor/results'
     | '/clerk/(auth)/sign-in'
     | '/clerk/(auth)/sign-up'
@@ -882,6 +894,13 @@ declare module '@tanstack/react-router' {
       path: '/results'
       fullPath: '/monitor/results'
       preLoaderRoute: typeof authMonitorResultsRouteImport
+      parentRoute: typeof authMonitorRouteRoute
+    }
+    '/(auth)/monitor/profile': {
+      id: '/(auth)/monitor/profile'
+      path: '/profile'
+      fullPath: '/monitor/profile'
+      preLoaderRoute: typeof authMonitorProfileRouteImport
       parentRoute: typeof authMonitorRouteRoute
     }
     '/(auth)/monitor/monitors': {
@@ -1266,6 +1285,7 @@ const authAdminRouteRouteWithChildren = authAdminRouteRoute._addFileChildren(
 interface authMonitorRouteRouteChildren {
   authMonitorAlertsRoute: typeof authMonitorAlertsRoute
   authMonitorMonitorsRoute: typeof authMonitorMonitorsRoute
+  authMonitorProfileRoute: typeof authMonitorProfileRoute
   authMonitorResultsRoute: typeof authMonitorResultsRoute
   authMonitorIndexRoute: typeof authMonitorIndexRoute
 }
@@ -1273,6 +1293,7 @@ interface authMonitorRouteRouteChildren {
 const authMonitorRouteRouteChildren: authMonitorRouteRouteChildren = {
   authMonitorAlertsRoute: authMonitorAlertsRoute,
   authMonitorMonitorsRoute: authMonitorMonitorsRoute,
+  authMonitorProfileRoute: authMonitorProfileRoute,
   authMonitorResultsRoute: authMonitorResultsRoute,
   authMonitorIndexRoute: authMonitorIndexRoute,
 }

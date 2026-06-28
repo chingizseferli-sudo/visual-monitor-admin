@@ -16,7 +16,7 @@ export function ResetPassword() {
       <Card className='max-w-sm gap-4 sm:min-w-sm'>
         <CardHeader>
           <CardTitle className='text-lg tracking-tight'>
-            Reset Password
+            Şifrəni yenilə
           </CardTitle>
           <CardDescription>
             Enter and confirm your new password to regain access to your
@@ -33,7 +33,7 @@ export function ResetPassword() {
               to='/sign-in'
               className='underline underline-offset-4 hover:text-primary'
             >
-              Sign in
+              Daxil olun
             </Link>
             .
           </p>

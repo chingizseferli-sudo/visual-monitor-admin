@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
@@ -49,6 +50,22 @@ function decodeHtml(text: string) {
   const textarea = document.createElement("textarea");
   textarea.innerHTML = text;
   return textarea.value;
+}
+
+function csvCell(value: string | number | null | undefined) {
+  const text = String(value ?? "").replace(/"/g, '""');
+  return `"${text}"`;
+}
+
+function downloadCsv(filename: string, rows: Array<Array<string | number | null | undefined>>) {
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function ResultsPage() {
@@ -205,6 +222,20 @@ function ResultsPage() {
     };
   }, [matches.length, rows, monitors.length]);
 
+  function exportResults() {
+    downloadCsv("admin-monitor-results.csv", [
+      ["Tarix", "Monitor", "A\u00e7ar s\u00f6z", "M\u0259nb\u0259", "Ba\u015fl\u0131q", "URL"],
+      ...rows.map((row) => [
+        formatDate(row.match.created_at),
+        row.monitor?.name || "-",
+        row.match.matched_keyword || "-",
+        row.source?.name || "-",
+        row.item?.title ? decodeHtml(row.item.title) : "X\u0259b\u0259r tap\u0131lmad\u0131",
+        row.item?.url || "",
+      ]),
+    ]);
+  }
+
   useEffect(() => {
     loadData();
   }, []);
@@ -213,11 +244,22 @@ function ResultsPage() {
 
   return (
     <div className="grid gap-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Nəticələr</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Nəticələr</h1>
         <p className="text-muted-foreground">
           Monitor açar sözlərinə uyğun tapılan xəbərlər
         </p>
+        </div>
+        <button
+          type="button"
+          onClick={exportResults}
+          disabled={rows.length === 0}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" />
+          CSV ixrac et
+        </button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

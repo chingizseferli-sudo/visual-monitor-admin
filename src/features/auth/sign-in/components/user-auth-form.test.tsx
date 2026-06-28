@@ -4,9 +4,9 @@ import { type Locator, userEvent } from 'vitest/browser'
 import { UserAuthForm } from './user-auth-form'
 
 const FORM_MESSAGES = {
-  emailEmpty: 'Please enter your email.',
-  passwordEmpty: 'Please enter your password.',
-  passwordShort: 'Password must be at least 7 characters long.',
+  emailEmpty: 'Email ünvanınızı daxil edin.',
+  passwordEmpty: 'Şifrənizi daxil edin.',
+  passwordShort: 'Şifrə ən azı 7 simvol olmalıdır.',
 } as const
 
 const mocks = vi.hoisted(() => ({
@@ -115,9 +115,9 @@ describe('UserAuthForm', () => {
     mocks.signOut.mockResolvedValue({ error: null })
     screen = await render(<UserAuthForm />)
     emailInput = screen.getByRole('textbox', { name: /^Email$/i })
-    passwordInput = screen.getByLabelText(/^Password$/i)
-    signInButton = screen.getByRole('button', { name: /^Sign in$/i })
-    forgotPasswordLink = screen.getByText(/^Forgot password\?$/i)
+    passwordInput = screen.getByLabelText(/^Şifrə$/i)
+    signInButton = screen.getByRole('button', { name: /^Daxil ol$/i })
+    forgotPasswordLink = screen.getByText(/^Şifrəni unutmusunuz\?$/i)
   })
 
   it('renders fields, submit button, and forgot password link', async () => {
@@ -226,8 +226,8 @@ describe('UserAuthForm', () => {
 
     await fillAndSubmit(
       getByRole('textbox', { name: /Email/i }),
-      getByLabelText('Password'),
-      getByRole('button', { name: /Sign in/i })
+      getByLabelText('Şifrə'),
+      getByRole('button', { name: /Daxil ol/i })
     )
 
     await vi.waitFor(() =>
@@ -250,8 +250,8 @@ describe('UserAuthForm', () => {
 
     await fillAndSubmit(
       getByRole('textbox', { name: /Email/i }),
-      getByLabelText('Password'),
-      getByRole('button', { name: /Sign in/i })
+      getByLabelText('Şifrə'),
+      getByRole('button', { name: /Daxil ol/i })
     )
 
     await vi.waitFor(() =>

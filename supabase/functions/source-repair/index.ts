@@ -1,4 +1,7 @@
-﻿const corsHeaders = {
+import { requireAdmin } from "../_shared/auth.ts";
+import { assertSafeUrl, safeFetch } from "../_shared/url_safety.ts";
+
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -27,6 +30,7 @@ type RepairResult = {
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
+const MAX_RESPONSE_BYTES = 1_500_000;
 
 function normalizeUrl(raw: string | null | undefined) {
   const value = String(raw || "").trim();
@@ -54,12 +58,47 @@ function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
+async function readLimitedText(response: Response, limitBytes: number) {
+  if (!response.body) return await response.text();
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    received += value.byteLength;
+    if (received > limitBytes) {
+      try {
+        await reader.cancel();
+      } catch {
+        // Best effort cancellation only.
+      }
+      throw new Error(`Response too large. Maximum allowed size is ${limitBytes} bytes.`);
+    }
+
+    chunks.push(value);
+  }
+
+  const merged = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder("utf-8").decode(merged);
+}
+
 async function fetchText(rawUrl: string, timeoutMs = 12000) {
+  const url = await assertSafeUrl(rawUrl);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(rawUrl, {
-      redirect: "follow",
+    const response = await safeFetch(url, {
       signal: controller.signal,
       headers: {
         "User-Agent": USER_AGENT,
@@ -67,7 +106,7 @@ async function fetchText(rawUrl: string, timeoutMs = 12000) {
         "Accept-Language": "az-AZ,az;q=0.9,en-US;q=0.8",
       },
     });
-    const text = await response.text();
+    const text = await readLimitedText(response, MAX_RESPONSE_BYTES);
     return {
       ok: response.ok,
       status: response.status,
@@ -297,28 +336,30 @@ async function repairSource(source: SourceInput): Promise<RepairResult> {
   };
 }
 
+function json(body: unknown, status = 200) {
+  return Response.json(body, { status, headers: corsHeaders });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  const auth = await requireAdmin(req, json);
+  if (auth instanceof Response) return auth;
 
   try {
     const body = await req.json().catch(() => ({}));
     const source = body.source as SourceInput | undefined;
 
     if (!source?.id) {
-      return Response.json(
-        { error: "source with id required" },
-        { status: 400, headers: corsHeaders },
-      );
+      return json({ error: "source with id required" }, 400);
     }
 
     const result = await repairSource(source);
     return Response.json(result, { headers: corsHeaders });
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 500, headers: corsHeaders },
-    );
+    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });

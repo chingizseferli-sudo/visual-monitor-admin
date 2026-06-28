@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Bell, CheckCircle2, ExternalLink, Loader2, Send } from "lucide-react";
+﻿import { createFileRoute } from "@tanstack/react-router";
+import { Bell, CheckCircle2, Download, ExternalLink, Loader2, Send, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
 
 const PAGE_SIZE = 12;
+const ALL = "all";
 
 type AlertRow = {
   id: string;
@@ -24,6 +25,11 @@ type AlertRow = {
       url: string;
     } | null;
   } | null;
+};
+
+type FilterOption = {
+  value: string;
+  label: string;
 };
 
 function decodeHtml(text: string) {
@@ -53,6 +59,61 @@ function getHost(url: string | undefined) {
   } catch {
     return url;
   }
+}
+
+function getChannelLabel(channel: string | null) {
+  const normalized = channel || "web";
+
+  if (normalized === "telegram") return "Telegram";
+  if (normalized === "email") return "Email";
+  if (normalized === "web") return "Panel";
+  return normalized;
+}
+
+function getStatusInfo(status: string | null) {
+  const normalized = status || "new";
+
+  if (["sent", "delivered", "new"].includes(normalized)) {
+    return {
+      label: normalized === "new" ? "Yeni" : "Göndərildi",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (["pending", "queued"].includes(normalized)) {
+    return {
+      label: "Gözləyir",
+      className: "border-amber-200 bg-amber-50 text-amber-700",
+    };
+  }
+
+  if (["failed", "error"].includes(normalized)) {
+    return {
+      label: "Göndərilmədi",
+      className: "border-destructive/30 bg-destructive/10 text-destructive",
+    };
+  }
+
+  return {
+    label: normalized,
+    className: "border-muted bg-muted/40 text-muted-foreground",
+  };
+}
+
+function csvCell(value: string | number | null | undefined) {
+  const text = String(value ?? "").replace(/"/g, '""');
+  return `"${text}"`;
+}
+
+function downloadCsv(filename: string, rows: Array<Array<string | number | null | undefined>>) {
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function Pagination({
@@ -99,25 +160,40 @@ function Pagination({
 function AlertsPage() {
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [channelFilter, setChannelFilter] = useState(ALL);
+  const [statusFilter, setStatusFilter] = useState(ALL);
+  const [monitorFilter, setMonitorFilter] = useState(ALL);
   const [page, setPage] = useState(1);
 
   async function loadAlerts() {
     setLoading(true);
+    setErrorMessage("");
 
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (userError || !user) {
+      setAlerts([]);
+      setErrorMessage("Sessiya tapılmadı. Zəhmət olmasa yenidən daxil olun.");
       setLoading(false);
       return;
     }
 
-    const { data: monitors } = await supabase
+    const { data: monitors, error: monitorsError } = await supabase
       .from("user_monitors")
       .select("id")
       .eq("user_id", user.id);
+
+    if (monitorsError) {
+      console.error("User monitor load error:", monitorsError);
+      setAlerts([]);
+      setErrorMessage("Monitorlar yüklənmədi. Bir az sonra yenidən yoxlayın.");
+      setLoading(false);
+      return;
+    }
 
     const monitorIds = (monitors || []).map((item) => item.id);
 
@@ -127,10 +203,18 @@ function AlertsPage() {
       return;
     }
 
-    const { data: matches } = await supabase
+    const { data: matches, error: matchesError } = await supabase
       .from("monitor_matches")
       .select("id")
       .in("monitor_id", monitorIds);
+
+    if (matchesError) {
+      console.error("User alert match load error:", matchesError);
+      setAlerts([]);
+      setErrorMessage("Bildiriş məlumatları yüklənmədi.");
+      setLoading(false);
+      return;
+    }
 
     const matchIds = (matches || []).map((item) => item.id);
 
@@ -152,6 +236,7 @@ function AlertsPage() {
     if (error) {
       console.error("User alerts error:", error);
       setAlerts([]);
+      setErrorMessage("Bildirişlər yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin.");
     } else {
       setAlerts((data || []) as AlertRow[]);
     }
@@ -165,12 +250,38 @@ function AlertsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [filter]);
+  }, [channelFilter, statusFilter, monitorFilter]);
+
+  const monitorOptions = useMemo<FilterOption[]>(() => {
+    const map = new Map<string, string>();
+    alerts.forEach((alert) => {
+      const matchId = alert.monitor_matches?.id;
+      const name = alert.monitor_matches?.user_monitors?.name;
+      if (matchId && name) map.set(name, name);
+    });
+    return Array.from(map, ([value, label]) => ({ value, label })).sort((a, b) =>
+      a.label.localeCompare(b.label, "az")
+    );
+  }, [alerts]);
+
+  const statusOptions = useMemo<FilterOption[]>(() => {
+    const values = Array.from(new Set(alerts.map((alert) => alert.status || "new")));
+    return values.sort((a, b) => a.localeCompare(b, "az")).map((value) => ({ value, label: getStatusInfo(value).label }));
+  }, [alerts]);
 
   const filteredAlerts = useMemo(() => {
-    if (filter === "all") return alerts;
-    return alerts.filter((alert) => (alert.channel || "web") === filter);
-  }, [alerts, filter]);
+    return alerts.filter((alert) => {
+      const channel = alert.channel || "web";
+      const status = alert.status || "new";
+      const monitorName = alert.monitor_matches?.user_monitors?.name || "Monitor";
+
+      return (
+        (channelFilter === ALL || channel === channelFilter) &&
+        (statusFilter === ALL || status === statusFilter) &&
+        (monitorFilter === ALL || monitorName === monitorFilter)
+      );
+    });
+  }, [alerts, channelFilter, statusFilter, monitorFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -181,28 +292,66 @@ function AlertsPage() {
       all: alerts.length,
       telegram: alerts.filter((item) => item.channel === "telegram").length,
       web: alerts.filter((item) => (item.channel || "web") === "web").length,
-      sent: alerts.filter((item) => item.status === "sent" || item.status === "new").length,
+      sent: alerts.filter((item) => ["sent", "delivered", "new"].includes(item.status || "new")).length,
+      failed: alerts.filter((item) => ["failed", "error"].includes(item.status || "")).length,
     }),
     [alerts]
   );
+
+  function exportAlerts() {
+    downloadCsv("monitor-alerts.csv", [
+      ["Monitor", "Açar söz", "Başlıq", "Mənbə", "Link", "Kanal", "Status", "Göndərilmə vaxtı"],
+      ...filteredAlerts.map((alert) => {
+        const match = alert.monitor_matches;
+        const item = match?.monitored_items;
+        return [
+          match?.user_monitors?.name || "Monitor",
+          match?.matched_keyword || "-",
+          item?.title ? decodeHtml(item.title) : "Xəbər tapılmadı",
+          getHost(item?.url),
+          item?.url || "",
+          getChannelLabel(alert.channel),
+          getStatusInfo(alert.status).label,
+          formatDate(alert.sent_at),
+        ];
+      }),
+    ]);
+  }
 
   if (loading) {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        <span>Yüklənir...</span>
+        <span>Bildirişlər yüklənir...</span>
       </div>
     );
   }
 
   return (
     <div className="grid gap-5 p-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Bildirişlərim</h1>
-        <p className="text-muted-foreground">Monitorlarınıza aid xəbər bildirişləri</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Bildirişlərim</h1>
+          <p className="text-muted-foreground">Monitorlarınıza aid xəbər bildirişləri</p>
+        </div>
+        <button
+          type="button"
+          onClick={exportAlerts}
+          disabled={filteredAlerts.length === 0}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" />
+          CSV ixrac
+        </button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
+      {errorMessage ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 md:grid-cols-5">
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -236,35 +385,61 @@ function AlertsPage() {
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">Aktiv</div>
+              <div className="text-sm text-muted-foreground">Göndərilən</div>
               <div className="mt-1 text-2xl font-semibold">{stats.sent}</div>
             </div>
             <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
           </div>
         </div>
+
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-muted-foreground">Xətalı</div>
+              <div className="mt-1 text-2xl font-semibold">{stats.failed}</div>
+            </div>
+            <XCircle className="h-5 w-5 text-muted-foreground" />
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
-        <div className="flex flex-wrap gap-2">
-          {[
-            ["all", "Hamısı"],
-            ["telegram", "Telegram"],
-            ["web", "Panel"],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setFilter(value)}
-              className={
-                filter === value
-                  ? "rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-                  : "rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
-              }
-            >
-              {label}
-            </button>
+      <div className="grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-3">
+        <select
+          value={channelFilter}
+          onChange={(event) => setChannelFilter(event.target.value)}
+          className="rounded-lg border bg-background px-3 py-2 text-sm"
+        >
+          <option value={ALL}>Bütün kanallar</option>
+          <option value="telegram">Telegram</option>
+          <option value="web">Panel</option>
+          <option value="email">Email</option>
+        </select>
+
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+          className="rounded-lg border bg-background px-3 py-2 text-sm"
+        >
+          <option value={ALL}>Bütün statuslar</option>
+          {statusOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
           ))}
-        </div>
+        </select>
+
+        <select
+          value={monitorFilter}
+          onChange={(event) => setMonitorFilter(event.target.value)}
+          className="rounded-lg border bg-background px-3 py-2 text-sm"
+        >
+          <option value={ALL}>Bütün monitorlar</option>
+          {monitorOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <Pagination
@@ -274,64 +449,74 @@ function AlertsPage() {
         onPageChange={setPage}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3">
         {paginatedAlerts.map((alert) => {
           const match = alert.monitor_matches;
           const item = match?.monitored_items;
           const title = item ? decodeHtml(item.title) : "Xəbər tapılmadı";
+          const statusInfo = getStatusInfo(alert.status);
 
           return (
-            <article key={alert.id} className="flex aspect-square min-h-64 flex-col overflow-hidden rounded-lg border bg-card p-4">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border px-2 py-1 text-xs">
-                  {match?.user_monitors?.name || "Monitor"}
-                </span>
-                <span className="rounded-full border px-2 py-1 text-xs">
-                  {match?.matched_keyword || "-"}
-                </span>
-                <span className="rounded-full border px-2 py-1 text-xs">
-                  {alert.channel || "web"}
-                </span>
+            <article key={alert.id} className="rounded-lg border bg-card p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border px-2 py-1 text-xs">
+                      {match?.user_monitors?.name || "Monitor"}
+                    </span>
+                    <span className="rounded-full border px-2 py-1 text-xs">
+                      {match?.matched_keyword || "Açar söz yoxdur"}
+                    </span>
+                    <span className="rounded-full border px-2 py-1 text-xs">
+                      {getChannelLabel(alert.channel)}
+                    </span>
+                    <span className={`rounded-full border px-2 py-1 text-xs ${statusInfo.className}`}>
+                      {statusInfo.label}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground">{getHost(item?.url)}</div>
+
+                  {item ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 line-clamp-2 text-base font-semibold leading-snug hover:underline"
+                    >
+                      {title}
+                    </a>
+                  ) : (
+                    <div className="mt-2 text-base font-semibold text-muted-foreground">{title}</div>
+                  )}
+
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    Göndərilmə vaxtı: {formatDate(alert.sent_at)}
+                  </div>
+                </div>
+
+                {item ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
+                  >
+                    Aç
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                ) : null}
               </div>
-
-              <div className="text-xs text-muted-foreground">{getHost(item?.url)}</div>
-
-              {item ? (
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 line-clamp-4 text-base font-semibold leading-snug hover:underline"
-                >
-                  {title}
-                </a>
-              ) : (
-                <div className="mt-3 text-base font-semibold text-muted-foreground">{title}</div>
-              )}
-
-              <div className="mt-auto grid gap-1 pt-4 text-sm text-muted-foreground">
-                <span>Status: {alert.status || "new"}</span>
-                <span>Vaxt: {formatDate(alert.sent_at)}</span>
-              </div>
-
-              {item ? (
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
-                >
-                  Aç
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              ) : null}
             </article>
           );
         })}
 
         {paginatedAlerts.length === 0 && (
-          <div className="rounded-lg border bg-card p-10 text-center text-muted-foreground md:col-span-2 xl:col-span-3">
-            Bildiriş tapılmadı.
+          <div className="rounded-lg border bg-card p-10 text-center">
+            <div className="font-medium">Bildiriş tapılmadı.</div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Filtrləri dəyişin və ya yeni monitor nəticəsi yaranmasını gözləyin.
+            </p>
           </div>
         )}
       </div>

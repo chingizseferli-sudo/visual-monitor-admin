@@ -4,9 +4,9 @@ import { type Locator, userEvent } from 'vitest/browser'
 import { ResetPasswordForm } from './reset-password-form'
 
 const FORM_MESSAGES = {
-  passwordEmpty: 'Please enter your password.',
-  confirmPasswordEmpty: 'Please confirm your password.',
-  passwordMismatch: "Passwords don't match.",
+  passwordEmpty: 'Şifrənizi daxil edin.',
+  confirmPasswordEmpty: 'Şifrənizi təsdiqləyin.',
+  passwordMismatch: "Şifrələr uyğun gəlmir.",
 } as const
 
 const mocks = vi.hoisted(() => ({
@@ -61,9 +61,9 @@ describe('ResetPasswordForm', () => {
     })
 
     screen = await render(<ResetPasswordForm />)
-    passwordInput = screen.getByLabelText(/^New Password$/i)
-    confirmPasswordInput = screen.getByLabelText(/^Confirm Password$/i)
-    submitButton = screen.getByRole('button', { name: /^Update Password$/i })
+    passwordInput = screen.getByLabelText(/^Yeni şifrə$/i)
+    confirmPasswordInput = screen.getByLabelText(/^Şifrəni təsdiqləyin$/i)
+    submitButton = screen.getByRole('button', { name: /^Şifrəni yenilə$/i })
   })
 
   it('renders fields and submit button', async () => {

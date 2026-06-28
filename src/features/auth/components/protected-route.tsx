@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   CurrentProfile,
@@ -58,7 +58,7 @@ export function ProtectedRoute({
   }, [allowedRoles, isChecking, navigate, sessionProfile, unauthorizedRedirect])
 
   if (isChecking || !sessionProfile) {
-    return <div className='p-6 text-sm text-muted-foreground'>Yüklənir...</div>
+    return <div className='p-6 text-sm text-muted-foreground'>YÃ¼klÉ™nir...</div>
   }
 
   if (
@@ -67,13 +67,13 @@ export function ProtectedRoute({
     sessionProfile.error ||
     !sessionProfile.profile
   ) {
-    return <div className='p-6 text-sm text-muted-foreground'>Yüklənir...</div>
+    return <div className='p-6 text-sm text-muted-foreground'>YÃ¼klÉ™nir...</div>
   }
 
   const role = sessionProfile.profile.role ?? 'customer'
 
   if (!allowedRoles.includes(role)) {
-    return <div className='p-6 text-sm text-muted-foreground'>Yüklənir...</div>
+    return <div className='p-6 text-sm text-muted-foreground'>YÃ¼klÉ™nir...</div>
   }
 
   return children

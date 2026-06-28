@@ -1,4 +1,6 @@
 ﻿import { DOMParser } from "https://deno.land/x/deno_dom/deno-dom-wasm.ts";
+import { requireAuthenticated } from "../_shared/auth.ts";
+import { assertSafeUrl, safeFetch } from "../_shared/url_safety.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,19 +34,6 @@ function fail(error: string, status = 0, httpStatus = 200) {
     },
     httpStatus,
   );
-}
-
-function normalizeUrl(raw: unknown) {
-  const value = String(raw || "").trim();
-  if (!value) return null;
-
-  try {
-    const url = new URL(value);
-    if (!["http:", "https:"].includes(url.protocol)) return null;
-    return url.toString();
-  } catch {
-    return null;
-  }
 }
 
 function normalizeText(text: string) {
@@ -95,13 +84,12 @@ async function readLimitedText(response: Response, limitBytes: number) {
   return new TextDecoder("utf-8").decode(merged);
 }
 
-async function fetchHtml(url: string) {
+async function fetchHtml(url: URL) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
-      redirect: "follow",
+    const response = await safeFetch(url, {
       signal: controller.signal,
       headers: {
         "User-Agent": USER_AGENT,
@@ -117,7 +105,7 @@ async function fetchHtml(url: string) {
     return {
       ok: response.ok,
       status: response.status,
-      finalUrl: response.url || url,
+      finalUrl: response.url || url.toString(),
       contentType,
       text,
     };
@@ -154,12 +142,20 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return fail("Method not allowed", 0, 405);
 
+  const auth = await requireAuthenticated(req, json);
+  if (auth instanceof Response) return auth;
+
   try {
     const body = await req.json().catch(() => ({}));
-    const url = normalizeUrl(body.url);
     const selector = String(body.selector || "").trim();
 
-    if (!url) return fail("URL tələb olunur və http:// və ya https:// ilə başlamalıdır.", 0, 400);
+    let url: URL;
+    try {
+      url = await assertSafeUrl(body.url);
+    } catch {
+      return fail("URL tələb olunur və təhlükəsiz http:// və ya https:// ünvanı olmalıdır.", 0, 400);
+    }
+
     if (!selector) return fail("CSS selector tələb olunur.", 0, 400);
 
     const fetched = await fetchHtml(url);

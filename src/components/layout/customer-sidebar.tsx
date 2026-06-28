@@ -7,6 +7,7 @@ import {
   LogOut,
   Radio,
   ShieldCheck,
+  UserRound,
 } from 'lucide-react'
 import useDialogState from '@/hooks/use-dialog-state'
 import {
@@ -49,6 +50,11 @@ const customerNavItems = [
     url: '/monitor/alerts',
     icon: Bell,
   },
+  {
+    title: 'Profil / Ayarlar',
+    url: '/monitor/profile',
+    icon: UserRound,
+  },
 ] as const
 
 function isActivePath(href: string, url: string) {
@@ -70,7 +76,7 @@ function getDisplayRole(session: CurrentProfile | null) {
 
   if (role === 'superadmin') return 'Superadmin'
   if (role === 'admin') return 'Admin'
-  if (role === 'customer') return 'Müştəri'
+  if (role === 'customer') return 'İstifadəçi'
 
   return 'İstifadəçi'
 }

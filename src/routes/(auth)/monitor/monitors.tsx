@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import {
   Activity,
   Bell,
@@ -7,6 +7,7 @@ import {
   Hash,
   Loader2,
   Plus,
+  Pencil,
   Search,
   Send,
   Trash2,
@@ -14,6 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type Monitor = {
   id: string;
@@ -41,6 +43,13 @@ type Match = {
 type UserProfile = {
   user_id: string;
   telegram_chat_id: string | null;
+};
+
+type PlanLimitState = {
+  available: boolean;
+  name: string | null;
+  maxWatches: number | null;
+  warning: string | null;
 };
 
 function formatDate(value: string | null) {
@@ -77,6 +86,49 @@ function uniqueKeywords(items: string[]) {
   return result;
 }
 
+async function loadMonitorPlanLimits(userId: string): Promise<PlanLimitState> {
+  const unavailable = {
+    available: false,
+    name: null,
+    maxWatches: null,
+    warning: "Plan mÉ™lumatÄ± hÉ™lÉ™ aktiv deyil.",
+  };
+
+  const profilePlan = await supabase
+    .from("user_profiles")
+    .select("plan_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const planId = (profilePlan.data as { plan_id?: string | null } | null)?.plan_id;
+
+  if (profilePlan.error || !planId) {
+    return unavailable;
+  }
+
+  const planResult = await supabase
+    .from("subscription_plans")
+    .select("name,max_watches")
+    .eq("id", planId)
+    .maybeSingle();
+
+  if (planResult.error || !planResult.data) {
+    return unavailable;
+  }
+
+  const plan = planResult.data as {
+    name?: string | null;
+    max_watches?: number | null;
+  };
+
+  return {
+    available: true,
+    name: plan.name || null,
+    maxWatches: plan.max_watches ?? null,
+    warning: null,
+  };
+}
+
 function StatBox({
   label,
   value,
@@ -87,23 +139,28 @@ function StatBox({
   icon: typeof Activity;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="rounded-lg border bg-card p-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm text-muted-foreground">{label}</div>
-          <div className="mt-1 text-2xl font-semibold">{value}</div>
+          <div className="mt-1 text-lg font-semibold">{value}</div>
         </div>
         <Icon className="h-5 w-5 text-muted-foreground" />
       </div>
     </div>
   );
 }
-
 function MonitorsPage() {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [planLimits, setPlanLimits] = useState<PlanLimitState>({
+    available: false,
+    name: null,
+    maxWatches: null,
+    warning: "Plan mÉ™lumatÄ± hÉ™lÉ™ aktiv deyil.",
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
@@ -113,6 +170,11 @@ function MonitorsPage() {
   const [newMonitorDescription, setNewMonitorDescription] = useState("");
   const [newMonitorKeywords, setNewMonitorKeywords] = useState("");
   const [keywordDrafts, setKeywordDrafts] = useState<Record<string, string>>({});
+  const [editingMonitorId, setEditingMonitorId] = useState<string | null>(null);
+  const [editMonitorName, setEditMonitorName] = useState("");
+  const [editMonitorDescription, setEditMonitorDescription] = useState("");
+  const [actionMonitorId, setActionMonitorId] = useState<string | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<Monitor | null>(null);
   const telegramBotUsername = String(import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "").replace(/^@/, "");
 
   async function loadData() {
@@ -125,13 +187,13 @@ function MonitorsPage() {
 
     if (!user) {
       setLoading(false);
-      setMessage("İstifadəçi sessiyası tapılmadı.");
+      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
       return;
     }
 
     setCurrentUserId(user.id);
 
-    const [profileRes, monitorRes] = await Promise.all([
+    const [profileRes, monitorRes, planRes] = await Promise.all([
       supabase
         .from("user_profiles")
         .select("user_id,telegram_chat_id")
@@ -143,22 +205,26 @@ function MonitorsPage() {
         .select("id,name,description,status,telegram_chat_id,created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
+
+      loadMonitorPlanLimits(user.id),
     ]);
 
     if (profileRes.error) {
-      console.error("Profil oxuma xətası:", profileRes.error);
+      console.error("Profil oxuma xÉ™tasÄ±:", profileRes.error);
       setProfile(null);
     } else {
       setProfile((profileRes.data || null) as UserProfile | null);
     }
 
+    setPlanLimits(planRes);
+
     if (monitorRes.error) {
-      console.error("Monitor oxuma xətası:", monitorRes.error);
+      console.error("Monitor oxuma xÉ™tasÄ±:", monitorRes.error);
       setMonitors([]);
       setKeywords([]);
       setMatches([]);
       setLoading(false);
-      setMessage(`Monitorlar oxunmadı: ${monitorRes.error.message}`);
+      setMessage(`Monitorlar oxunmadÄ±: ${monitorRes.error.message}`);
       return;
     }
 
@@ -188,15 +254,15 @@ function MonitorsPage() {
     ]);
 
     if (keywordsRes.error) {
-      console.error("Keyword oxuma xətası:", keywordsRes.error);
+      console.error("Keyword oxuma xÉ™tasÄ±:", keywordsRes.error);
       setKeywords([]);
-      setMessage(`Açar sözlər oxunmadı: ${keywordsRes.error.message}`);
+      setMessage(`AÃ§ar sÃ¶zlÉ™r oxunmadÄ±: ${keywordsRes.error.message}`);
     } else {
       setKeywords((keywordsRes.data || []) as Keyword[]);
     }
 
     if (matchesRes.error) {
-      console.error("Nəticə oxuma xətası:", matchesRes.error);
+      console.error("NÉ™ticÉ™ oxuma xÉ™tasÄ±:", matchesRes.error);
       setMatches([]);
     } else {
       setMatches((matchesRes.data || []) as Match[]);
@@ -248,7 +314,7 @@ function MonitorsPage() {
     const incoming = uniqueKeywords(parseKeywordInput(value));
 
     if (incoming.length === 0) {
-      setMessage("Açar söz yazılmalıdır.");
+      setMessage("AÃ§ar sÃ¶z yazÄ±lmalÄ±dÄ±r.");
       return false;
     }
 
@@ -261,7 +327,7 @@ function MonitorsPage() {
     const fresh = incoming.filter((item) => !existing.has(item.toLocaleLowerCase("az-AZ")));
 
     if (fresh.length === 0) {
-      setMessage("Bu açar sözlər artıq əlavə edilib.");
+      setMessage("Bu aÃ§ar sÃ¶zlÉ™r artÄ±q É™lavÉ™ edilib.");
       return false;
     }
 
@@ -277,13 +343,13 @@ function MonitorsPage() {
       .select("id,monitor_id,keyword,match_type,created_at");
 
     if (error) {
-      console.error("Açar söz əlavə xətası:", error);
-      setMessage(`Açar söz əlavə olunmadı: ${error.message}`);
+      console.error("AÃ§ar sÃ¶z É™lavÉ™ xÉ™tasÄ±:", error);
+      setMessage(`AÃ§ar sÃ¶z É™lavÉ™ olunmadÄ±: ${error.message}`);
       return false;
     }
 
     setKeywords((prev) => [...((data || []) as Keyword[]), ...prev]);
-    setMessage(`${fresh.length} açar söz əlavə olundu.`);
+    setMessage(`${fresh.length} aÃ§ar sÃ¶z É™lavÉ™ olundu.`);
     return true;
   }
 
@@ -291,7 +357,7 @@ function MonitorsPage() {
     const name = newMonitorName.trim();
 
     if (!name) {
-      setMessage("Monitor adı yazılmalıdır.");
+      setMessage("Monitor adÄ± yazÄ±lmalÄ±dÄ±r.");
       return;
     }
 
@@ -303,36 +369,46 @@ function MonitorsPage() {
 
     if (!user) {
       setSaving(false);
-      setMessage("İstifadəçi sessiyası tapılmadı.");
+      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
       return;
     }
 
-    const { data, error } = await supabase
-      .from("user_monitors")
-      .insert({
-        user_id: user.id,
-        name,
-        description: newMonitorDescription.trim() || null,
-        status: "active",
-        notify_telegram: true,
-      })
-      .select("id,name,description,status,telegram_chat_id,created_at")
-      .single();
-
-    if (error || !data) {
+    if (planLimits.available && planLimits.maxWatches !== null && monitors.length >= planLimits.maxWatches) {
       setSaving(false);
-      console.error("Monitor yaratma xətası:", error);
-      setMessage(`Monitor yaradılmadı: ${error?.message || "Naməlum xəta"}`);
+      setMessage(
+        planLimits.name
+          ? planLimits.name + " planÄ± Ã¼zrÉ™ monitor limiti dolub: " + monitors.length + "/" + planLimits.maxWatches + "."
+          : "Monitor limiti dolub: " + monitors.length + "/" + planLimits.maxWatches + "."
+      );
       return;
     }
 
-    const created = data as Monitor;
+    const { data, error } = await supabase.rpc("create_user_monitor_with_limit", {
+      p_name: name,
+      p_description: newMonitorDescription.trim() || null,
+      p_notify_telegram: true,
+    });
+
+    const created = (Array.isArray(data) ? data[0] : data) as Monitor | null;
+
+    if (error || !created) {
+      setSaving(false);
+      console.error("Monitor yaratma xÉ™tasÄ±:", error);
+      const isLimitError = error?.message?.includes("PLAN_WATCH_LIMIT_REACHED");
+      setMessage(
+        isLimitError
+          ? "Plan limitiniz dolub. Yeni monitor yaratmaq Ã¼Ã§Ã¼n mÃ¶vcud monitorlardan birini silin vÉ™ ya planÄ±nÄ±zÄ± yÃ¼ksÉ™ldin."
+          : `Monitor yaradÄ±lmadÄ±: ${error?.message || "NamÉ™lum xÉ™ta"}`
+      );
+      return;
+    }
+
     setMonitors((prev) => [created, ...prev]);
 
     if (newMonitorKeywords.trim()) {
       await addKeywordsToMonitor(created.id, newMonitorKeywords);
     } else {
-      setMessage("Monitor yaradıldı.");
+      setMessage("Monitor yaradÄ±ldÄ±.");
     }
 
     setNewMonitorName("");
@@ -354,33 +430,142 @@ function MonitorsPage() {
   }
 
   async function deleteKeyword(keywordId: string, keyword: string) {
-    const confirmed = window.confirm(`"${keyword}" açar sözü silinsin?`);
+    const confirmed = window.confirm(`"${keyword}" aÃ§ar sÃ¶zÃ¼ silinsin?`);
 
     if (!confirmed) return;
 
     const { error } = await supabase.from("monitor_keywords").delete().eq("id", keywordId);
 
     if (error) {
-      console.error("Açar söz silmə xətası:", error);
-      setMessage(`Açar söz silinmədi: ${error.message}`);
+      console.error("AÃ§ar sÃ¶z silmÉ™ xÉ™tasÄ±:", error);
+      setMessage(`AÃ§ar sÃ¶z silinmÉ™di: ${error.message}`);
       return;
     }
 
     setKeywords((prev) => prev.filter((item) => item.id !== keywordId));
-    setMessage(`Açar söz silindi: ${keyword}`);
+    setMessage(`AÃ§ar sÃ¶z silindi: ${keyword}`);
+  }
+
+  function startEditMonitor(monitor: Monitor) {
+    setEditingMonitorId(monitor.id);
+    setEditMonitorName(monitor.name);
+    setEditMonitorDescription(monitor.description || "");
+    setMessage("");
+  }
+
+  function cancelEditMonitor() {
+    setEditingMonitorId(null);
+    setEditMonitorName("");
+    setEditMonitorDescription("");
+  }
+
+  async function updateMonitor(monitor: Monitor) {
+    const name = editMonitorName.trim();
+
+    if (!name) {
+      setMessage("Monitor adÄ± yazÄ±lmalÄ±dÄ±r.");
+      return;
+    }
+
+    setActionMonitorId(monitor.id);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setActionMonitorId(null);
+      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
+      return;
+    }
+
+    const payload = {
+      name,
+      description: editMonitorDescription.trim() || null,
+    };
+
+    const { data, error } = await supabase
+      .from("user_monitors")
+      .update(payload)
+      .eq("id", monitor.id)
+      .eq("user_id", user.id)
+      .select("id,name,description,status,telegram_chat_id,created_at")
+      .maybeSingle();
+
+    setActionMonitorId(null);
+
+    if (error || !data) {
+      console.error("Monitor yenilÉ™mÉ™ xÉ™tasÄ±:", error);
+      setMessage(`Monitor yenilÉ™nmÉ™di: ${error?.message || "Ä°cazÉ™ verilmÉ™di"}`);
+      return;
+    }
+
+    setMonitors((prev) =>
+      prev.map((item) => (item.id === monitor.id ? (data as Monitor) : item))
+    );
+    cancelEditMonitor();
+    setMessage("Monitor yenilÉ™ndi.");
+  }
+
+  async function deleteMonitor(monitor: Monitor) {
+    setActionMonitorId(monitor.id);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setActionMonitorId(null);
+      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("user_monitors")
+      .delete()
+      .eq("id", monitor.id)
+      .eq("user_id", user.id);
+
+    setActionMonitorId(null);
+
+    if (error) {
+      console.error("Monitor silmÉ™ xÉ™tasÄ±:", error);
+      setMessage(`Monitor silinmÉ™di: ${error.message}`);
+      return;
+    }
+
+    setMonitors((prev) => prev.filter((item) => item.id !== monitor.id));
+    setKeywords((prev) => prev.filter((item) => item.monitor_id !== monitor.id));
+    setMatches((prev) => prev.filter((item) => item.monitor_id !== monitor.id));
+    setDeleteCandidate(null);
+    setMessage("Monitor silindi.");
   }
 
   async function toggleMonitorStatus(monitor: Monitor) {
     const nextStatus = monitor.status === "active" ? "inactive" : "active";
+    setActionMonitorId(monitor.id);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setActionMonitorId(null);
+      setMessage("Ä°stifadÉ™Ã§i sessiyasÄ± tapÄ±lmadÄ±.");
+      return;
+    }
 
     const { error } = await supabase
       .from("user_monitors")
       .update({ status: nextStatus })
-      .eq("id", monitor.id);
+      .eq("id", monitor.id)
+      .eq("user_id", user.id);
+
+    setActionMonitorId(null);
 
     if (error) {
-      console.error("Monitor status xətası:", error);
-      setMessage(`Monitor statusu dəyişmədi: ${error.message}`);
+      console.error("Monitor status xÉ™tasÄ±:", error);
+      setMessage(`Monitor statusu dÉ™yiÅŸmÉ™di: ${error.message}`);
       return;
     }
 
@@ -396,23 +581,28 @@ function MonitorsPage() {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        <span>Yüklənir...</span>
+        <span>YÃ¼klÉ™nir...</span>
       </div>
     );
   }
 
   const telegramConnected = Boolean(profile?.telegram_chat_id);
+  const monitorLimitReached =
+    planLimits.available &&
+    planLimits.maxWatches !== null &&
+    monitors.length >= planLimits.maxWatches;
   const telegramLink =
     telegramBotUsername && currentUserId
       ? `https://t.me/${telegramBotUsername}?start=${currentUserId}`
       : "";
 
   return (
-    <div className="grid gap-5 p-6">
+    <>
+      <div className="grid gap-4 p-4 md:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Monitorlarım</h1>
-          <p className="text-muted-foreground">Açar sözlər, Telegram və son nəticələr</p>
+          <h1 className="text-2xl font-bold tracking-tight">MonitorlarÄ±m</h1>
+          <p className="text-muted-foreground">AÃ§ar sÃ¶zlÉ™r, Telegram vÉ™ son nÉ™ticÉ™lÉ™r</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -424,11 +614,11 @@ function MonitorsPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
               <Send className="h-4 w-4" />
-              Telegram-a qoş
+              Telegram-a qoÅŸ
             </a>
           ) : (
             <span className="rounded-lg border px-4 py-2 text-sm text-muted-foreground">
-              Telegram bot adı aktiv deyil
+              Telegram bot adÄ± aktiv deyil
             </span>
           )}
         </div>
@@ -441,43 +631,65 @@ function MonitorsPage() {
       <div className="grid gap-3 md:grid-cols-4">
         <StatBox label="Monitor" value={stats.monitors} icon={Activity} />
         <StatBox label="Aktiv" value={stats.active} icon={CheckCircle2} />
-        <StatBox label="Açar söz" value={stats.keywords} icon={Hash} />
-        <StatBox label="Nəticə" value={stats.matches} icon={Bell} />
+        <StatBox label="AÃ§ar sÃ¶z" value={stats.keywords} icon={Hash} />
+        <StatBox label="NÉ™ticÉ™" value={stats.matches} icon={Bell} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="rounded-lg border bg-card p-4">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">Yeni monitor</h2>
-            <p className="text-sm text-muted-foreground">Mövzu adı və açar söz siyahısı</p>
+      <div className="grid gap-3 lg:grid-cols-[0.85fr_1.15fr]">
+        <section className="rounded-lg border bg-card p-3">
+          <div className="mb-3">
+            <h2 className="text-base font-semibold">Yeni monitor</h2>
+            <p className="text-sm text-muted-foreground">MÃ¶vzu adÄ± vÉ™ aÃ§ar sÃ¶z siyahÄ±sÄ±</p>
+          </div>
+
+          <div
+            className={
+              monitorLimitReached
+                ? "mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700"
+                : "mb-4 rounded-lg border bg-background p-3 text-sm text-muted-foreground"
+            }
+          >
+            <div className="font-medium text-foreground">Plan istifadÉ™si</div>
+            <div className="mt-1">
+              Cari monitor sayÄ±: {monitors.length}
+              {planLimits.maxWatches !== null ? " / " + planLimits.maxWatches : ""}
+            </div>
+            <div className="mt-1">
+              {planLimits.available
+                ? "Plan: " + (planLimits.name || "-")
+                : planLimits.warning || "Plan limiti aktiv deyil."}
+            </div>
+            {monitorLimitReached ? (
+              <div className="mt-1 font-medium">Yeni monitor yaratmaq Ã¼Ã§Ã¼n limit boÅŸalmalÄ±dÄ±r.</div>
+            ) : null}
           </div>
 
           <div className="grid gap-3">
             <input
               value={newMonitorName}
               onChange={(event) => setNewMonitorName(event.target.value)}
-              placeholder="Monitor adı"
+              placeholder="Monitor adÄ±"
               className="rounded-lg border bg-background px-3 py-2"
             />
 
             <input
               value={newMonitorDescription}
               onChange={(event) => setNewMonitorDescription(event.target.value)}
-              placeholder="Qısa təsvir"
+              placeholder="QÄ±sa tÉ™svir"
               className="rounded-lg border bg-background px-3 py-2"
             />
 
             <textarea
               value={newMonitorKeywords}
               onChange={(event) => setNewMonitorKeywords(event.target.value)}
-              placeholder="Açar sözləri vergül və ya yeni sətrlə yaz"
-              className="min-h-28 rounded-lg border bg-background px-3 py-2"
+              placeholder="AÃ§ar sÃ¶zlÉ™ri vergÃ¼l vÉ™ ya yeni sÉ™trlÉ™ yaz"
+              className="min-h-20 rounded-lg border bg-background px-3 py-2 text-sm"
             />
 
             <button
               type="button"
               onClick={createMonitor}
-              disabled={saving}
+              disabled={saving || monitorLimitReached}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
@@ -486,11 +698,11 @@ function MonitorsPage() {
           </div>
         </section>
 
-        <section className="rounded-lg border bg-card p-4">
+        <section className="rounded-lg border bg-card p-3">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold">Telegram statusu</h2>
-              <p className="text-sm text-muted-foreground">Bildirişlərin göndəriləcəyi hesab</p>
+              <h2 className="text-base font-semibold">Telegram statusu</h2>
+              <p className="text-sm text-muted-foreground">BildiriÅŸlÉ™rin gÃ¶ndÉ™rilÉ™cÉ™yi hesab</p>
             </div>
 
             <span
@@ -500,7 +712,7 @@ function MonitorsPage() {
                   : "rounded-full border px-3 py-1 text-sm text-muted-foreground"
               }
             >
-              {telegramConnected ? "Qoşulub" : "Qoşulmayıb"}
+              {telegramConnected ? "QoÅŸulub" : "QoÅŸulmayÄ±b"}
             </span>
           </div>
 
@@ -508,7 +720,7 @@ function MonitorsPage() {
             <div className="rounded-lg border bg-background p-3 text-sm">
               <div className="text-muted-foreground">Telegram chat</div>
               <div className="mt-1 font-medium">
-                {profile?.telegram_chat_id || "Hələ aktiv deyil"}
+                {profile?.telegram_chat_id || "HÉ™lÉ™ aktiv deyil"}
               </div>
             </div>
 
@@ -517,21 +729,21 @@ function MonitorsPage() {
                 href={telegramLink}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-muted"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
               >
                 <Send className="h-4 w-4" />
-                Telegram-a qoş
+                Telegram-a qoÅŸ
               </a>
             ) : (
               <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                VITE_TELEGRAM_BOT_USERNAME env dəyəri əlavə olunmalıdır.
+                VITE_TELEGRAM_BOT_USERNAME env dÉ™yÉ™ri É™lavÉ™ olunmalÄ±dÄ±r.
               </div>
             )}
           </div>
         </section>
       </div>
 
-      <div className="rounded-lg border bg-card p-4">
+      <div className="rounded-lg border bg-card p-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -546,12 +758,31 @@ function MonitorsPage() {
       <div className="grid gap-4">
         {rows.map((monitor) => (
           <section key={monitor.id} className="rounded-lg border bg-card">
-            <div className="grid gap-4 border-b p-4 lg:grid-cols-[1.4fr_0.5fr_0.5fr_0.7fr_auto]">
+            <div className="grid gap-3 border-b p-3 lg:grid-cols-[1.2fr_0.45fr_0.45fr_0.65fr_auto]">
               <div>
-                <h2 className="text-lg font-semibold">{monitor.name}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {monitor.description || "Təsvir yoxdur"}
-                </p>
+                {editingMonitorId === monitor.id ? (
+                  <div className="grid gap-2">
+                    <input
+                      value={editMonitorName}
+                      onChange={(event) => setEditMonitorName(event.target.value)}
+                      className="rounded-lg border bg-background px-3 py-2 text-sm"
+                      placeholder="Monitor adÄ±"
+                    />
+                    <input
+                      value={editMonitorDescription}
+                      onChange={(event) => setEditMonitorDescription(event.target.value)}
+                      className="rounded-lg border bg-background px-3 py-2 text-sm"
+                      placeholder="QÄ±sa tÉ™svir"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-base font-semibold">{monitor.name}</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {monitor.description || "TÉ™svir yoxdur"}
+                    </p>
+                  </>
+                )}
               </div>
 
               <div>
@@ -562,30 +793,70 @@ function MonitorsPage() {
               </div>
 
               <div>
-                <div className="text-xs text-muted-foreground">Nəticə</div>
-                <div className="mt-1 text-xl font-semibold">{monitor.resultCount}</div>
+                <div className="text-xs text-muted-foreground">NÉ™ticÉ™</div>
+                <div className="mt-1 text-lg font-semibold">{monitor.resultCount}</div>
               </div>
 
               <div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock3 className="h-3.5 w-3.5" />
-                  Son uyğunluq
+                  Son uyÄŸunluq
                 </div>
                 <div className="mt-1 text-sm">{formatDate(monitor.lastMatch)}</div>
               </div>
 
-              <div className="flex items-start lg:justify-end">
-                <button
-                  type="button"
-                  onClick={() => toggleMonitorStatus(monitor)}
-                  className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
-                >
-                  {monitor.status === "active" ? "Passiv et" : "Aktiv et"}
-                </button>
+              <div className="flex flex-wrap items-start gap-1.5 lg:justify-end">
+                {editingMonitorId === monitor.id ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => updateMonitor(monitor)}
+                      disabled={actionMonitorId === monitor.id}
+                      className="rounded-lg bg-primary px-2.5 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
+                    >
+                      Yadda saxla
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditMonitor}
+                      disabled={actionMonitorId === monitor.id}
+                      className="rounded-lg border px-2.5 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-60"
+                    >
+                      LÉ™ÄŸv et
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => startEditMonitor(monitor)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium hover:bg-muted"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      RedaktÉ™ et
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleMonitorStatus(monitor)}
+                      disabled={actionMonitorId === monitor.id}
+                      className="rounded-lg border px-2.5 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-60"
+                    >
+                      {monitor.status === "active" ? "Passiv et" : "Aktiv et"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteCandidate(monitor)}
+                      disabled={actionMonitorId === monitor.id}
+                      className="rounded-lg border border-destructive/40 px-2.5 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-60"
+                    >
+                      Sil
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="grid gap-4 p-4">
+            <div className="grid gap-3 p-3">
               <div className="grid gap-3 md:grid-cols-[1fr_auto]">
                 <textarea
                   value={keywordDrafts[monitor.id] || ""}
@@ -595,8 +866,8 @@ function MonitorsPage() {
                       [monitor.id]: event.target.value,
                     }))
                   }
-                  placeholder="Yeni açar sözlər"
-                  className="min-h-20 rounded-lg border bg-background px-3 py-2"
+                  placeholder="Yeni aÃ§ar sÃ¶zlÉ™r"
+                  className="min-h-14 rounded-lg border bg-background px-3 py-2 text-sm"
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && event.ctrlKey) addKeyword(monitor.id);
                   }}
@@ -605,16 +876,16 @@ function MonitorsPage() {
                 <button
                   type="button"
                   onClick={() => addKeyword(monitor.id)}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 font-medium hover:bg-muted"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
                 >
                   <Plus className="h-4 w-4" />
-                  Əlavə et
+                  ÆlavÉ™ et
                 </button>
               </div>
 
               {monitor.keywords.length === 0 ? (
                 <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
-                  Açar söz yoxdur.
+                  AÃ§ar sÃ¶z yoxdur.
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -641,12 +912,34 @@ function MonitorsPage() {
         ))}
 
         {rows.length === 0 && (
-          <div className="rounded-lg border bg-card p-10 text-center text-muted-foreground">
-            Monitor tapılmadı. Yuxarıdakı formadan ilk monitorunu yarat.
+          <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+            Monitor tapÄ±lmadÄ±. YuxarÄ±dakÄ± formadan ilk monitorunu yarat.
           </div>
         )}
       </div>
-    </div>
+      </div>
+
+      <ConfirmDialog
+        open={!!deleteCandidate}
+        onOpenChange={(open) => {
+          if (!open) setDeleteCandidate(null);
+        }}
+        title='Monitoru sil'
+        desc={
+          deleteCandidate
+            ? '"' + deleteCandidate.name + '" monitoru silinsin? Bu É™mÉ™liyyat geri qaytarÄ±lmÄ±r.'
+            : 'Monitor silinsin?'
+        }
+        cancelBtnText='LÉ™ÄŸv et'
+        confirmText='Sil'
+        destructive
+        isLoading={deleteCandidate ? actionMonitorId === deleteCandidate.id : false}
+        handleConfirm={() => {
+          if (deleteCandidate) void deleteMonitor(deleteCandidate);
+        }}
+        className='sm:max-w-md'
+      />
+    </>
   );
 }
 

@@ -24,12 +24,12 @@ const formSchema = z
   .object({
     password: z
       .string()
-      .min(1, 'Please enter your password.')
-      .min(7, 'Password must be at least 7 characters long.'),
-    confirmPassword: z.string().min(1, 'Please confirm your password.'),
+      .min(1, 'Şifrənizi daxil edin.')
+      .min(7, 'Şifrə ən azı 7 simvol olmalıdır.'),
+    confirmPassword: z.string().min(1, 'Şifrənizi təsdiqləyin.'),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match.",
+    message: "Şifrələr uyğun gəlmir.",
     path: ['confirmPassword'],
   })
 
@@ -78,7 +78,7 @@ export function ResetPasswordForm({
           name='password'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>New Password</FormLabel>
+              <FormLabel>Yeni şifrə</FormLabel>
               <FormControl>
                 <PasswordInput placeholder='********' {...field} />
               </FormControl>
@@ -91,7 +91,7 @@ export function ResetPasswordForm({
           name='confirmPassword'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
+              <FormLabel>Şifrəni təsdiqləyin</FormLabel>
               <FormControl>
                 <PasswordInput placeholder='********' {...field} />
               </FormControl>
@@ -101,7 +101,7 @@ export function ResetPasswordForm({
         />
         <Button className='mt-2' disabled={isLoading}>
           {isLoading ? <Loader2 className='animate-spin' /> : <KeyRound />}
-          Update Password
+          Şifrəni yenilə
         </Button>
       </form>
     </Form>

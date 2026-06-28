@@ -1,8 +1,13 @@
+﻿import { requireAuthenticated } from "../_shared/auth.ts";
+import { assertSafeUrl, safeFetch } from "../_shared/url_safety.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+const MAX_RESPONSE_BYTES = 1_500_000;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -30,9 +35,47 @@ function sanitizeHtml(html: string, finalUrl: string) {
   return cleaned;
 }
 
+async function readLimitedText(response: Response, limitBytes: number) {
+  if (!response.body) return await response.text();
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    received += value.byteLength;
+    if (received > limitBytes) {
+      try {
+        await reader.cancel();
+      } catch {
+        // Best effort cancellation only.
+      }
+      throw new Error(`Response too large. Maximum allowed size is ${limitBytes} bytes.`);
+    }
+
+    chunks.push(value);
+  }
+
+  const merged = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder("utf-8").decode(merged);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  const auth = await requireAuthenticated(req, json);
+  if (auth instanceof Response) return auth;
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -40,18 +83,14 @@ Deno.serve(async (req) => {
 
     if (!rawUrl) return json({ error: "url required" }, 400);
 
-    const url = new URL(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`);
-    if (!["http:", "https:"].includes(url.protocol)) {
-      return json({ error: "only http/https allowed" }, 400);
-    }
+    const url = await assertSafeUrl(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15000);
     let upstream: Response;
 
     try {
-      upstream = await fetch(url.toString(), {
-        redirect: "follow",
+      upstream = await safeFetch(url, {
         signal: controller.signal,
         headers: {
           "User-Agent":
@@ -66,7 +105,7 @@ Deno.serve(async (req) => {
     }
 
     const contentType = upstream.headers.get("content-type") || "";
-    const text = await upstream.text();
+    const text = await readLimitedText(upstream, MAX_RESPONSE_BYTES);
 
     if (!contentType.includes("text/html") && !text.includes("<html")) {
       return json({

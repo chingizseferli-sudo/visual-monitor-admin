@@ -1,4 +1,6 @@
-﻿const corsHeaders = {
+﻿import { requireAdmin } from "../_shared/auth.ts";
+
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -24,6 +26,9 @@ function json(body: unknown, status = 200) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  const auth = await requireAdmin(req, json);
+  if (auth instanceof Response) return auth;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -59,7 +64,7 @@ Deno.serve(async (req) => {
         updated_at: user.updated_at || null,
         last_sign_in_at: user.last_sign_in_at || null,
         user_metadata: user.user_metadata || null,
-      }))
+      })),
     );
 
     if (batch.length < perPage) break;
