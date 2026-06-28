@@ -1,7 +1,9 @@
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bell, Clock3, Download, ExternalLink, Hash, Loader2, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { customerQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
 
 const PAGE_SIZE = 12;
@@ -122,77 +124,67 @@ function Pagination({
   );
 }
 
+type ResultsData = {
+  rows: ResultRow[];
+  errorMessage: string;
+};
+
+async function fetchResultsData(): Promise<ResultsData> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { rows: [], errorMessage: "Sessiya tapılmadı. Zəhmət olmasa yenidən daxil olun." };
+  }
+
+  const { data: monitors, error: monitorsError } = await supabase
+    .from("user_monitors")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (monitorsError) {
+    console.error("User monitor load error:", monitorsError);
+    return { rows: [], errorMessage: "Monitorlar yüklənmədi. Bir az sonra yenidən yoxlayın." };
+  }
+
+  const monitorIds = (monitors || []).map((item) => item.id);
+
+  if (monitorIds.length === 0) return { rows: [], errorMessage: "" };
+
+  const { data, error } = await supabase
+    .from("monitor_matches")
+    .select(
+      "id,monitor_id,item_id,matched_keyword,created_at,user_monitors(name),monitored_items(title,url,published_at,detected_at,status)"
+    )
+    .in("monitor_id", monitorIds)
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  if (error) {
+    console.error("User results error:", error);
+    return { rows: [], errorMessage: "Nəticələr yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin." };
+  }
+
+  return { rows: (data || []) as ResultRow[], errorMessage: "" };
+}
+
 function ResultsPage() {
-  const [rows, setRows] = useState<ResultRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const { data, isLoading } = useQuery({
+    queryKey: customerQueryKeys.results(),
+    queryFn: fetchResultsData,
+    staleTime: 30 * 1000,
+    placeholderData: keepPreviousData,
+  });
+  const rows = data?.rows || [];
+  const errorMessage = data?.errorMessage || "";
   const [search, setSearch] = useState("");
   const [monitorFilter, setMonitorFilter] = useState(ALL);
   const [keywordFilter, setKeywordFilter] = useState(ALL);
   const [sourceFilter, setSourceFilter] = useState(ALL);
   const [dateFilter, setDateFilter] = useState("");
   const [page, setPage] = useState(1);
-
-  async function loadResults() {
-    setLoading(true);
-    setErrorMessage("");
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      setRows([]);
-      setErrorMessage("Sessiya tapılmadı. Zəhmət olmasa yenidən daxil olun.");
-      setLoading(false);
-      return;
-    }
-
-    const { data: monitors, error: monitorsError } = await supabase
-      .from("user_monitors")
-      .select("id")
-      .eq("user_id", user.id);
-
-    if (monitorsError) {
-      console.error("User monitor load error:", monitorsError);
-      setRows([]);
-      setErrorMessage("Monitorlar yüklənmədi. Bir az sonra yenidən yoxlayın.");
-      setLoading(false);
-      return;
-    }
-
-    const monitorIds = (monitors || []).map((item) => item.id);
-
-    if (monitorIds.length === 0) {
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("monitor_matches")
-      .select(
-        "id,monitor_id,item_id,matched_keyword,created_at,user_monitors(name),monitored_items(title,url,published_at,detected_at,status)"
-      )
-      .in("monitor_id", monitorIds)
-      .order("created_at", { ascending: false })
-      .limit(300);
-
-    if (error) {
-      console.error("User results error:", error);
-      setRows([]);
-      setErrorMessage("Nəticələr yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin.");
-    } else {
-      setRows((data || []) as ResultRow[]);
-    }
-
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadResults();
-  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -266,7 +258,7 @@ function ResultsPage() {
     ]);
   }
 
-  if (loading) {
+  if (isLoading && !data) {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />

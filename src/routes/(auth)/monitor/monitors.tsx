@@ -1,3 +1,4 @@
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Activity,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { customerQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
 import { getStatusBadgeClass, getStatusLabel } from "@/lib/status-ui";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -51,6 +53,16 @@ type PlanLimitState = {
   name: string | null;
   maxWatches: number | null;
   warning: string | null;
+};
+
+type MonitorsData = {
+  userId: string;
+  profile: UserProfile | null;
+  planLimits: PlanLimitState;
+  monitors: Monitor[];
+  keywords: Keyword[];
+  matches: Match[];
+  message: string;
 };
 
 function formatDate(value: string | null) {
@@ -151,6 +163,91 @@ function StatBox({
     </div>
   );
 }
+
+async function fetchMonitorsData(): Promise<MonitorsData> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("İstifadəçi sessiyası tapılmadı.");
+
+  const [profileRes, monitorRes, planRes] = await Promise.all([
+    supabase
+      .from("user_profiles")
+      .select("user_id,telegram_chat_id")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+
+    supabase
+      .from("user_monitors")
+      .select("id,name,description,status,telegram_chat_id,created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+
+    loadMonitorPlanLimits(user.id),
+  ]);
+
+  const profile = profileRes.error ? null : ((profileRes.data || null) as UserProfile | null);
+
+  if (profileRes.error) {
+    console.error("Profil oxuma xətası:", profileRes.error);
+  }
+
+  if (monitorRes.error) {
+    console.error("Monitor oxuma xətası:", monitorRes.error);
+    throw new Error(`Monitorlar oxunmadı: ${monitorRes.error.message}`);
+  }
+
+  const monitors = (monitorRes.data || []) as Monitor[];
+  const monitorIds = monitors.map((item) => item.id);
+
+  if (monitorIds.length === 0) {
+    return {
+      userId: user.id,
+      profile,
+      planLimits: planRes,
+      monitors,
+      keywords: [],
+      matches: [],
+      message: "",
+    };
+  }
+
+  const [keywordsRes, matchesRes] = await Promise.all([
+    supabase
+      .from("monitor_keywords")
+      .select("id,monitor_id,keyword,match_type,created_at")
+      .in("monitor_id", monitorIds)
+      .order("created_at", { ascending: false }),
+
+    supabase
+      .from("monitor_matches")
+      .select("id,monitor_id,created_at")
+      .in("monitor_id", monitorIds)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  let message = "";
+
+  if (keywordsRes.error) {
+    console.error("Keyword oxuma xətası:", keywordsRes.error);
+    message = `Açar sözlər oxunmadı: ${keywordsRes.error.message}`;
+  }
+
+  if (matchesRes.error) {
+    console.error("Nəticə oxuma xətası:", matchesRes.error);
+  }
+
+  return {
+    userId: user.id,
+    profile,
+    planLimits: planRes,
+    monitors,
+    keywords: keywordsRes.error ? [] : ((keywordsRes.data || []) as Keyword[]),
+    matches: matchesRes.error ? [] : ((matchesRes.data || []) as Match[]),
+    message,
+  };
+}
 function MonitorsPage() {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
@@ -177,6 +274,36 @@ function MonitorsPage() {
   const [actionMonitorId, setActionMonitorId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<Monitor | null>(null);
   const telegramBotUsername = String(import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "").replace(/^@/, "");
+  const queryClient = useQueryClient();
+  const monitorsQuery = useQuery({
+    queryKey: customerQueryKeys.monitors(),
+    queryFn: fetchMonitorsData,
+    staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
+  });
+
+  function invalidateCustomerMonitorCaches() {
+    void queryClient.invalidateQueries({ queryKey: customerQueryKeys.monitors() });
+    void queryClient.invalidateQueries({ queryKey: customerQueryKeys.dashboard() });
+  }
+
+  useEffect(() => {
+    setLoading(monitorsQuery.isLoading && !monitorsQuery.data);
+
+    if (monitorsQuery.error) {
+      setMessage(monitorsQuery.error instanceof Error ? monitorsQuery.error.message : "Monitorlar yüklənmədi.");
+    }
+
+    if (!monitorsQuery.data) return;
+
+    setCurrentUserId(monitorsQuery.data.userId);
+    setProfile(monitorsQuery.data.profile);
+    setPlanLimits(monitorsQuery.data.planLimits);
+    setMonitors(monitorsQuery.data.monitors);
+    setKeywords(monitorsQuery.data.keywords);
+    setMatches(monitorsQuery.data.matches);
+    if (monitorsQuery.data.message) setMessage(monitorsQuery.data.message);
+  }, [monitorsQuery.data, monitorsQuery.error, monitorsQuery.isLoading]);
 
   async function loadData() {
     setLoading(true);
@@ -271,10 +398,6 @@ function MonitorsPage() {
 
     setLoading(false);
   }
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const rows = useMemo(() => {
     const q = search.trim().toLocaleLowerCase("az-AZ");
@@ -405,6 +528,7 @@ function MonitorsPage() {
     }
 
     setMonitors((prev) => [created, ...prev]);
+    invalidateCustomerMonitorCaches();
 
     if (newMonitorKeywords.trim()) {
       await addKeywordsToMonitor(created.id, newMonitorKeywords);
@@ -444,6 +568,7 @@ function MonitorsPage() {
     }
 
     setKeywords((prev) => prev.filter((item) => item.id !== keywordId));
+    invalidateCustomerMonitorCaches();
     setMessage(`Açar söz silindi: ${keyword}`);
   }
 
@@ -504,6 +629,7 @@ function MonitorsPage() {
     setMonitors((prev) =>
       prev.map((item) => (item.id === monitor.id ? (data as Monitor) : item))
     );
+    invalidateCustomerMonitorCaches();
     cancelEditMonitor();
     setMessage("Monitor yeniləndi.");
   }
@@ -538,6 +664,7 @@ function MonitorsPage() {
     setMonitors((prev) => prev.filter((item) => item.id !== monitor.id));
     setKeywords((prev) => prev.filter((item) => item.monitor_id !== monitor.id));
     setMatches((prev) => prev.filter((item) => item.monitor_id !== monitor.id));
+    invalidateCustomerMonitorCaches();
     setDeleteCandidate(null);
     setMessage("Monitor silindi.");
   }
@@ -575,6 +702,7 @@ function MonitorsPage() {
         item.id === monitor.id ? { ...item, status: nextStatus } : item
       )
     );
+    invalidateCustomerMonitorCaches();
     setMessage(nextStatus === "active" ? "Monitor aktiv edildi." : "Monitor passiv edildi.");
   }
 

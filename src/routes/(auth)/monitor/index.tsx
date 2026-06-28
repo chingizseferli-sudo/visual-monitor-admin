@@ -1,7 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bell, ExternalLink, Hash, Loader2, Radio, Send } from "lucide-react";
-import { useEffect, useState } from "react";
 
+import { customerQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
 
 type MatchRow = {
@@ -16,6 +17,22 @@ type MatchRow = {
     title: string;
     url: string;
   } | null;
+};
+
+type DashboardData = {
+  monitorCount: number;
+  keywordCount: number;
+  resultCount: number;
+  alertCount: number;
+  recentMatches: MatchRow[];
+};
+
+const EMPTY_DASHBOARD: DashboardData = {
+  monitorCount: 0,
+  keywordCount: 0,
+  resultCount: 0,
+  alertCount: 0,
+  recentMatches: [],
 };
 
 function decodeHtml(text: string) {
@@ -35,6 +52,57 @@ function formatDate(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+async function fetchDashboardData(): Promise<DashboardData> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return EMPTY_DASHBOARD;
+
+  const { data: monitors } = await supabase
+    .from("user_monitors")
+    .select("id")
+    .eq("user_id", user.id);
+
+  const monitorIds = (monitors || []).map((item) => item.id);
+
+  if (monitorIds.length === 0) return EMPTY_DASHBOARD;
+
+  const [keywordsRes, matchesRes] = await Promise.all([
+    supabase
+      .from("monitor_keywords")
+      .select("id", { count: "exact", head: true })
+      .in("monitor_id", monitorIds),
+
+    supabase
+      .from("monitor_matches")
+      .select("id,monitor_id,matched_keyword,created_at,user_monitors(name),monitored_items(title,url)")
+      .in("monitor_id", monitorIds)
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+
+  const matches = (matchesRes.data || []) as MatchRow[];
+  const matchIds = matches.map((item) => item.id);
+  let alertCount = 0;
+
+  if (matchIds.length > 0) {
+    const { count } = await supabase
+      .from("monitor_alerts")
+      .select("id", { count: "exact", head: true })
+      .in("match_id", matchIds);
+    alertCount = count || 0;
+  }
+
+  return {
+    monitorCount: monitorIds.length,
+    keywordCount: keywordsRes.count || 0,
+    resultCount: matchIds.length,
+    alertCount,
+    recentMatches: matches,
+  };
 }
 
 function MetricCard({
@@ -62,83 +130,15 @@ function MetricCard({
 }
 
 function UserMonitorDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [monitorCount, setMonitorCount] = useState(0);
-  const [keywordCount, setKeywordCount] = useState(0);
-  const [resultCount, setResultCount] = useState(0);
-  const [alertCount, setAlertCount] = useState(0);
-  const [recentMatches, setRecentMatches] = useState<MatchRow[]>([]);
+  const { data = EMPTY_DASHBOARD, isLoading } = useQuery({
+    queryKey: customerQueryKeys.dashboard(),
+    queryFn: fetchDashboardData,
+    staleTime: 30 * 1000,
+  });
 
-  async function loadDashboard() {
-    setLoading(true);
+  const { monitorCount, keywordCount, resultCount, alertCount, recentMatches } = data;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const { data: monitors } = await supabase
-      .from("user_monitors")
-      .select("id")
-      .eq("user_id", user.id);
-
-    const monitorIds = (monitors || []).map((item) => item.id);
-
-    setMonitorCount(monitorIds.length);
-
-    if (monitorIds.length === 0) {
-      setKeywordCount(0);
-      setResultCount(0);
-      setAlertCount(0);
-      setRecentMatches([]);
-      setLoading(false);
-      return;
-    }
-
-    const [keywordsRes, matchesRes] = await Promise.all([
-      supabase
-        .from("monitor_keywords")
-        .select("id", { count: "exact", head: true })
-        .in("monitor_id", monitorIds),
-
-      supabase
-        .from("monitor_matches")
-        .select("id,monitor_id,matched_keyword,created_at,user_monitors(name),monitored_items(title,url)")
-        .in("monitor_id", monitorIds)
-        .order("created_at", { ascending: false })
-        .limit(10),
-    ]);
-
-    const matches = (matchesRes.data || []) as MatchRow[];
-    const matchIds = matches.map((item) => item.id);
-
-    setKeywordCount(keywordsRes.count || 0);
-    setResultCount(matchIds.length);
-    setRecentMatches(matches);
-
-    if (matchIds.length > 0) {
-      const { count } = await supabase
-        .from("monitor_alerts")
-        .select("id", { count: "exact", head: true })
-        .in("match_id", matchIds);
-
-      setAlertCount(count || 0);
-    } else {
-      setAlertCount(0);
-    }
-
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />

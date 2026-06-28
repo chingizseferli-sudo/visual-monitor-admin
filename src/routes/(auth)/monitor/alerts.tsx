@@ -1,7 +1,9 @@
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bell, CheckCircle2, Download, ExternalLink, Loader2, Send, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { customerQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
 import { getStatusMeta } from "@/lib/status-ui";
 
@@ -158,96 +160,79 @@ function Pagination({
   );
 }
 
+type AlertsData = {
+  alerts: AlertRow[];
+  errorMessage: string;
+};
+
+async function fetchAlertsData(): Promise<AlertsData> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { alerts: [], errorMessage: "Sessiya tapılmadı. Zəhmət olmasa yenidən daxil olun." };
+  }
+
+  const { data: monitors, error: monitorsError } = await supabase
+    .from("user_monitors")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (monitorsError) {
+    console.error("User monitor load error:", monitorsError);
+    return { alerts: [], errorMessage: "Monitorlar yüklənmədi. Bir az sonra yenidən yoxlayın." };
+  }
+
+  const monitorIds = (monitors || []).map((item) => item.id);
+
+  if (monitorIds.length === 0) return { alerts: [], errorMessage: "" };
+
+  const { data: matches, error: matchesError } = await supabase
+    .from("monitor_matches")
+    .select("id")
+    .in("monitor_id", monitorIds);
+
+  if (matchesError) {
+    console.error("User alert match load error:", matchesError);
+    return { alerts: [], errorMessage: "Bildiriş məlumatları yüklənmədi." };
+  }
+
+  const matchIds = (matches || []).map((item) => item.id);
+
+  if (matchIds.length === 0) return { alerts: [], errorMessage: "" };
+
+  const { data, error } = await supabase
+    .from("monitor_alerts")
+    .select(
+      "id,match_id,channel,recipient,status,sent_at,monitor_matches(id,matched_keyword,user_monitors(name),monitored_items(title,url))"
+    )
+    .in("match_id", matchIds)
+    .order("sent_at", { ascending: false })
+    .limit(300);
+
+  if (error) {
+    console.error("User alerts error:", error);
+    return { alerts: [], errorMessage: "Bildirişlər yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin." };
+  }
+
+  return { alerts: (data || []) as AlertRow[], errorMessage: "" };
+}
+
 function AlertsPage() {
-  const [alerts, setAlerts] = useState<AlertRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const { data, isLoading } = useQuery({
+    queryKey: customerQueryKeys.alerts(),
+    queryFn: fetchAlertsData,
+    staleTime: 30 * 1000,
+    placeholderData: keepPreviousData,
+  });
+  const alerts = data?.alerts || [];
+  const errorMessage = data?.errorMessage || "";
   const [channelFilter, setChannelFilter] = useState(ALL);
   const [statusFilter, setStatusFilter] = useState(ALL);
   const [monitorFilter, setMonitorFilter] = useState(ALL);
   const [page, setPage] = useState(1);
-
-  async function loadAlerts() {
-    setLoading(true);
-    setErrorMessage("");
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      setAlerts([]);
-      setErrorMessage("Sessiya tapılmadı. Zəhmət olmasa yenidən daxil olun.");
-      setLoading(false);
-      return;
-    }
-
-    const { data: monitors, error: monitorsError } = await supabase
-      .from("user_monitors")
-      .select("id")
-      .eq("user_id", user.id);
-
-    if (monitorsError) {
-      console.error("User monitor load error:", monitorsError);
-      setAlerts([]);
-      setErrorMessage("Monitorlar yüklənmədi. Bir az sonra yenidən yoxlayın.");
-      setLoading(false);
-      return;
-    }
-
-    const monitorIds = (monitors || []).map((item) => item.id);
-
-    if (monitorIds.length === 0) {
-      setAlerts([]);
-      setLoading(false);
-      return;
-    }
-
-    const { data: matches, error: matchesError } = await supabase
-      .from("monitor_matches")
-      .select("id")
-      .in("monitor_id", monitorIds);
-
-    if (matchesError) {
-      console.error("User alert match load error:", matchesError);
-      setAlerts([]);
-      setErrorMessage("Bildiriş məlumatları yüklənmədi.");
-      setLoading(false);
-      return;
-    }
-
-    const matchIds = (matches || []).map((item) => item.id);
-
-    if (matchIds.length === 0) {
-      setAlerts([]);
-      setLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("monitor_alerts")
-      .select(
-        "id,match_id,channel,recipient,status,sent_at,monitor_matches(id,matched_keyword,user_monitors(name),monitored_items(title,url))"
-      )
-      .in("match_id", matchIds)
-      .order("sent_at", { ascending: false })
-      .limit(300);
-
-    if (error) {
-      console.error("User alerts error:", error);
-      setAlerts([]);
-      setErrorMessage("Bildirişlər yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin.");
-    } else {
-      setAlerts((data || []) as AlertRow[]);
-    }
-
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadAlerts();
-  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -319,7 +304,7 @@ function AlertsPage() {
     ]);
   }
 
-  if (loading) {
+  if (isLoading && !data) {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />

@@ -1,7 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Bell, CalendarDays, CreditCard, Loader2, Mail, Radio, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
-
+import { customerQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
 
 type ProfileRow = {
@@ -97,15 +97,7 @@ function formatStatus(status: string) {
   return status || "-";
 }
 
-function ProfilePage() {
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [profileState, setProfileState] = useState<ProfileState | null>(null);
-
-  async function loadProfile() {
-    setLoading(true);
-    setErrorMessage("");
-
+async function fetchProfileData(): Promise<{ profileState: ProfileState | null; errorMessage: string }> {
     const {
       data: { user },
       error: userError,
@@ -142,25 +134,33 @@ function ProfilePage() {
 
     const profile = (profileResult.data || null) as ProfileRow | null;
 
-    setProfileState({
-      email: profile?.email || user.email || "-",
-      role: getRoleLabel(profile?.role || null),
-      status: getStatusLabel(profile?.status || null),
-      createdAt: user.created_at || null,
-      telegramChatId: profile?.telegram_chat_id || null,
-      monitorCount: monitorCountResult.count || 0,
-      plan: planResult.plan,
-      planAvailable: planResult.available,
-    });
+    return {
+      profileState: {
+        email: profile?.email || user.email || "-",
+        role: getRoleLabel(profile?.role || null),
+        status: getStatusLabel(profile?.status || null),
+        createdAt: user.created_at || null,
+        telegramChatId: profile?.telegram_chat_id || null,
+        monitorCount: monitorCountResult.count || 0,
+        plan: planResult.plan,
+        planAvailable: planResult.available,
+      },
+      errorMessage: profileResult.error
+        ? "Profil məlumatları tam yüklənmədi. Əsas hesab məlumatları göstərilir."
+        : "",
+    };
+}
 
-    setLoading(false);
-  }
+function ProfilePage() {
+  const { data, isLoading } = useQuery({
+    queryKey: customerQueryKeys.profile(),
+    queryFn: fetchProfileData,
+    staleTime: 5 * 60 * 1000,
+  });
+  const profileState = data?.profileState || null;
+  const errorMessage = data?.errorMessage || "";
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
