@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
+import { getStatusLabel } from '@/lib/status-ui'
 
 type Source = {
   id: string
@@ -588,7 +589,7 @@ function ProblemSourcesPage() {
                   </td>
                   <td className='max-w-sm p-4'>
                     <div className='text-xs font-medium'>
-                      {source.last_result || latestLog?.status || '-'}
+                      {getStatusLabel(source.last_result || latestLog?.status, '-')}
                     </div>
                     <div className='mt-1 line-clamp-2 text-xs text-muted-foreground'>
                       {latestLog?.reason || source.notes || '-'}

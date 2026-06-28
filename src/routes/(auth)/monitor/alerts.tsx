@@ -3,6 +3,7 @@ import { Bell, CheckCircle2, Download, ExternalLink, Loader2, Send, XCircle } fr
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { getStatusMeta } from "@/lib/status-ui";
 
 const PAGE_SIZE = 12;
 const ALL = "all";

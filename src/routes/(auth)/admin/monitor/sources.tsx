@@ -205,6 +205,17 @@ function formatStatus(value: string | null) {
   })
 }
 
+function formatDiscoveryStatus(value: string | null) {
+  return mapValue(value, {
+    readable: 'Oxuna bilir',
+    accepted: 'Qəbul edilib',
+    rejected: 'Rədd edilib',
+    pending: 'Gözləyir',
+    needs_review: 'Yoxlama lazımdır',
+    needs_manual_selector: 'Manual selector lazımdır',
+    manual_needed: 'Manual yoxlama lazımdır',
+  })
+}
 function formatTrustLevel(value: string | null) {
   return mapValue(value, {
     high: 'Yüksək',
@@ -1738,8 +1749,8 @@ function SourcesPage() {
           className='min-w-0 rounded-lg border bg-background px-3 py-2'
         >
           <option value='all'>Bütün statuslar</option>
-          <option value='active'>active</option>
-          <option value='inactive'>inactive</option>
+          <option value='active'>Aktiv</option>
+          <option value='inactive'>Passiv</option>
         </select>
 
         <select
@@ -1752,8 +1763,8 @@ function SourcesPage() {
         >
           <option value='all'>Bütün metodlar</option>
           {MONITOR_METHODS.map((method) => (
-            <option key={method} value={method}>
-              {method}
+            <option key={formatMonitorMethod(method)} value={formatMonitorMethod(method)}>
+              {formatMonitorMethod(method)}
             </option>
           ))}
         </select>
@@ -1787,9 +1798,9 @@ function SourcesPage() {
           <option value='subdomain'>Aktiv subdomain</option>
           <option value='missing_rss'>RSS URL yoxdur</option>
           <option value='missing_selector'>Selector/XPath yoxdur</option>
-          <option value='blocked'>Blocked/dead/failed</option>
+          <option value='blocked'>Bloklanıb / ölü / xətalı</option>
           <option value='fail_limit'>Fail limiti</option>
-          <option value='site_error'>Site error</option>
+          <option value='site_error'>Sayt oxunmadı</option>
           <option value='non_news'>Xəbər saytı deyil</option>
           <option value='stale'>24 saat+ yoxlanmayıb</option>
         </select>
@@ -1863,8 +1874,8 @@ function SourcesPage() {
                 {MONITOR_METHODS.filter(
                   (method) => !['dead', 'failed'].includes(method)
                 ).map((method) => (
-                  <option key={method} value={method}>
-                    {method}
+                  <option key={formatMonitorMethod(method)} value={formatMonitorMethod(method)}>
+                    {formatMonitorMethod(method)}
                   </option>
                 ))}
               </select>
@@ -1956,10 +1967,10 @@ function SourcesPage() {
                   {Object.entries(repairRun.methodCounts).map(
                     ([method, count]) => (
                       <span
-                        key={method}
+                        key={formatMonitorMethod(method)}
                         className='rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700'
                       >
-                        {method}: {count}
+                        {formatMonitorMethod(method)}: {count}
                       </span>
                     )
                   )}
@@ -2280,19 +2291,19 @@ function SourcesPage() {
                           : 'border-red-200 bg-red-50 text-red-700'
                       }`}
                     >
-                      {source.status || 'unknown'}
+                      {formatStatus(source.status)}
                     </span>
                   </td>
 
                   <td className='p-3'>
                     <span className='rounded-full border px-2 py-1 text-xs'>
-                      {source.monitor_method || 'auto'}
+                      {formatMonitorMethod(source.monitor_method || 'auto')}
                     </span>
                   </td>
 
                   <td className='p-3'>
                     <span className='rounded-full border px-2 py-1 text-xs'>
-                      {source.discovery_status || '-'}
+                      {formatDiscoveryStatus(source.discovery_status)}
                     </span>
                   </td>
 
@@ -2326,7 +2337,7 @@ function SourcesPage() {
                               : 'text-muted-foreground'
                         }`}
                       >
-                        {source.last_result || '-'}
+                        {formatResult(source.last_result)}
                       </span>
                       {source.last_error ? (
                         <span className='line-clamp-1 text-xs text-red-600'>
@@ -2834,8 +2845,8 @@ function SourcesPage() {
                   }
                   className='rounded-lg border bg-background px-3 py-2'
                 >
-                  <option value='active'>active</option>
-                  <option value='inactive'>inactive</option>
+                  <option value='active'>Aktiv</option>
+                  <option value='inactive'>Passiv</option>
                 </select>
               </label>
 
@@ -2849,8 +2860,8 @@ function SourcesPage() {
                   className='rounded-lg border bg-background px-3 py-2'
                 >
                   {MONITOR_METHODS.map((method) => (
-                    <option key={method} value={method}>
-                      {method}
+                    <option key={formatMonitorMethod(method)} value={formatMonitorMethod(method)}>
+                      {formatMonitorMethod(method)}
                     </option>
                   ))}
                 </select>
@@ -2876,9 +2887,9 @@ function SourcesPage() {
                   }
                   className='rounded-lg border bg-background px-3 py-2'
                 >
-                  <option value='high'>high</option>
-                  <option value='medium'>medium</option>
-                  <option value='low'>low</option>
+                  <option value='high'>Yüksək</option>
+                  <option value='medium'>Orta</option>
+                  <option value='low'>Aşağı</option>
                 </select>
               </label>
 
@@ -2896,7 +2907,7 @@ function SourcesPage() {
                 >
                   {DISCOVERY_STATUSES.map((status) => (
                     <option key={status} value={status}>
-                      {status}
+                      {formatDiscoveryStatus(status)}
                     </option>
                   ))}
                 </select>
@@ -2921,7 +2932,7 @@ function SourcesPage() {
             <div className='mt-4 grid gap-3 rounded-xl border bg-muted/20 p-4 text-sm md:grid-cols-3'>
               <div>
                 <div className='text-xs text-muted-foreground'>Son nəticə</div>
-                <div className='font-medium'>{editing.last_result || '-'}</div>
+                <div className='font-medium'>{formatResult(editing.last_result)}</div>
               </div>
               <div>
                 <div className='text-xs text-muted-foreground'>Fail sayı</div>
@@ -3066,5 +3077,3 @@ function SourcesPage() {
 export const Route = createFileRoute('/(auth)/admin/monitor/sources')({
   component: SourcesPage,
 })
-
-

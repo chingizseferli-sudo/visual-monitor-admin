@@ -108,10 +108,10 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
             columnId: 'status',
             title: 'Status',
             options: [
-              { label: 'Active', value: 'active' },
-              { label: 'Inactive', value: 'inactive' },
-              { label: 'Invited', value: 'invited' },
-              { label: 'Suspended', value: 'suspended' },
+              { label: 'Aktiv', value: 'active' },
+              { label: 'Passiv', value: 'inactive' },
+              { label: 'Dəvət edilib', value: 'invited' },
+              { label: 'Dayandırılıb', value: 'suspended' },
             ],
           },
           {

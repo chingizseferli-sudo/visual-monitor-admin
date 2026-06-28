@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
+import { getStatusLabel } from '@/lib/status-ui'
 
 type SourceCheck = {
   id: string
@@ -536,7 +537,7 @@ function LogsPage() {
                     </td>
                     <td className='max-w-sm p-4'>
                       <div className='font-medium'>
-                        {source.last_result || '-'}
+                        {getStatusLabel(source.last_result, '-')}
                       </div>
                       <div className='mt-1 line-clamp-2 text-xs text-red-700'>
                         {source.last_error || source.notes || '-'}
@@ -609,7 +610,7 @@ function LogsPage() {
                   className='border-t'
                 >
                   <td className='p-4 font-medium'>{row.domain || '-'}</td>
-                  <td className='p-4'>{row.status || '-'}</td>
+                  <td className='p-4'>{getStatusLabel(row.status, '-')}</td>
                   <td className='p-4'>{row.method || '-'}</td>
                   <td className='p-4'>{row.score ?? '-'}</td>
                   <td className='max-w-xl p-4 text-muted-foreground'>

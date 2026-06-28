@@ -2,6 +2,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/data-table";
+import { getStatusBadgeClass, getStatusLabel } from "@/lib/status-ui";
 import { NewsRowActions } from "./news-row-actions";
 
 export type NewsItem = {
@@ -105,18 +106,8 @@ export const newsColumns: ColumnDef<NewsItem>[] = [
       const status = row.original.status;
 
       return (
-        <Badge
-          className={
-            status === "published"
-              ? "bg-green-100 text-green-700 hover:bg-green-100"
-              : status === "pending"
-                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-100"
-                : status === "scheduled"
-                  ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-100"
-          }
-        >
-          {status || "draft"}
+        <Badge className={getStatusBadgeClass(status, "draft")}>
+          {getStatusLabel(status, "draft")}
         </Badge>
       );
     },

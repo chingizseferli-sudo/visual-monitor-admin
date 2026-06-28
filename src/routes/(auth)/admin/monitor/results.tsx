@@ -3,6 +3,7 @@ import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { getStatusBadgeClass, getStatusLabel } from "@/lib/status-ui";
 
 type Monitor = {
   id: string;
@@ -317,9 +318,9 @@ function ResultsPage() {
           className="rounded-lg border bg-background px-3 py-2"
         >
           <option value="all">Bütün statuslar</option>
-          <option value="new">new</option>
-          <option value="seen">seen</option>
-          <option value="archived">archived</option>
+          <option value="new">Yeni</option>
+          <option value="seen">Görüldü</option>
+          <option value="archived">Arxivləşdirilib</option>
         </select>
       </div>
 
@@ -374,8 +375,8 @@ function ResultsPage() {
                 </td>
 
                 <td className="p-4">
-                  <span className="rounded-full border px-2 py-1 text-xs">
-                    {item?.status || "new"}
+                  <span className={`rounded-full border px-2 py-1 text-xs ${getStatusBadgeClass(item?.status, "new")}`}>
+                    {getStatusLabel(item?.status, "new")}
                   </span>
                 </td>
 

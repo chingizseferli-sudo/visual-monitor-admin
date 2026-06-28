@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { getStatusLabel } from "@/lib/status-ui";
 
 type Monitor = {
   id: string;
@@ -192,7 +193,7 @@ function MonitorDetailsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-xl border bg-card p-4 shadow-sm">
           <div className="text-sm text-muted-foreground">Status</div>
-          <div className="text-2xl font-bold">{monitor.status || "-"}</div>
+          <div className="text-2xl font-bold">{getStatusLabel(monitor.status)}</div>
         </div>
 
         <div className="rounded-xl border bg-card p-4 shadow-sm">

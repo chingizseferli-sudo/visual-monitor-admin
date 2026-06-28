@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { LongText } from '@/components/long-text'
-import { callTypes, roles } from '../data/data'
+import { getStatusBadgeClass, getStatusLabel } from '@/lib/status-ui'
+import { roles } from '../data/data'
 import { type User } from '../data/schema'
 import { DataTableRowActions } from './data-table-row-actions'
 
@@ -88,11 +89,11 @@ export const usersColumns: ColumnDef<User>[] = [
     ),
     cell: ({ row }) => {
       const { status } = row.original
-      const badgeColor = callTypes.get(status)
+      const badgeColor = getStatusBadgeClass(status)
       return (
         <div className='flex space-x-2'>
-          <Badge variant='outline' className={cn('capitalize', badgeColor)}>
-            {row.getValue('status')}
+          <Badge variant='outline' className={cn(badgeColor)}>
+            {getStatusLabel(status)}
           </Badge>
         </div>
       )

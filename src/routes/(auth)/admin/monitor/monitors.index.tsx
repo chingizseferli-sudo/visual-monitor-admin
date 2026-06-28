@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { getStatusBadgeClass, getStatusLabel } from "@/lib/status-ui";
 
 type Monitor = {
   id: string;
@@ -372,8 +373,8 @@ function MonitorsPage() {
                 </td>
 
                 <td className="p-4">
-                  <span className="rounded-full border px-2 py-1 text-xs">
-                    {monitor.status || "unknown"}
+                  <span className={`rounded-full border px-2 py-1 text-xs ${getStatusBadgeClass(monitor.status)}`}>
+                    {getStatusLabel(monitor.status)}
                   </span>
                 </td>
 

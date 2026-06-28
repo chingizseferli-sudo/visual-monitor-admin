@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { getStatusBadgeClass, getStatusLabel } from "@/lib/status-ui";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type Monitor = {
@@ -787,8 +788,8 @@ function MonitorsPage() {
 
               <div>
                 <div className="text-xs text-muted-foreground">Status</div>
-                <span className="mt-1 inline-flex rounded-full border px-2 py-1 text-xs">
-                  {monitor.status || "unknown"}
+                <span className={`mt-1 inline-flex rounded-full border px-2 py-1 text-xs ${getStatusBadgeClass(monitor.status)}`}>
+                  {getStatusLabel(monitor.status)}
                 </span>
               </div>
 

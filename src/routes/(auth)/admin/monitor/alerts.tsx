@@ -3,6 +3,7 @@ import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { getChannelLabel, getStatusBadgeClass, getStatusLabel } from "@/lib/status-ui";
 
 type AlertRow = {
   id: string;
@@ -213,7 +214,7 @@ function AlertsPage() {
           match?.user_monitors?.name || "Monitor",
           match?.matched_keyword || "-",
           alert.channel || "web",
-          alert.status || "new",
+          getStatusLabel(alert.status, "new"),
           item?.title ? decodeHtml(item.title) : "X\u0259b\u0259r tap\u0131lmad\u0131",
           item?.url || "",
         ];
@@ -294,10 +295,10 @@ function AlertsPage() {
           className="rounded-lg border bg-background px-3 py-2"
         >
           <option value="all">Bütün statuslar</option>
-          <option value="new">new</option>
-          <option value="read">read</option>
-          <option value="sent">sent</option>
-          <option value="failed">failed</option>
+          <option value="new">Yeni</option>
+          <option value="read">Oxundu</option>
+          <option value="sent">Göndərildi</option>
+          <option value="failed">Xəta</option>
         </select>
 
         <select
@@ -307,8 +308,8 @@ function AlertsPage() {
         >
           <option value="all">Bütün kanallar</option>
           {channels.map((channel) => (
-            <option key={channel} value={channel}>
-              {channel}
+            <option key={getChannelLabel(channel)} value={getChannelLabel(channel)}>
+              {getChannelLabel(channel)}
             </option>
           ))}
         </select>
@@ -390,11 +391,11 @@ function AlertsPage() {
                     </span>
                   </td>
 
-                  <td className="p-4">{alert.channel || "web"}</td>
+                  <td className="p-4">{getChannelLabel(alert.channel)}</td>
 
                   <td className="p-4">
-                    <span className="rounded-full border px-2 py-1 text-xs">
-                      {alert.status || "new"}
+                    <span className={`rounded-full border px-2 py-1 text-xs ${getStatusBadgeClass(alert.status, "new")}`}>
+                      {getStatusLabel(alert.status, "new")}
                     </span>
                   </td>
 
