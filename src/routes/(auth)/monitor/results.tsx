@@ -571,11 +571,11 @@ function ResultsPage() {
   }
 
   return (
-    <div className="grid gap-4 p-4 md:p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 md:text-5xl">Tapılan xəbərlər</h1>
-          <p className="mt-2 text-slate-500">Açar sözlərinizə uyğun gələn son media nəticələri.</p>
+    <div className="grid gap-3 p-3 md:p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 md:text-3xl">Tapılan xəbərlər</h1>
+          <p className="mt-1 text-sm text-slate-500">Açar sözlərinizə uyğun gələn son media nəticələri.</p>
         </div>
         <Pagination
           page={safePage}
@@ -586,25 +586,38 @@ function ResultsPage() {
         />
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="mt-1 rounded-xl bg-blue-50 p-2 text-blue-700">
+      {errorMessage ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+            <span className="inline-flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 font-extrabold text-blue-700">
               <Download className="h-4 w-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-extrabold text-blue-700">Export</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Seçilən interval üzrə {exportRows.length} nəticə eksport ediləcək.
-              </p>
-            </div>
+              Export
+            </span>
+            <span className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600">
+              {exportRows.length} nəticə
+            </span>
+            <span className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600">
+              {rows.length} media
+            </span>
+            <span className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600">
+              {uniqueMonitors} monitor
+            </span>
+            <span className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600">
+              {uniqueKeywords} açar söz
+            </span>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-wrap gap-2">
             <select
               value={exportRange}
               onChange={(event) => setExportRange(event.target.value as ExportRange)}
-              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium"
+              className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium"
             >
               {Object.entries(exportRangeLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -616,7 +629,7 @@ function ResultsPage() {
               type="button"
               onClick={() => exportResults("csv")}
               disabled={exportRows.length === 0}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-extrabold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-extrabold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileText className="h-4 w-4" />
               CSV
@@ -625,7 +638,7 @@ function ResultsPage() {
               type="button"
               onClick={() => exportResults("json")}
               disabled={exportRows.length === 0}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-extrabold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-extrabold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileJson2 className="h-4 w-4" />
               JSON
@@ -634,146 +647,122 @@ function ResultsPage() {
               type="button"
               onClick={() => exportResults("html")}
               disabled={exportRows.length === 0}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-extrabold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-extrabold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileCode2 className="h-4 w-4" />
               HTML
             </button>
           </div>
         </div>
-      </section>
 
-      {errorMessage ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : null}
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold">Nəticələr nə vaxt görünür?</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Sistem mənbələri mütəmadi yoxlayır. Açar sözlərinizə uyğun yeni material tapıldıqda burada görünür.
-          Nəticələrin yaranması mənbələrin nə qədər tez yenilənməsindən asılıdır.
-        </p>
-      </section>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-slate-500">Tapılan media materialı</div>
-              <div className="mt-1 text-2xl font-semibold">{rows.length}</div>
-            </div>
-            <Bell className="h-5 w-5 text-slate-500" />
+        <div className="mt-3 grid gap-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr_auto]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Başlıq, monitor, link və ya açar söz üzrə axtar..."
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm"
+            />
           </div>
-        </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-slate-500">Monitor</div>
-              <div className="mt-1 text-2xl font-semibold">{uniqueMonitors}</div>
-            </div>
-            <Clock3 className="h-5 w-5 text-slate-500" />
-          </div>
-        </div>
+          <select
+            value={monitorFilter}
+            onChange={(event) => setMonitorFilter(event.target.value)}
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+          >
+            <option value={ALL}>Bütün monitorlar</option>
+            {monitorOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-slate-500">Açar söz</div>
-              <div className="mt-1 text-2xl font-semibold">{uniqueKeywords}</div>
-            </div>
-            <Hash className="h-5 w-5 text-slate-500" />
-          </div>
-        </div>
-      </div>
+          <select
+            value={keywordFilter}
+            onChange={(event) => setKeywordFilter(event.target.value)}
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+          >
+            <option value={ALL}>Bütün açar sözlər</option>
+            {keywordOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
 
-      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1.4fr_1fr_1fr_1fr_auto]">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <select
+            value={sourceFilter}
+            onChange={(event) => setSourceFilter(event.target.value)}
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+          >
+            <option value={ALL}>Bütün mənbələr</option>
+            {sourceOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
           <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Başlıq, monitor, link və ya açar söz üzrə axtar..."
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3"
+            type="date"
+            value={dateFilter}
+            onChange={(event) => setDateFilter(event.target.value)}
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
           />
         </div>
 
-        <select
-          value={monitorFilter}
-          onChange={(event) => setMonitorFilter(event.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-        >
-          <option value={ALL}>Bütün monitorlar</option>
-          {monitorOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <p className="mt-2 text-xs text-slate-500">
+          Sistem mənbələri mütəmadi yoxlayır; uyğun yeni material tapıldıqda bu siyahıya əlavə olunur.
+        </p>
+      </section>
 
-        <select
-          value={keywordFilter}
-          onChange={(event) => setKeywordFilter(event.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-        >
-          <option value={ALL}>Bütün açar sözlər</option>
-          {keywordOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 text-sm text-slate-500">
+          <span>{filteredRows.length} nəticə | səhifə {safePage} / {totalPages}</span>
+          <Pagination
+            page={safePage}
+            totalPages={totalPages}
+            totalItems={filteredRows.length}
+            onPageChange={setPage}
+            compact
+          />
+        </div>
 
-        <select
-          value={sourceFilter}
-          onChange={(event) => setSourceFilter(event.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-        >
-          <option value={ALL}>Bütün mənbələr</option>
-          {sourceOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <div className="divide-y divide-slate-100">
+          {paginatedRows.map((row) => {
+            const item = row.monitored_items;
+            const title = item ? decodeHtml(item.title) : "Xəbər tapılmadı";
+            const detectedAt = item?.detected_at || row.created_at;
 
-        <input
-          type="date"
-          value={dateFilter}
-          onChange={(event) => setDateFilter(event.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-        />
-      </div>
+            return (
+              <article key={row.id} className="px-3 py-2.5 transition hover:bg-slate-50">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5">{row.user_monitors?.name || "Monitor"}</span>
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">{row.matched_keyword || "Açar söz yoxdur"}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5">{getHost(item?.url)}</span>
+                    </div>
 
-      <Pagination
-        page={safePage}
-        totalPages={totalPages}
-        totalItems={filteredRows.length}
-        onPageChange={setPage}
-      />
+                    {item ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block truncate text-sm font-extrabold leading-5 text-slate-950 hover:text-blue-700 hover:underline"
+                      >
+                        {title}
+                      </a>
+                    ) : (
+                      <div className="mt-1 truncate text-sm font-extrabold text-slate-500">{title}</div>
+                    )}
 
-      <div className="grid gap-3">
-        {paginatedRows.map((row) => {
-          const item = row.monitored_items;
-          const title = item ? decodeHtml(item.title) : "Xəbər tapılmadı";
-          const detectedAt = item?.detected_at || row.created_at;
-
-          return (
-            <article key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border px-2 py-1 text-xs">
-                      {row.user_monitors?.name || "Monitor"}
-                    </span>
-                    <span className="rounded-full border px-2 py-1 text-xs">
-                      {row.matched_keyword || "Açar söz yoxdur"}
-                    </span>
-                    <span className="rounded-full border px-2 py-1 text-xs text-slate-500">
-                      {getHost(item?.url)}
-                    </span>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                      <span>Dərc: {formatDate(item?.published_at || null)}</span>
+                      <span>Tapıldı: {formatDate(detectedAt)}</span>
+                    </div>
                   </div>
 
                   {item ? (
@@ -781,60 +770,34 @@ function ResultsPage() {
                       href={item.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="line-clamp-2 text-base font-semibold leading-snug hover:underline"
+                      className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg border border-slate-200 px-2.5 text-xs font-bold hover:bg-slate-50"
                     >
-                      {title}
+                      Aç
+                      <ExternalLink className="h-3.5 w-3.5" />
                     </a>
-                  ) : (
-                    <div className="text-base font-semibold text-slate-500">{title}</div>
-                  )}
-
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
-                    <span>Dərc: {formatDate(item?.published_at || null)}</span>
-                    <span>Tapıldı: {formatDate(detectedAt)}</span>
-                  </div>
+                  ) : null}
                 </div>
+              </article>
+            );
+          })}
 
-                {item ? (
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
-                  >
-                    Aç
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                ) : null}
-              </div>
-            </article>
-          );
-        })}
-
-        {paginatedRows.length === 0 && !errorMessage && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <div className="font-medium">Hələ nəticə yoxdur</div>
-            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-              Sistem mənbələri yoxladıqca uyğun media materialları burada görünəcək. Əgər uzun müddət nəticə
-              yaranmırsa, monitorlarınızdakı açar sözləri daha aydın və konkret yazmağı yoxlayın.
-            </p>
-            <Link to="/monitor/monitors" className="mt-3 inline-flex rounded-lg border px-3 py-2 text-sm hover:bg-muted">
-              Monitorlara bax
-            </Link>
-          </div>
-        )}
+          {paginatedRows.length === 0 && !errorMessage && (
+            <div className="p-6 text-center">
+              <div className="font-medium">Hələ nəticə yoxdur</div>
+              <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+                Sistem mənbələri yoxladıqca uyğun media materialları burada görünəcək. Uzun müddət nəticə yaranmırsa,
+                açar sözləri daha konkret yazmağı yoxlayın.
+              </p>
+              <Link to="/monitor/monitors" className="mt-3 inline-flex rounded-lg border px-3 py-2 text-sm hover:bg-muted">
+                Monitorlara bax
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
-
-      <Pagination
-        page={safePage}
-        totalPages={totalPages}
-        totalItems={filteredRows.length}
-        onPageChange={setPage}
-      />
     </div>
   );
 }
-
 export const Route = createFileRoute("/(auth)/monitor/results")({
   component: ResultsPage,
 });
