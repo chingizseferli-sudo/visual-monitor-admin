@@ -4,6 +4,7 @@ import {
   Bell,
   CalendarDays,
   CreditCard,
+  ExternalLink,
   Loader2,
   Mail,
   MessageCircle,
@@ -11,6 +12,7 @@ import {
   Send,
   ShieldCheck,
   Smartphone,
+  type LucideIcon,
 } from "lucide-react";
 import { customerQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
@@ -32,6 +34,7 @@ type PlanInfo = {
 };
 
 type ProfileState = {
+  userId: string;
   email: string;
   role: string;
   status: string;
@@ -67,6 +70,16 @@ function getStatusLabel(status: string | null) {
   if (status === "blocked") return "Bloklanıb";
   if (status === "inactive") return "Passiv";
   return status || "-";
+}
+
+function getTelegramBotUrl(userId: string) {
+  const username = String(import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "")
+    .replace(/^@/, "")
+    .trim();
+
+  if (!username || !userId) return "";
+
+  return `https://t.me/${encodeURIComponent(username)}?start=${encodeURIComponent(userId)}`;
 }
 
 async function loadOptionalPlan(userId: string): Promise<{ plan: PlanInfo | null; available: boolean }> {
@@ -133,6 +146,7 @@ async function fetchProfileData(): Promise<{ profileState: ProfileState | null; 
 
   return {
     profileState: {
+      userId: user.id,
       email: profile?.email || user.email || "-",
       role: getRoleLabel(profile?.role || null),
       status: getStatusLabel(profile?.status || null),
@@ -155,7 +169,7 @@ function InfoTile({
 }: {
   label: string;
   value: string | number;
-  icon?: typeof Mail;
+  icon?: LucideIcon;
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -173,11 +187,15 @@ function NotificationChannelCard({
   status,
   statusTone,
   icon: Icon,
+  href,
+  actionLabel,
 }: {
   title: string;
   status: string;
   statusTone: "active" | "ready" | "soon";
-  icon: typeof Bell;
+  icon: LucideIcon;
+  href?: string;
+  actionLabel?: string;
 }) {
   const toneClass =
     statusTone === "active"
@@ -186,21 +204,42 @@ function NotificationChannelCard({
         ? "border-blue-200 bg-blue-50 text-blue-700"
         : "border-slate-200 bg-slate-50 text-slate-600";
 
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-50 text-slate-700">
-            <Icon className="h-5 w-5" />
-          </div>
-          <h3 className="font-extrabold text-slate-950">{title}</h3>
+  const content = (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-50 text-slate-700">
+          <Icon className="h-5 w-5" />
         </div>
-        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-extrabold ${toneClass}`}>
-          {status}
-        </span>
+        <div>
+          <h3 className="font-extrabold text-slate-950">{title}</h3>
+          {actionLabel ? (
+            <div className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#1463ff]">
+              {actionLabel}
+              <ExternalLink className="h-3.5 w-3.5" />
+            </div>
+          ) : null}
+        </div>
       </div>
+      <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-extrabold ${toneClass}`}>
+        {status}
+      </span>
     </div>
   );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">{content}</div>;
 }
 
 function ProfilePage() {
@@ -236,6 +275,7 @@ function ProfilePage() {
   const hasReachedPlanLimit = typeof planLimit === "number" && profileState.monitorCount >= planLimit;
   const telegramActive = Boolean(profileState.telegramChatId);
   const emailReady = profileState.email !== "-";
+  const telegramBotUrl = getTelegramBotUrl(profileState.userId);
 
   return (
     <div className="grid gap-4 p-4 md:p-6">
@@ -300,6 +340,8 @@ function ProfilePage() {
             status={telegramActive ? "Aktiv" : "Aktiv deyil"}
             statusTone={telegramActive ? "active" : "soon"}
             icon={Send}
+            href={telegramBotUrl}
+            actionLabel={telegramBotUrl ? (telegramActive ? "Botu aç" : "Qoşul") : undefined}
           />
           <NotificationChannelCard
             title="Email"
