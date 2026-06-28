@@ -91,7 +91,7 @@ function AlertsPage() {
       alert("Bildirişlər oxunmadı: " + error.message);
       setAlerts([]);
     } else {
-      setAlerts((data || []) as AlertRow[]);
+      setAlerts((data || []) as unknown as AlertRow[]);
     }
 
     setLoading(false);

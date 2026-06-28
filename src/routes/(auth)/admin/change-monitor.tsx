@@ -644,19 +644,6 @@ function getDiffToneClass(tone: DiffCellTone) {
   return 'border-border bg-background text-foreground'
 }
 
-function formatSnapshotPreview(text: string | null | undefined, maxChars = 1200) {
-  const raw = String(text || '').trim()
-  if (!raw) return 'Snapshot boşdur.'
-
-  let preview = raw
-  try {
-    preview = JSON.stringify(JSON.parse(raw), null, 2)
-  } catch {
-    preview = raw
-  }
-
-  return preview.length > maxChars ? `${preview.slice(0, maxChars).trimEnd()}...` : preview
-}
 function formatDate(value: string | null | undefined) {
   if (!value) return '-'
 
@@ -745,12 +732,6 @@ function parseChangeSummaryForNotification(summary: string | null | undefined) {
     itemUrl,
     published,
   }
-}
-
-function isRecentChange(event: ChangeEvent | null | undefined) {
-  if (!event?.created_at) return false
-  const created = new Date(event.created_at).getTime()
-  return Number.isFinite(created) && Date.now() - created <= 24 * 60 * 60 * 1000
 }
 
 function hasError(source: ChangeSource) {
@@ -1790,13 +1771,6 @@ function ChangeMonitorPage() {
     }
     return map
   }, [recentEvents])
-  const latestAlertBySourceId = useMemo(() => {
-    const map = new Map<string, ChangeAlert>()
-    for (const alert of alerts) {
-      if (alert.source_id && !map.has(alert.source_id)) map.set(alert.source_id, alert)
-    }
-    return map
-  }, [alerts])
   const notificationItems = useMemo<ChangeNotificationItem[]>(() => {
     const sourceMap = new Map(sources.map((source) => [source.id, source] as const))
     const eventMap = new Map(recentEvents.map((event) => [event.id, event] as const))
@@ -2097,7 +2071,6 @@ function ChangeMonitorPage() {
               <TableBody>
                 {filteredSources.map((source) => {
                   const latestEvent = latestEventBySourceId.get(source.id) || null
-                  const latestAlertForSource = latestAlertBySourceId.get(source.id) || null
                   const isExpanded = expandedSourceId === source.id
                   const details = expandedDetails[source.id]
                   const latestInlineEvent = details?.events?.[0] || null
@@ -2151,7 +2124,6 @@ function ChangeMonitorPage() {
                       changedCount: itemCompare.changed.length,
                     }
                   })
-                  const latestSummary = latestEvent?.diff_summary?.trim() || diagnostic.reason
                   const hasUnreadNotification = unreadNotificationSourceIds.has(source.id)
                   const rowClass =
                     source.status !== 'active'

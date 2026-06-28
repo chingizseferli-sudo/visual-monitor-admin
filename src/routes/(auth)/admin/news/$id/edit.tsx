@@ -94,7 +94,7 @@ function RouteComponent() {
       return;
     }
 
-    navigate({ to: "/news" });
+    navigate({ to: "/admin/news" });
   }
 
   if (loading) {

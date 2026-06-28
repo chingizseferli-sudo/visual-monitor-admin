@@ -167,7 +167,7 @@ async function fetchResultsData(): Promise<ResultsData> {
     return { rows: [], errorMessage: "Nəticələr yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin." };
   }
 
-  return { rows: (data || []) as ResultRow[], errorMessage: "" };
+  return { rows: (data || []) as unknown as ResultRow[], errorMessage: "" };
 }
 
 function ResultsPage() {

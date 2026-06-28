@@ -104,10 +104,10 @@ async function fetchProfileData(): Promise<{ profileState: ProfileState | null; 
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      setProfileState(null);
-      setErrorMessage("Sessiya tapılmadı. Zəhmət olmasa yenidən daxil olun.");
-      setLoading(false);
-      return;
+      return {
+        profileState: null,
+        errorMessage: "Sessiya tapılmadı. Zəhmət olmasa yenidən daxil olun.",
+      };
     }
 
     const [profileResult, monitorCountResult, planResult] = await Promise.all([
@@ -125,7 +125,6 @@ async function fetchProfileData(): Promise<{ profileState: ProfileState | null; 
 
     if (profileResult.error) {
       console.error("Customer profile load error:", profileResult.error);
-      setErrorMessage("Profil məlumatları tam yüklənmədi. Əsas hesab məlumatları göstərilir.");
     }
 
     if (monitorCountResult.error) {

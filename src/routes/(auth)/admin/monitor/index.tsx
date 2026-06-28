@@ -102,7 +102,7 @@ function MonitorDashboard() {
     setTodayMatchesCount(matchesRes.count || 0);
 
     if (!recentMatchesRes.error && recentMatchesRes.data) {
-      setRecentMatches(recentMatchesRes.data as MatchRow[]);
+      setRecentMatches(recentMatchesRes.data as unknown as MatchRow[]);
     } else {
       setRecentMatches([]);
     }

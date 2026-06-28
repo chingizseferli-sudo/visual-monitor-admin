@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { customerQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
-import { getStatusMeta } from "@/lib/status-ui";
 
 const PAGE_SIZE = 12;
 const ALL = "all";
@@ -217,7 +216,7 @@ async function fetchAlertsData(): Promise<AlertsData> {
     return { alerts: [], errorMessage: "Bildirişlər yüklənmədi. Bağlantını yoxlayıb yenidən cəhd edin." };
   }
 
-  return { alerts: (data || []) as AlertRow[], errorMessage: "" };
+  return { alerts: (data || []) as unknown as AlertRow[], errorMessage: "" };
 }
 
 function AlertsPage() {

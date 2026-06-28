@@ -84,7 +84,7 @@ async function fetchDashboardData(): Promise<DashboardData> {
       .limit(10),
   ]);
 
-  const matches = (matchesRes.data || []) as MatchRow[];
+  const matches = (matchesRes.data || []) as unknown as MatchRow[];
   const matchIds = matches.map((item) => item.id);
   let alertCount = 0;
 
