@@ -152,13 +152,13 @@ function StatBox({
   icon: typeof Activity;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-sm text-muted-foreground">{label}</div>
+          <div className="text-sm text-slate-500">{label}</div>
           <div className="mt-1 text-lg font-semibold">{value}</div>
         </div>
-        <Icon className="h-5 w-5 text-muted-foreground" />
+        <Icon className="h-5 w-5 text-slate-500" />
       </div>
     </div>
   );
@@ -638,7 +638,7 @@ function MonitorsPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Monitorlar</h1>
-          <p className="text-muted-foreground">
+          <p className="text-slate-500">
             Monitorlar sistemin izlədiyi mövzu, təşkilat, şəxs və ya brend üzrə açar söz qaydalarıdır.
           </p>
         </div>
@@ -649,13 +649,13 @@ function MonitorsPage() {
               href={telegramLink}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#1463ff] px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
             >
               <Send className="h-4 w-4" />
               Telegram-a qoş
             </a>
           ) : (
-            <span className="rounded-lg border px-4 py-2 text-sm text-muted-foreground">
+            <span className="rounded-lg border px-4 py-2 text-sm text-slate-500">
               Telegram bot adı aktiv deyil
             </span>
           )}
@@ -663,7 +663,7 @@ function MonitorsPage() {
       </div>
 
       {message ? (
-        <div className="rounded-lg border bg-card px-4 py-3 text-sm">{message}</div>
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm px-4 py-3 text-sm">{message}</div>
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-4">
@@ -674,15 +674,15 @@ function MonitorsPage() {
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[0.85fr_1.15fr]">
-        <section className="rounded-lg border bg-card p-3">
+        <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="mb-3">
             <h2 className="text-base font-semibold">Yeni monitor</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Monitor yaradın, açar sözləri əlavə edin və sistem uyğun media materiallarını tapdıqca nəticələri izləyin.
             </p>
           </div>
 
-          <div className="mb-4 rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+          <div className="mb-4 rounded-2xl border border-slate-200 bg-[#f7f9fd] p-3 text-sm text-slate-500">
             <div className="font-medium text-foreground">Necə işləyir?</div>
             <ol className="mt-2 grid gap-1">
               <li>1. Monitor üçün aydın ad yazın.</li>
@@ -695,7 +695,7 @@ function MonitorsPage() {
             className={
               monitorLimitReached
                 ? "mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700"
-                : "mb-4 rounded-lg border bg-background p-3 text-sm text-muted-foreground"
+                : "mb-4 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-500"
             }
           >
             <div className="font-medium text-foreground">Plan istifadəsi</div>
@@ -718,23 +718,23 @@ function MonitorsPage() {
               value={newMonitorName}
               onChange={(event) => setNewMonitorName(event.target.value)}
               placeholder="Monitor adı, məsələn: ADA Universiteti"
-              className="rounded-lg border bg-background px-3 py-2"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2"
             />
 
             <input
               value={newMonitorDescription}
               onChange={(event) => setNewMonitorDescription(event.target.value)}
               placeholder="Qısa təsvir, məsələn: universitetlə bağlı media izləmə"
-              className="rounded-lg border bg-background px-3 py-2"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2"
             />
 
             <textarea
               value={newMonitorKeywords}
               onChange={(event) => setNewMonitorKeywords(event.target.value)}
               placeholder="Açar sözləri vergül və ya yeni sətrlə yaz: universitet adı, şirkət, brend, şəxs, layihə, dəqiq ifadə"
-              className="min-h-20 rounded-lg border bg-background px-3 py-2 text-sm"
+              className="min-h-20 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
             />
-            <div className="rounded-lg border bg-background p-3 text-xs text-muted-foreground">
+            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500">
               Nümunələr: “Bakı Dövlət Universiteti”, “Mərkəzi Bank”, “Azercell”, “rektor adı”, “yeni layihə”, “dəqiq sitat”. Bir neçə açar sözü vergül və ya ayrı sətirlə əlavə edə bilərsiniz.
             </div>
 
@@ -742,7 +742,7 @@ function MonitorsPage() {
               type="button"
               onClick={createMonitor}
               disabled={saving || monitorLimitReached}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1463ff] px-4 py-2 font-bold text-white hover:bg-blue-700 disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Monitor yarat
@@ -750,18 +750,18 @@ function MonitorsPage() {
           </div>
         </section>
 
-        <section className="rounded-lg border bg-card p-3">
+        <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold">Telegram statusu</h2>
-              <p className="text-sm text-muted-foreground">Bildirişlərin göndəriləcəyi hesab</p>
+              <p className="text-sm text-slate-500">Bildirişlərin göndəriləcəyi hesab</p>
             </div>
 
             <span
               className={
                 telegramConnected
                   ? "rounded-full border border-green-200 bg-green-50 px-3 py-1 text-sm text-green-700"
-                  : "rounded-full border px-3 py-1 text-sm text-muted-foreground"
+                  : "rounded-full border px-3 py-1 text-sm text-slate-500"
               }
             >
               {telegramConnected ? "Qoşulub" : "Qoşulmayıb"}
@@ -769,8 +769,8 @@ function MonitorsPage() {
           </div>
 
           <div className="grid gap-3">
-            <div className="rounded-lg border bg-background p-3 text-sm">
-              <div className="text-muted-foreground">Telegram chat</div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
+              <div className="text-slate-500">Telegram chat</div>
               <div className="mt-1 font-medium">
                 {profile?.telegram_chat_id || "Hələ aktiv deyil"}
               </div>
@@ -787,7 +787,7 @@ function MonitorsPage() {
                 Telegram-a qoş
               </a>
             ) : (
-              <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+              <div className="rounded-lg border p-3 text-sm text-slate-500">
                 VITE_TELEGRAM_BOT_USERNAME env dəyəri əlavə olunmalıdır.
               </div>
             )}
@@ -795,21 +795,21 @@ function MonitorsPage() {
         </section>
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Monitor adı, təsvir və ya status üzrə axtar..."
-            className="w-full rounded-lg border bg-background py-2 pl-9 pr-3"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3"
           />
         </div>
       </div>
 
       <div className="grid gap-4">
         {rows.map((monitor) => (
-          <section key={monitor.id} className="rounded-lg border bg-card">
+          <section key={monitor.id} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="grid gap-3 border-b p-3 lg:grid-cols-[1.2fr_0.45fr_0.45fr_0.65fr_auto]">
               <div>
                 {editingMonitorId === monitor.id ? (
@@ -817,20 +817,20 @@ function MonitorsPage() {
                     <input
                       value={editMonitorName}
                       onChange={(event) => setEditMonitorName(event.target.value)}
-                      className="rounded-lg border bg-background px-3 py-2 text-sm"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                       placeholder="Monitor adı"
                     />
                     <input
                       value={editMonitorDescription}
                       onChange={(event) => setEditMonitorDescription(event.target.value)}
-                      className="rounded-lg border bg-background px-3 py-2 text-sm"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                       placeholder="Qısa təsvir"
                     />
                   </div>
                 ) : (
                   <>
                     <h2 className="text-base font-semibold">{monitor.name}</h2>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-slate-500">
                       {monitor.description || "Təsvir yoxdur"}
                     </p>
                   </>
@@ -838,19 +838,19 @@ function MonitorsPage() {
               </div>
 
               <div>
-                <div className="text-xs text-muted-foreground">Status</div>
+                <div className="text-xs text-slate-500">Status</div>
                 <span className={`mt-1 inline-flex rounded-full border px-2 py-1 text-xs ${getStatusBadgeClass(monitor.status)}`}>
                   {getStatusLabel(monitor.status)}
                 </span>
               </div>
 
               <div>
-                <div className="text-xs text-muted-foreground">Nəticə</div>
+                <div className="text-xs text-slate-500">Nəticə</div>
                 <div className="mt-1 text-lg font-semibold">{monitor.resultCount}</div>
               </div>
 
               <div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1 text-xs text-slate-500">
                   <Clock3 className="h-3.5 w-3.5" />
                   Son uyğunluq
                 </div>
@@ -919,7 +919,7 @@ function MonitorsPage() {
                     }))
                   }
                   placeholder="Yeni açar sözlər: təşkilat, brend, şəxs, layihə və ya dəqiq ifadə"
-                  className="min-h-14 rounded-lg border bg-background px-3 py-2 text-sm"
+                  className="min-h-14 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && event.ctrlKey) addKeyword(monitor.id);
                   }}
@@ -936,7 +936,7 @@ function MonitorsPage() {
               </div>
 
               {monitor.keywords.length === 0 ? (
-                <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-slate-200 bg-[#f7f9fd] p-4 text-sm text-slate-500">
                   <div className="font-medium text-foreground">Bu monitorda hələ açar söz yoxdur.</div>
                   <p className="mt-1">
                     Nəticələrin gəlməsi üçün ən azı bir açar söz əlavə edin. Sistem mənbələri mütəmadi yoxlayır; uyğun nəticələr aşkar olunduqca burada görünəcək.
@@ -956,7 +956,7 @@ function MonitorsPage() {
                       <button
                         type="button"
                         onClick={() => deleteKeyword(item.id, item.keyword)}
-                        className="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
+                        className="rounded-full p-0.5 text-slate-500 hover:text-destructive"
                         title="Sil"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -970,9 +970,9 @@ function MonitorsPage() {
         ))}
 
         {rows.length === 0 && (
-          <div className="rounded-lg border bg-card p-8 text-center">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <div className="font-medium">Seçilmiş axtarışa uyğun monitor tapılmadı</div>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
               İlk monitorunuzu yaradın, açar sözləri əlavə edin və nəticələri bu paneldən izləyin. Sistem mənbələri mütəmadi yoxladığı üçün nəticələr bir qədər sonra görünə bilər.
             </p>
           </div>

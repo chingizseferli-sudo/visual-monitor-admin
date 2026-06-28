@@ -27,10 +27,10 @@ export function SignIn() {
             Monitorlarınızı, nəticələri və bildirişləri görmək üçün email və şifrənizi yazın.
             Hesabınız yoxdur?{' '}
             <Link
-              to='/contact'
+              to='/sign-up'
               className='font-semibold text-[#1463ff] underline underline-offset-4 hover:text-blue-700'
             >
-              Demo üçün əlaqə saxlayın
+              Qeydiyyatdan keçin
             </Link>
           </CardDescription>
         </CardHeader>

@@ -186,7 +186,7 @@ function ProfilePage() {
     <div className="grid gap-4 p-4 md:p-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Profil və ayarlar</h1>
-        <p className="text-muted-foreground">
+        <p className="text-slate-500">
           Hesab məlumatları, plan istifadəsi və bildiriş bağlantısı bu bölmədə idarə olunur.
         </p>
       </div>
@@ -198,36 +198,36 @@ function ProfilePage() {
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-lg border bg-card p-5 lg:col-span-2">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+            <ShieldCheck className="h-5 w-5 text-slate-500" />
             <h2 className="text-lg font-semibold">Hesab məlumatları</h2>
           </div>
-          <p className="mb-4 text-sm text-muted-foreground">
+          <p className="mb-4 text-sm text-slate-500">
             Bu məlumatlar hesabınızın platformada hansı rol və statusla istifadə olunduğunu göstərir.
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border bg-background p-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center gap-2 text-sm text-slate-500">
                 <Mail className="h-4 w-4" />
                 Email
               </div>
               <div className="mt-2 break-all font-medium">{profileState.email}</div>
             </div>
 
-            <div className="rounded-lg border bg-background p-4">
-              <div className="text-sm text-muted-foreground">Hesab rolu</div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="text-sm text-slate-500">Hesab rolu</div>
               <div className="mt-2 font-medium">{formatRole(profileState.role)}</div>
             </div>
 
-            <div className="rounded-lg border bg-background p-4">
-              <div className="text-sm text-muted-foreground">Hesab statusu</div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="text-sm text-slate-500">Hesab statusu</div>
               <div className="mt-2 font-medium">{formatStatus(profileState.status)}</div>
             </div>
 
-            <div className="rounded-lg border bg-background p-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center gap-2 text-sm text-slate-500">
                 <CalendarDays className="h-4 w-4" />
                 Qeydiyyat tarixi
               </div>
@@ -236,27 +236,27 @@ function ProfilePage() {
           </div>
         </section>
 
-        <section className="rounded-lg border bg-card p-5">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
-            <Bell className="h-5 w-5 text-muted-foreground" />
+            <Bell className="h-5 w-5 text-slate-500" />
             <h2 className="text-lg font-semibold">Telegram</h2>
           </div>
-          <p className="mb-4 text-sm text-muted-foreground">
+          <p className="mb-4 text-sm text-slate-500">
             Telegram bildirişləri yeni uyğun nəticələr barədə daha tez xəbərdar olmaq üçündür.
           </p>
 
           {profileState.telegramChatId ? (
-            <div className="rounded-lg border bg-background p-4">
-              <div className="text-sm text-muted-foreground">Bağlantı statusu</div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="text-sm text-slate-500">Bağlantı statusu</div>
               <div className="mt-2 font-medium text-emerald-700">Telegram bildirişləri aktivdir.</div>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-slate-500">
                 Uyğun nəticələr tapıldıqda bildirişlər Telegram kanalınıza göndərilə bilər.
               </p>
             </div>
           ) : (
-            <div className="rounded-lg border bg-muted/30 p-4">
+            <div className="rounded-2xl border border-slate-200 bg-[#f7f9fd] p-4">
               <div className="font-medium">Telegram bildirişləri hələ aktiv deyil.</div>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-slate-500">
                 Aktivləşdirildikdən sonra vacib nəticələr barədə Telegram üzərindən xəbər ala biləcəksiniz.
               </p>
             </div>
@@ -265,12 +265,12 @@ function ProfilePage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-lg border bg-card p-5 lg:col-span-2">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-muted-foreground" />
+            <CreditCard className="h-5 w-5 text-slate-500" />
             <h2 className="text-lg font-semibold">Plan və limitlər</h2>
           </div>
-          <p className="mb-4 text-sm text-muted-foreground">
+          <p className="mb-4 text-sm text-slate-500">
             Planınız neçə monitor yarada biləcəyinizi, yoxlama tezliyini və nəticə tarixçəsinin nə qədər saxlanacağını
             müəyyən edir.
           </p>
@@ -278,53 +278,53 @@ function ProfilePage() {
           {profileState.planAvailable && profileState.plan ? (
             <div className="grid gap-3">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border bg-background p-4">
-                  <div className="text-sm text-muted-foreground">Cari plan</div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="text-sm text-slate-500">Cari plan</div>
                   <div className="mt-2 font-medium">{profileState.plan.name || "-"}</div>
                 </div>
-                <div className="rounded-lg border bg-background p-4">
-                  <div className="text-sm text-muted-foreground">Monitor limiti</div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="text-sm text-slate-500">Monitor limiti</div>
                   <div className="mt-2 font-medium">{planLimit ?? "Limitsiz"}</div>
                 </div>
-                <div className="rounded-lg border bg-background p-4">
-                  <div className="text-sm text-muted-foreground">Ən qısa yoxlama intervalı</div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="text-sm text-slate-500">Ən qısa yoxlama intervalı</div>
                   <div className="mt-2 font-medium">
                     {profileState.plan.minimum_interval_minutes
                       ? `${profileState.plan.minimum_interval_minutes} dəq`
                       : "-"}
                   </div>
                 </div>
-                <div className="rounded-lg border bg-background p-4">
-                  <div className="text-sm text-muted-foreground">Nəticə tarixçəsi</div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="text-sm text-slate-500">Nəticə tarixçəsi</div>
                   <div className="mt-2 font-medium">
                     {profileState.plan.history_days ? `${profileState.plan.history_days} gün` : "-"}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-slate-200 bg-[#f7f9fd] p-4 text-sm text-slate-500">
                 {hasReachedPlanLimit
                   ? "Monitor limitinə çatmısınız. Yeni monitor yaratmaq üçün mövcud monitorlardan birini silmək və ya planı genişləndirmək lazımdır."
                   : "Limitə çatmadığınız müddətdə yeni monitorlar yarada bilərsiniz. Limit dolduqda sistem yeni monitor yaradılmasına icazə verməyəcək."}
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-slate-200 bg-[#f7f9fd] p-4 text-sm text-slate-500">
               Plan məlumatı hələ aktiv deyil.
             </div>
           )}
         </section>
 
-        <section className="rounded-lg border bg-card p-5">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
-            <Radio className="h-5 w-5 text-muted-foreground" />
+            <Radio className="h-5 w-5 text-slate-500" />
             <h2 className="text-lg font-semibold">İstifadə</h2>
           </div>
 
-          <div className="rounded-lg border bg-background p-4">
-            <div className="text-sm text-muted-foreground">Yaradılmış monitorlar</div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="text-sm text-slate-500">Yaradılmış monitorlar</div>
             <div className="mt-2 text-2xl font-semibold">{profileState.monitorCount}</div>
-            <div className="mt-1 text-sm text-muted-foreground">
+            <div className="mt-1 text-sm text-slate-500">
               {planLimit
                 ? `${planLimit} monitor limitindən ${profileState.monitorCount} istifadə olunur`
                 : "Monitor limiti haqqında məlumat yoxdur"}

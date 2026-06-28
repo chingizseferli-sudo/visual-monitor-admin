@@ -25,6 +25,9 @@ export function PublicHeader() {
           <Link to="/sign-in" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white">
             İstifadəçi girişi
           </Link>
+          <Link to="/sign-up" className="hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:inline-flex">
+            Qeydiyyat
+          </Link>
           <Link to="/demo" className="rounded-lg bg-[#1463ff] px-4 py-2 text-sm font-bold text-white shadow-[0_12px_26px_rgba(20,99,255,0.22)] hover:bg-blue-700">
             Demo istə
           </Link>
@@ -41,6 +44,7 @@ export function PublicFooter() {
         <p>© 2026 Vizual.Az. Communication Intelligence Platform.</p>
         <div className="flex justify-center gap-4">
           <Link to="/sign-in" className="font-semibold text-slate-700 hover:text-slate-950">İstifadəçi girişi</Link>
+          <Link to="/sign-up" className="font-semibold text-slate-700 hover:text-slate-950">Qeydiyyat</Link>
           <Link to="/contact" className="font-semibold text-slate-700 hover:text-slate-950">Demo istə</Link>
         </div>
       </div>

@@ -51,10 +51,10 @@ function SectionShell({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border bg-background p-5">
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="mb-4 border-b pb-3">
         <h2 className="text-base font-semibold">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+        {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
       </div>
       {children}
     </section>
@@ -70,18 +70,18 @@ function WorkspacePreviewPage() {
       >
         <div className="grid gap-4 md:grid-cols-[1.5fr_0.7fr]">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Sabahınız xeyir.</p>
+            <p className="text-sm font-medium text-slate-500">Sabahınız xeyir.</p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
               Bu gün təşkilatınız haqqında nə baş verir?
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
               Bu səhifə gündəlik işə başlamazdan əvvəl ən vacib nəticələri, bildirişləri və növbəti addımları bir yerdə göstərmək üçün nəzərdə tutulur.
             </p>
           </div>
           <div className="rounded-md border bg-muted/30 p-4">
             <p className="text-sm font-medium">Günün statusu</p>
             <p className="mt-2 text-xl font-semibold">Normal</p>
-            <p className="mt-2 text-sm text-muted-foreground">Monitorinq aktivdir. Kritik problem görünmür.</p>
+            <p className="mt-2 text-sm text-slate-500">Monitorinq aktivdir. Kritik problem görünmür.</p>
           </div>
         </div>
       </SectionShell>
@@ -90,9 +90,9 @@ function WorkspacePreviewPage() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {summaryItems.map((item) => (
             <div key={item.label} className="rounded-md border p-4">
-              <p className="text-sm text-muted-foreground">{item.label}</p>
+              <p className="text-sm text-slate-500">{item.label}</p>
               <p className="mt-2 text-2xl font-semibold">{item.value}</p>
-              <p className="mt-2 text-sm text-muted-foreground">{item.note}</p>
+              <p className="mt-2 text-sm text-slate-500">{item.note}</p>
             </div>
           ))}
         </div>
@@ -114,7 +114,7 @@ function WorkspacePreviewPage() {
             <article key={item.title} className="rounded-md border p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0">
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap gap-2 text-xs text-slate-500">
                     <span>{item.source}</span>
                     <span>•</span>
                     <span>{item.keyword}</span>
@@ -145,15 +145,15 @@ function WorkspacePreviewPage() {
       <SectionShell title="Workspace Health" description="Sistemin gündəlik iş üçün hazır olub-olmadığını göstərən sakit status bloku.">
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-md border p-4">
-            <p className="text-sm text-muted-foreground">Monitorinq</p>
+            <p className="text-sm text-slate-500">Monitorinq</p>
             <p className="mt-2 font-semibold">Aktiv</p>
           </div>
           <div className="rounded-md border p-4">
-            <p className="text-sm text-muted-foreground">Bildirişlər</p>
+            <p className="text-sm text-slate-500">Bildirişlər</p>
             <p className="mt-2 font-semibold">İşlək</p>
           </div>
           <div className="rounded-md border p-4">
-            <p className="text-sm text-muted-foreground">Plan istifadəsi</p>
+            <p className="text-sm text-slate-500">Plan istifadəsi</p>
             <p className="mt-2 font-semibold">Normal</p>
           </div>
         </div>

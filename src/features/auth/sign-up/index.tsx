@@ -13,17 +13,20 @@ import { SignUpForm } from './components/sign-up-form'
 export function SignUp() {
   return (
     <AuthLayout>
-      <Card className='max-w-sm gap-4'>
-        <CardHeader>
-          <CardTitle className='text-lg tracking-tight'>
-            Hesab yaradın
+      <Card className='gap-4 rounded-3xl border-slate-200 bg-white/95 shadow-[0_28px_70px_rgba(22,42,84,0.16)]'>
+        <CardHeader className='space-y-3'>
+          <div className='inline-flex w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#1463ff]'>
+            İstifadəçi qeydiyyatı
+          </div>
+          <CardTitle className='text-2xl font-black tracking-tight text-slate-950'>
+            Workspace hesabı yaradın
           </CardTitle>
-          <CardDescription>
-            Hesab yaratmaq üçün email və şifrənizi yazın. <br />
+          <CardDescription className='leading-6'>
+            Qeydiyyat yalnız istifadəçi workspace-i üçündür. Admin hesabı bu formadan yaradılmır.
             Artıq hesabınız var?{' '}
             <Link
               to='/sign-in'
-              className='underline underline-offset-4 hover:text-primary'
+              className='font-semibold text-[#1463ff] underline underline-offset-4 hover:text-blue-700'
             >
               Daxil olun
             </Link>
@@ -33,22 +36,8 @@ export function SignUp() {
           <SignUpForm />
         </CardContent>
         <CardFooter>
-          <p className='px-8 text-center text-sm text-muted-foreground'>
-            Hesab yaratmaqla{' '}
-            <a
-              href='/terms'
-              className='underline underline-offset-4 hover:text-primary'
-            >
-              İstifadə şərtləri
-            </a>{' '}
-            və{' '}
-            <a
-              href='/privacy'
-              className='underline underline-offset-4 hover:text-primary'
-            >
-              Məxfilik siyasəti
-            </a>{' '}
-            ilə razılaşırsınız.
+          <p className='px-2 text-center text-xs leading-5 text-muted-foreground'>
+            Qeydiyyatdan sonra hesabınız email təsdiqi və profil statusuna uyğun aktivləşir. Plan və limitlər workspace daxilində göstərilir.
           </p>
         </CardFooter>
       </Card>

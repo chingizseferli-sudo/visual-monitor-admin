@@ -98,7 +98,7 @@ function getStatusInfo(status: string | null) {
 
   return {
     label: normalized,
-    className: "border-muted bg-muted/40 text-muted-foreground",
+    className: "border-muted bg-muted/40 text-slate-500",
   };
 }
 
@@ -132,8 +132,8 @@ function Pagination({
   if (totalItems === 0) return null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-sm text-muted-foreground">
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-sm text-slate-500">
         {totalItems} bildiriş | səhifə {page} / {totalPages}
       </div>
 
@@ -317,7 +317,7 @@ function AlertsPage() {
       <div className="grid gap-4 p-4 md:p-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Bildirişlər</h1>
-          <p className="text-muted-foreground">
+          <p className="text-slate-500">
             Vacib uyğunluqlar üzrə yaradılan və göndərilən bildirişlərin tarixçəsi burada görünür.
           </p>
         </div>
@@ -342,7 +342,7 @@ function AlertsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Bildirişlər</h1>
-          <p className="text-muted-foreground">
+          <p className="text-slate-500">
             Vacib uyğunluqlar üzrə yaradılan və göndərilən bildirişlərin tarixçəsi burada görünür.
           </p>
         </div>
@@ -357,71 +357,71 @@ function AlertsPage() {
         </button>
       </div>
 
-      <section className="rounded-lg border bg-card p-4">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-semibold">Bildirişlər necə yaranır?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-slate-500">
           Uyğun nəticə tapıldıqdan sonra sistem bildiriş yarada və seçilmiş kanala göndərə bilər. Bəzən nəticə
           paneldə görünə bilər, amma bildiriş hələ göndərilməmiş ola bilər.
         </p>
       </section>
 
       <div className="grid gap-3 md:grid-cols-5">
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">Hamısı</div>
+              <div className="text-sm text-slate-500">Hamısı</div>
               <div className="mt-1 text-2xl font-semibold">{stats.all}</div>
             </div>
-            <Bell className="h-5 w-5 text-muted-foreground" />
+            <Bell className="h-5 w-5 text-slate-500" />
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">Telegram</div>
+              <div className="text-sm text-slate-500">Telegram</div>
               <div className="mt-1 text-2xl font-semibold">{stats.telegram}</div>
             </div>
-            <Send className="h-5 w-5 text-muted-foreground" />
+            <Send className="h-5 w-5 text-slate-500" />
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">Panel</div>
+              <div className="text-sm text-slate-500">Panel</div>
               <div className="mt-1 text-2xl font-semibold">{stats.web}</div>
             </div>
-            <Bell className="h-5 w-5 text-muted-foreground" />
+            <Bell className="h-5 w-5 text-slate-500" />
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">Göndərilən</div>
+              <div className="text-sm text-slate-500">Göndərilən</div>
               <div className="mt-1 text-2xl font-semibold">{stats.sent}</div>
             </div>
-            <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+            <CheckCircle2 className="h-5 w-5 text-slate-500" />
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">Xətalı</div>
+              <div className="text-sm text-slate-500">Xətalı</div>
               <div className="mt-1 text-2xl font-semibold">{stats.failed}</div>
             </div>
-            <XCircle className="h-5 w-5 text-muted-foreground" />
+            <XCircle className="h-5 w-5 text-slate-500" />
           </div>
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-3">
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-3">
         <select
           value={channelFilter}
           onChange={(event) => setChannelFilter(event.target.value)}
-          className="rounded-lg border bg-background px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         >
           <option value={ALL}>Bütün kanallar</option>
           <option value="telegram">Telegram</option>
@@ -432,7 +432,7 @@ function AlertsPage() {
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
-          className="rounded-lg border bg-background px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         >
           <option value={ALL}>Bütün statuslar</option>
           {statusOptions.map((option) => (
@@ -445,7 +445,7 @@ function AlertsPage() {
         <select
           value={monitorFilter}
           onChange={(event) => setMonitorFilter(event.target.value)}
-          className="rounded-lg border bg-background px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         >
           <option value={ALL}>Bütün monitorlar</option>
           {monitorOptions.map((option) => (
@@ -471,7 +471,7 @@ function AlertsPage() {
           const statusInfo = getStatusInfo(alert.status);
 
           return (
-            <article key={alert.id} className="rounded-lg border bg-card p-4">
+            <article key={alert.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -489,7 +489,7 @@ function AlertsPage() {
                     </span>
                   </div>
 
-                  <div className="text-xs text-muted-foreground">{getHost(item?.url)}</div>
+                  <div className="text-xs text-slate-500">{getHost(item?.url)}</div>
 
                   {item ? (
                     <a
@@ -501,10 +501,10 @@ function AlertsPage() {
                       {title}
                     </a>
                   ) : (
-                    <div className="mt-2 text-base font-semibold text-muted-foreground">{title}</div>
+                    <div className="mt-2 text-base font-semibold text-slate-500">{title}</div>
                   )}
 
-                  <div className="mt-2 text-sm text-muted-foreground">
+                  <div className="mt-2 text-sm text-slate-500">
                     Göndərilmə vaxtı: {formatDate(alert.sent_at)}
                   </div>
                 </div>
@@ -526,9 +526,9 @@ function AlertsPage() {
         })}
 
         {paginatedAlerts.length === 0 && (
-          <div className="rounded-lg border bg-card p-8 text-center">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <div className="font-medium">Hələ bildiriş yoxdur</div>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
               Bildirişlər uyğun nəticə tapıldıqda və göndərildikdə burada görünür. Nəticələr bölməsində material
               ola bilər, amma bildiriş hələ yaranmamış və ya göndərilməmiş ola bilər.
             </p>

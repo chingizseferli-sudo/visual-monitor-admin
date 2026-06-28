@@ -97,8 +97,8 @@ function Pagination({
   if (totalItems === 0) return null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-sm text-muted-foreground">
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-sm text-slate-500">
         {totalItems} nəticə | səhifə {page} / {totalPages}
       </div>
 
@@ -272,7 +272,7 @@ function ResultsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Nəticələr</h1>
-          <p className="text-muted-foreground">
+          <p className="text-slate-500">
             Açar sözlərinizə uyğun tapılan media materialları və onların mənbə linkləri burada toplanır.
           </p>
         </div>
@@ -293,61 +293,61 @@ function ResultsPage() {
         </div>
       ) : null}
 
-      <section className="rounded-lg border bg-card p-4">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-semibold">Nəticələr nə vaxt görünür?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-slate-500">
           Sistem mənbələri mütəmadi yoxlayır. Açar sözlərinizə uyğun yeni material tapıldıqda burada görünür.
           Nəticələrin yaranması mənbələrin nə qədər tez yenilənməsindən asılıdır.
         </p>
       </section>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">Nəticə</div>
+              <div className="text-sm text-slate-500">Nəticə</div>
               <div className="mt-1 text-2xl font-semibold">{rows.length}</div>
             </div>
-            <Bell className="h-5 w-5 text-muted-foreground" />
+            <Bell className="h-5 w-5 text-slate-500" />
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">Monitor</div>
+              <div className="text-sm text-slate-500">Monitor</div>
               <div className="mt-1 text-2xl font-semibold">{uniqueMonitors}</div>
             </div>
-            <Clock3 className="h-5 w-5 text-muted-foreground" />
+            <Clock3 className="h-5 w-5 text-slate-500" />
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">Açar söz</div>
+              <div className="text-sm text-slate-500">Açar söz</div>
               <div className="mt-1 text-2xl font-semibold">{uniqueKeywords}</div>
             </div>
-            <Hash className="h-5 w-5 text-muted-foreground" />
+            <Hash className="h-5 w-5 text-slate-500" />
           </div>
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-lg border bg-card p-4 lg:grid-cols-[1.4fr_1fr_1fr_1fr_auto]">
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1.4fr_1fr_1fr_1fr_auto]">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Başlıq, monitor, link və ya açar söz üzrə axtar..."
-            className="w-full rounded-lg border bg-background py-2 pl-9 pr-3"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3"
           />
         </div>
 
         <select
           value={monitorFilter}
           onChange={(event) => setMonitorFilter(event.target.value)}
-          className="rounded-lg border bg-background px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         >
           <option value={ALL}>Bütün monitorlar</option>
           {monitorOptions.map((option) => (
@@ -360,7 +360,7 @@ function ResultsPage() {
         <select
           value={keywordFilter}
           onChange={(event) => setKeywordFilter(event.target.value)}
-          className="rounded-lg border bg-background px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         >
           <option value={ALL}>Bütün açar sözlər</option>
           {keywordOptions.map((option) => (
@@ -373,7 +373,7 @@ function ResultsPage() {
         <select
           value={sourceFilter}
           onChange={(event) => setSourceFilter(event.target.value)}
-          className="rounded-lg border bg-background px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         >
           <option value={ALL}>Bütün mənbələr</option>
           {sourceOptions.map((option) => (
@@ -387,7 +387,7 @@ function ResultsPage() {
           type="date"
           value={dateFilter}
           onChange={(event) => setDateFilter(event.target.value)}
-          className="rounded-lg border bg-background px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         />
       </div>
 
@@ -405,7 +405,7 @@ function ResultsPage() {
           const detectedAt = item?.detected_at || row.created_at;
 
           return (
-            <article key={row.id} className="rounded-lg border bg-card p-4">
+            <article key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -415,7 +415,7 @@ function ResultsPage() {
                     <span className="rounded-full border px-2 py-1 text-xs">
                       {row.matched_keyword || "Açar söz yoxdur"}
                     </span>
-                    <span className="rounded-full border px-2 py-1 text-xs text-muted-foreground">
+                    <span className="rounded-full border px-2 py-1 text-xs text-slate-500">
                       {getHost(item?.url)}
                     </span>
                   </div>
@@ -430,10 +430,10 @@ function ResultsPage() {
                       {title}
                     </a>
                   ) : (
-                    <div className="text-base font-semibold text-muted-foreground">{title}</div>
+                    <div className="text-base font-semibold text-slate-500">{title}</div>
                   )}
 
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
                     <span>Dərc: {formatDate(item?.published_at || null)}</span>
                     <span>Tapıldı: {formatDate(detectedAt)}</span>
                   </div>
@@ -456,9 +456,9 @@ function ResultsPage() {
         })}
 
         {paginatedRows.length === 0 && (
-          <div className="rounded-lg border bg-card p-8 text-center">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <div className="font-medium">Hələ nəticə yoxdur</div>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
               Sistem mənbələri yoxladıqca uyğun media materialları burada görünəcək. Əgər uzun müddət nəticə
               yaranmırsa, monitorlarınızdakı açar sözləri daha aydın və konkret yazmağı yoxlayın.
             </p>
