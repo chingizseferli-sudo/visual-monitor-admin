@@ -337,230 +337,182 @@ function ResultsPage() {
 
     const generatedAt = new Date().toLocaleString("az-AZ", {
       timeZone: "Asia/Baku",
-      day: "2-digit",
-      month: "2-digit",
       year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
     });
 
-    const articleCards = mappedRows
-      .map(
-        (row, index) => `
-          <article class="result-card">
-            <div class="result-index">${index + 1}</div>
-            <div class="result-body">
-              <div class="result-meta">
-                <span>${escapeHtml(row.source)}</span>
-                <span>${escapeHtml(row.keyword)}</span>
-                <span>${escapeHtml(row.detected_at)}</span>
+    const tableRows = mappedRows
+      .map((row) => {
+        const dateValue = row.published_at !== "-" ? row.published_at : row.detected_at;
+        const [datePart = "-", timePart = "-"] = dateValue.split(",").map((part) => part.trim());
+
+        return `
+          <tr>
+            <td><span class="monitor-pill">${escapeHtml(row.monitor)}</span></td>
+            <td>${escapeHtml(row.source)}</td>
+            <td><a href="${escapeHtml(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.title)}</a></td>
+            <td><span class="keyword-pill">${escapeHtml(row.keyword)}</span></td>
+            <td>
+              <div class="date-cell">
+                <strong>${escapeHtml(datePart)}</strong>
+                <span>${escapeHtml(timePart)}</span>
               </div>
-              <h2>${escapeHtml(row.title)}</h2>
-              <div class="result-monitor">Monitor: ${escapeHtml(row.monitor)}</div>
-              <a class="result-link" href="${escapeHtml(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.url)}</a>
-            </div>
-          </article>`
-      )
+            </td>
+          </tr>`;
+      })
       .join("");
+
+    const tableSection = mappedRows.length > 0
+      ? `<table>
+          <thead>
+            <tr>
+              <th>Monitor</th>
+              <th>Mənbə</th>
+              <th>Başlıq</th>
+              <th>Açar söz</th>
+              <th>Dərc vaxtı</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>`
+      : `<div class="empty">Seçilən interval üzrə ixrac ediləcək nəticə yoxdur.</div>`;
 
     downloadFile(
       "tapilan-xeberler.html",
       `<!doctype html>
 <html lang="az">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tapılan xəbərlər | Vizual.Az</title>
-  <style>
-    :root {
-      color-scheme: light;
-      --ink: #142033;
-      --muted: #5f6f89;
-      --line: #dbe4f0;
-      --soft: #f5f8fc;
-      --brand: #165dff;
-      --brand-soft: #eaf2ff;
-      --card: #ffffff;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--soft);
-      color: var(--ink);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-      line-height: 1.5;
-    }
-    .page {
-      width: min(1120px, calc(100% - 32px));
-      margin: 32px auto;
-    }
-    .report-header {
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
-      padding: 28px;
-      box-shadow: 0 18px 55px rgba(20, 32, 51, 0.08);
-    }
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--brand);
-      font-weight: 800;
-      letter-spacing: 0.01em;
-    }
-    .brand-mark {
-      width: 28px;
-      height: 28px;
-      border-radius: 9px;
-      background: var(--brand);
-      color: white;
-      display: grid;
-      place-items: center;
-      font-size: 15px;
-      font-weight: 900;
-    }
-    h1 {
-      margin: 18px 0 8px;
-      font-size: clamp(32px, 5vw, 56px);
-      line-height: 1;
-      letter-spacing: -0.04em;
-    }
-    .subtitle {
-      margin: 0;
-      max-width: 720px;
-      color: var(--muted);
-      font-size: 17px;
-    }
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 24px;
-    }
-    .summary-card {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: var(--card);
-      padding: 16px;
-    }
-    .summary-label {
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
-    }
-    .summary-value {
-      margin-top: 6px;
-      font-size: 22px;
-      font-weight: 900;
-    }
-    .results {
-      display: grid;
-      gap: 14px;
-      margin-top: 18px;
-    }
-    .result-card {
-      display: grid;
-      grid-template-columns: 44px 1fr;
-      gap: 14px;
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      background: var(--card);
-      padding: 18px;
-      break-inside: avoid;
-    }
-    .result-index {
-      width: 36px;
-      height: 36px;
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
-      background: var(--brand-soft);
-      color: var(--brand);
-      font-weight: 900;
-    }
-    .result-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 800;
-    }
-    .result-meta span {
-      border-radius: 999px;
-      background: #eef4fb;
-      padding: 6px 10px;
-    }
-    .result-card h2 {
-      margin: 12px 0 8px;
-      font-size: 20px;
-      line-height: 1.25;
-      letter-spacing: -0.01em;
-    }
-    .result-monitor {
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
-    }
-    .result-link {
-      display: block;
-      margin-top: 10px;
-      color: var(--brand);
-      font-size: 14px;
-      font-weight: 700;
-      overflow-wrap: anywhere;
-    }
-    .empty {
-      margin-top: 18px;
-      border: 1px dashed var(--line);
-      border-radius: 20px;
-      background: white;
-      padding: 24px;
-      color: var(--muted);
-      text-align: center;
-    }
-    .footer {
-      margin-top: 22px;
-      color: var(--muted);
-      font-size: 12px;
-      text-align: center;
-    }
-    @media (max-width: 720px) {
-      .page { width: min(100% - 20px, 1120px); margin: 16px auto; }
-      .report-header { padding: 20px; border-radius: 20px; }
-      .summary { grid-template-columns: 1fr; }
-      .result-card { grid-template-columns: 1fr; }
-    }
-    @media print {
-      body { background: white; }
-      .page { width: 100%; margin: 0; }
-      .report-header, .result-card, .summary-card { box-shadow: none; }
-      .result-link { color: #0f3fb8; }
-    }
-  </style>
-</head>
-<body>
-  <main class="page">
-    <section class="report-header">
-      <div class="brand"><span class="brand-mark">V</span> Vizual.Az</div>
-      <h1>Tapılan xəbərlər</h1>
-      <p class="subtitle">Açar sözlərinizə uyğun tapılan media materiallarının ixrac hesabatı.</p>
-      <div class="summary">
-        <div class="summary-card"><div class="summary-label">Interval</div><div class="summary-value">${escapeHtml(exportRangeLabels[exportRange])}</div></div>
-        <div class="summary-card"><div class="summary-label">Nəticə sayı</div><div class="summary-value">${mappedRows.length}</div></div>
-        <div class="summary-card"><div class="summary-label">Hazırlanma vaxtı</div><div class="summary-value">${escapeHtml(generatedAt)}</div></div>
-      </div>
-    </section>
-    ${mappedRows.length > 0 ? `<section class="results">${articleCards}</section>` : `<div class="empty">Seçilən interval üzrə ixrac ediləcək nəticə yoxdur.</div>`}
-    <div class="footer">Bu hesabat Vizual.Az platformasından ixrac edilib.</div>
-  </main>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Visual Monitor Export</title>
+    <style>
+      *{box-sizing:border-box}
+      body{
+        margin:0;
+        color:#172033;
+        background:#f5f8ff;
+        font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+        -webkit-font-smoothing:antialiased;
+        text-rendering:geometricPrecision;
+      }
+      .page{max-width:1180px;margin:0 auto;padding:34px}
+      .hero{
+        overflow:hidden;
+        border-radius:22px;
+        padding:28px;
+        color:white;
+        background:
+          radial-gradient(circle at 18% 20%, rgba(255,255,255,.28), transparent 28%),
+          linear-gradient(135deg,#1463ff 0%,#14b8a6 58%,#f59e0b 120%);
+        box-shadow:0 24px 70px rgba(20,99,255,.2);
+      }
+      .brand{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+      .logo{
+        display:grid;
+        width:46px;
+        height:46px;
+        place-items:center;
+        border-radius:14px;
+        color:#1463ff;
+        background:white;
+        font-weight:900;
+        letter-spacing:0;
+      }
+      .brand strong{font-size:20px}
+      h1{margin:0;font-size:34px;line-height:1.05;letter-spacing:0}
+      .hero p{max-width:760px;margin:12px 0 0;color:rgba(255,255,255,.88);font-size:16px;line-height:1.55}
+      .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+      .stat{
+        border:1px solid rgba(255,255,255,.22);
+        border-radius:14px;
+        padding:14px;
+        background:rgba(255,255,255,.14);
+      }
+      .stat span{display:block;color:rgba(255,255,255,.78);font-size:12px;font-weight:800;text-transform:uppercase}
+      .stat strong{display:block;margin-top:6px;font-size:24px}
+      .table-wrap{
+        margin-top:24px;
+        overflow:hidden;
+        border:1px solid #dce6f3;
+        border-radius:18px;
+        background:white;
+        box-shadow:0 18px 50px rgba(40,55,85,.08);
+      }
+      table{width:100%;border-collapse:collapse}
+      th,td{padding:14px 16px;text-align:left;vertical-align:top;border-bottom:1px solid #e8eef7}
+      th{color:#315078;background:#eef5ff;font-size:12px;text-transform:uppercase;letter-spacing:0;font-weight:900}
+      th:last-child,td:last-child{width:150px}
+      tr:nth-child(even) td{background:#fbfdff}
+      tr:hover td{background:#f5fbff}
+      a{color:#0f4fd7;font-weight:800;text-decoration:none}
+      .monitor-pill,.keyword-pill{
+        display:inline-flex;
+        min-height:28px;
+        align-items:center;
+        border-radius:999px;
+        padding:0 10px;
+        font-size:12px;
+        font-weight:900;
+        white-space:nowrap;
+      }
+      .monitor-pill{color:#0f4fd7;background:#eaf1ff}
+      .keyword-pill{color:#0f766e;background:#dcfdfa}
+      .date-cell{display:grid;gap:6px;min-width:118px}
+      .date-cell strong{font-size:14px;white-space:nowrap}
+      .date-cell span{
+        display:inline-flex;
+        width:fit-content;
+        min-height:26px;
+        align-items:center;
+        border-radius:999px;
+        padding:0 10px;
+        color:#0f4fd7;
+        background:#eaf1ff;
+        font-size:12px;
+        font-weight:900;
+      }
+      .empty{padding:34px;text-align:center;color:#61708a}
+      .footer{margin-top:18px;color:#61708a;font-size:12px}
+      @media (max-width: 760px){
+        .page{padding:18px}
+        .stats{grid-template-columns:1fr}
+        .table-wrap{overflow-x:auto}
+        table{min-width:820px}
+      }
+      @media print{
+        body{background:white}
+        .page{padding:0}
+        .hero,.table-wrap{box-shadow:none}
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="brand">
+          <div class="logo">VM</div>
+          <strong>Visual Monitor</strong>
+        </div>
+        <h1>Media Monitorinq Hesabatı</h1>
+        <p>Seçilmiş dövr üzrə tapılan uyğun xəbər nəticələri. Hesabat mənbə, dərc vaxtı, açar söz və keçid məlumatlarını bir yerdə göstərir.</p>
+        <div class="stats">
+          <div class="stat"><span>Interval</span><strong>${escapeHtml(exportRangeLabels[exportRange])}</strong></div>
+          <div class="stat"><span>Nəticə sayı</span><strong>${mappedRows.length}</strong></div>
+          <div class="stat"><span>Hazırlandı</span><strong>${escapeHtml(generatedAt)}</strong></div>
+        </div>
+      </section>
+
+      <section class="table-wrap">${tableSection}</section>
+      <div class="footer">Visual Monitor tərəfindən avtomatik yaradılıb.</div>
+    </main>
+  </body>
 </html>`,
       "text/html;charset=utf-8"
     );
   }
-
   if (isLoading && !data) {
     return (
       <div className="flex min-h-[360px] items-center justify-center p-6">
