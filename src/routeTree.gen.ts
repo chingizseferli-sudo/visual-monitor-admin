@@ -14,6 +14,7 @@ import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NewsIndexRouteImport } from './routes/news/index'
 import { Route as NewsSlugRouteImport } from './routes/news/$slug'
+import { Route as HealthEnvRouteImport } from './routes/health.env'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -92,6 +93,11 @@ const NewsSlugRoute = NewsSlugRouteImport.update({
   id: '/news/$slug',
   path: '/news/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const HealthEnvRoute = HealthEnvRouteImport.update({
+  id: '/env',
+  path: '/env',
+  getParentRoute: () => HealthRoute,
 } as any)
 const errors503Route = errors503RouteImport.update({
   id: '/(errors)/503',
@@ -370,7 +376,7 @@ const authAdminMonitorMonitorsMonitorIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/clerk': typeof ClerkauthRouteRouteWithChildren
-  '/health': typeof HealthRoute
+  '/health': typeof HealthRouteWithChildren
   '/admin': typeof authAdminRouteRouteWithChildren
   '/monitor': typeof authMonitorRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -384,6 +390,7 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/health/env': typeof HealthEnvRoute
   '/news/$slug': typeof NewsSlugRoute
   '/news/': typeof NewsIndexRoute
   '/admin/monitor': typeof authAdminMonitorRouteRouteWithChildren
@@ -428,7 +435,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/clerk': typeof ClerkauthRouteRouteWithChildren
-  '/health': typeof HealthRoute
+  '/health': typeof HealthRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/reset-password': typeof authResetPasswordRoute
@@ -440,6 +447,7 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/health/env': typeof HealthEnvRoute
   '/news/$slug': typeof NewsSlugRoute
   '/news': typeof NewsIndexRoute
   '/admin/change-monitor': typeof authAdminChangeMonitorRoute
@@ -481,7 +489,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/clerk': typeof ClerkRouteRouteWithChildren
-  '/health': typeof HealthRoute
+  '/health': typeof HealthRouteWithChildren
   '/(auth)/admin': typeof authAdminRouteRouteWithChildren
   '/(auth)/monitor': typeof authMonitorRouteRouteWithChildren
   '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
@@ -497,6 +505,7 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/health/env': typeof HealthEnvRoute
   '/news/$slug': typeof NewsSlugRoute
   '/news/': typeof NewsIndexRoute
   '/(auth)/admin/monitor': typeof authAdminMonitorRouteRouteWithChildren
@@ -557,6 +566,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/health/env'
     | '/news/$slug'
     | '/news/'
     | '/admin/monitor'
@@ -613,6 +623,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/health/env'
     | '/news/$slug'
     | '/news'
     | '/admin/change-monitor'
@@ -669,6 +680,7 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/health/env'
     | '/news/$slug'
     | '/news/'
     | '/(auth)/admin/monitor'
@@ -714,7 +726,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClerkRouteRoute: typeof ClerkRouteRouteWithChildren
-  HealthRoute: typeof HealthRoute
+  HealthRoute: typeof HealthRouteWithChildren
   authAdminRouteRoute: typeof authAdminRouteRouteWithChildren
   authMonitorRouteRoute: typeof authMonitorRouteRouteWithChildren
   authForgotPasswordRoute: typeof authForgotPasswordRoute
@@ -768,6 +780,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/news/$slug'
       preLoaderRoute: typeof NewsSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/health/env': {
+      id: '/health/env'
+      path: '/env'
+      fullPath: '/health/env'
+      preLoaderRoute: typeof HealthEnvRouteImport
+      parentRoute: typeof HealthRoute
     }
     '/(errors)/503': {
       id: '/(errors)/503'
@@ -1186,6 +1205,17 @@ const ClerkRouteRouteWithChildren = ClerkRouteRoute._addFileChildren(
   ClerkRouteRouteChildren,
 )
 
+interface HealthRouteChildren {
+  HealthEnvRoute: typeof HealthEnvRoute
+}
+
+const HealthRouteChildren: HealthRouteChildren = {
+  HealthEnvRoute: HealthEnvRoute,
+}
+
+const HealthRouteWithChildren =
+  HealthRoute._addFileChildren(HealthRouteChildren)
+
 interface authAdminMonitorMonitorsRouteChildren {
   authAdminMonitorMonitorsMonitorIdRoute: typeof authAdminMonitorMonitorsMonitorIdRoute
   authAdminMonitorMonitorsIndexRoute: typeof authAdminMonitorMonitorsIndexRoute
@@ -1324,7 +1354,7 @@ const authMonitorRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClerkRouteRoute: ClerkRouteRouteWithChildren,
-  HealthRoute: HealthRoute,
+  HealthRoute: HealthRouteWithChildren,
   authAdminRouteRoute: authAdminRouteRouteWithChildren,
   authMonitorRouteRoute: authMonitorRouteRouteWithChildren,
   authForgotPasswordRoute: authForgotPasswordRoute,
