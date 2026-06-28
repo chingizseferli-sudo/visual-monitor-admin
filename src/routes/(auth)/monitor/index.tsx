@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, ExternalLink, Hash, Loader2, Radio, Send } from "lucide-react";
+import { Bell, CheckCircle2, ExternalLink, Hash, Loader2, Radio, Send } from "lucide-react";
 
 import { customerQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
@@ -107,11 +107,13 @@ async function fetchDashboardData(): Promise<DashboardData> {
 
 function MetricCard({
   label,
+  description,
   value,
   to,
   icon: Icon,
 }: {
   label: string;
+  description: string;
   value: string | number;
   to: "/monitor/monitors" | "/monitor/results" | "/monitor/alerts";
   icon: typeof Bell;
@@ -122,10 +124,55 @@ function MetricCard({
         <div>
           <div className="text-sm text-muted-foreground">{label}</div>
           <div className="mt-1 text-2xl font-semibold">{value}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{description}</div>
         </div>
         <Icon className="h-5 w-5 text-muted-foreground" />
       </div>
     </Link>
+  );
+}
+
+function FirstRunGuide() {
+  const steps = [
+    "Monitor yaradın",
+    "Açar söz əlavə edin",
+    "Nəticələri və bildirişləri izləyin",
+  ];
+
+  return (
+    <section className="rounded-lg border bg-card p-5">
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">Visual Monitor-a xoş gəlmisiniz</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Visual Monitor seçdiyiniz açar sözləri media mənbələrində izləyir. Uyğun material tapıldıqda nəticələr paneldə görünür və bildiriş tarixçəsi yaranır.
+            </p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Başlamaq üçün ilk monitorunuzu yaradın, sonra izlənəcək açar sözləri əlavə edin. Sistem mənbələri yoxladıqca uyğun xəbərlər burada görünəcək.
+          </p>
+          <Link
+            to="/monitor/monitors"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            <Send className="h-4 w-4" />
+            İlk monitoru yarat
+          </Link>
+        </div>
+
+        <div className="grid gap-2">
+          {steps.map((step, index) => (
+            <div key={step} className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                {index + 1}
+              </div>
+              <div className="text-sm font-medium">{step}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -137,6 +184,7 @@ function UserMonitorDashboard() {
   });
 
   const { monitorCount, keywordCount, resultCount, alertCount, recentMatches } = data;
+  const hasNoMonitors = monitorCount === 0;
 
   if (isLoading) {
     return (
@@ -152,7 +200,9 @@ function UserMonitorDashboard() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Monitorinq panelim</h1>
-          <p className="text-muted-foreground">Monitorlar, açar sözlər və son uyğun xəbərlər</p>
+          <p className="text-muted-foreground">
+            Monitorlarınız, açar sözləriniz, tapılan media materialları və göndərilmiş bildirişlər.
+          </p>
         </div>
 
         <Link
@@ -164,12 +214,58 @@ function UserMonitorDashboard() {
         </Link>
       </div>
 
+      {hasNoMonitors ? <FirstRunGuide /> : null}
+
       <div className="grid gap-3 md:grid-cols-4">
-        <MetricCard label="Monitor" value={monitorCount} to="/monitor/monitors" icon={Radio} />
-        <MetricCard label="Açar söz" value={keywordCount} to="/monitor/monitors" icon={Hash} />
-        <MetricCard label="Nəticə" value={resultCount} to="/monitor/results" icon={Bell} />
-        <MetricCard label="Bildiriş" value={alertCount} to="/monitor/alerts" icon={Send} />
+        <MetricCard
+          label="Monitorlar"
+          description="İzlənən mövzular"
+          value={monitorCount}
+          to="/monitor/monitors"
+          icon={Radio}
+        />
+        <MetricCard
+          label="Açar sözlər"
+          description="İzlənən ifadələr"
+          value={keywordCount}
+          to="/monitor/monitors"
+          icon={Hash}
+        />
+        <MetricCard
+          label="Tapılan media materialı"
+          description="Uyğun nəticələr"
+          value={resultCount}
+          to="/monitor/results"
+          icon={Bell}
+        />
+        <MetricCard
+          label="Göndərilmiş bildiriş"
+          description="Bildiriş tarixçəsi"
+          value={alertCount}
+          to="/monitor/alerts"
+          icon={Send}
+        />
       </div>
+
+      {!hasNoMonitors ? (
+        <section className="rounded-lg border bg-card p-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-base font-semibold">Monitorinq necə işləyir?</h2>
+              <p className="text-sm text-muted-foreground">
+                Sistem açar sözlərinizi media mənbələrində yoxlayır. Uyğun material tapıldıqda nəticələr və bildirişlər bölməsində görünür.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-sm">
+              <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                Monitor aktivdir
+              </span>
+              <span className="rounded-full border px-2 py-1">Nəticələr avtomatik yenilənir</span>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-lg border bg-card">
         <div className="flex items-center justify-between gap-3 border-b p-4">
@@ -185,12 +281,16 @@ function UserMonitorDashboard() {
 
         {recentMatches.length === 0 ? (
           <div className="grid gap-2 p-8 text-center">
-            <div className="font-medium">Hələ nəticə yoxdur</div>
+            <div className="font-medium">
+              {hasNoMonitors ? "Başlamaq üçün monitor yaradın" : "Hələ nəticə yoxdur"}
+            </div>
             <p className="mx-auto max-w-md text-sm text-muted-foreground">
-              Monitorlarınız yeni uyğun xəbər tapdıqda son nəticələr burada görünəcək.
+              {hasNoMonitors
+                ? "İlk monitoru yaratdıqdan və açar söz əlavə etdikdən sonra sistem uyğun media materiallarını izləməyə başlayacaq."
+                : "Monitorlarınız yeni uyğun media materialı tapdıqda son nəticələr burada görünəcək."}
             </p>
             <Link to="/monitor/monitors" className="mx-auto mt-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted">
-              Monitorları yoxla
+              {hasNoMonitors ? "İlk monitoru yarat" : "Monitorları yoxla"}
             </Link>
           </div>
         ) : (
