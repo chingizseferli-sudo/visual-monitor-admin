@@ -2267,6 +2267,9 @@ function ChangeMonitorPage() {
                       changedCount: itemCompare.changed.length,
                     }
                   })
+                  const visibleEventTimeline = eventTimeline
+                    .filter(({ addedCount, removedCount, changedCount }) => addedCount > 0 || removedCount > 0 || changedCount > 0)
+                    .slice(0, 3)
                   const hasUnreadNotification = unreadNotificationSourceIds.has(source.id)
                   const rowClass =
                     source.status !== 'active'
@@ -2405,19 +2408,19 @@ function ChangeMonitorPage() {
                                 </div>
                               ) : (
                                 <div className='min-w-0 space-y-3'>
-                                  {eventTimeline.length > 0 ? (
-                                    <div className='min-w-0 rounded-lg border bg-background p-3'>
-                                      <div className='flex flex-wrap items-center justify-between gap-2 border-b pb-2'>
+                                  {visibleEventTimeline.length > 0 ? (
+                                    <div className='min-w-0 rounded-lg border bg-background p-2'>
+                                      <div className='flex flex-wrap items-center justify-between gap-2'>
                                         <div>
-                                          <div className='text-sm font-semibold'>Dəyişiklik tarixçəsi</div>
+                                          <div className='text-sm font-semibold'>Son dəyişikliklər</div>
                                           <div className='text-xs text-muted-foreground'>
-                                            Telegram yalnız yeni paylaşımlar üçün göndərilir. Silinən və dəyişən elementlər admin tarixçəsində saxlanılır.
+                                            Yalnız yeni, real silinən və dəyişən elementlər göstərilir.
                                           </div>
                                         </div>
                                       </div>
-                                      <div className='mt-2 max-h-[280px] space-y-2 overflow-auto pr-1'>
-                                        {eventTimeline.slice(0, 6).map(({ event, itemCompare, addedCount, removedCount, changedCount }) => (
-                                          <div key={event.id} className='rounded-md border bg-muted/20 p-2'>
+                                      <div className='mt-2 max-h-[190px] space-y-1.5 overflow-auto pr-1'>
+                                        {visibleEventTimeline.map(({ event, itemCompare, addedCount, removedCount, changedCount }) => (
+                                          <div key={event.id} className='rounded-md border bg-muted/20 px-2 py-1.5'>
                                             <div className='flex flex-wrap items-center justify-between gap-2'>
                                               <div className='text-xs font-medium text-muted-foreground'>{formatDate(event.created_at)}</div>
                                               <div className='flex flex-wrap gap-1'>
@@ -2432,7 +2435,7 @@ function ChangeMonitorPage() {
                                                 </span>
                                               </div>
                                             </div>
-                                            {event.diff_summary ? (
+                                            {false && event.diff_summary ? (
                                               <div className='mt-1 line-clamp-2 whitespace-pre-line text-xs text-muted-foreground'>
                                                 {event.diff_summary}
                                               </div>
@@ -2441,7 +2444,7 @@ function ChangeMonitorPage() {
                                             {itemCompare.added.length > 0 ? (
                                               <div className='mt-2 space-y-1'>
                                                 <div className='text-xs font-semibold text-emerald-700'>Yeni paylaşımlar</div>
-                                                {itemCompare.added.slice(0, 4).map((item, index) => (
+                                                {itemCompare.added.slice(0, 2).map((item, index) => (
                                                   <div key={`${item.url || item.title}-added-${index}`} className='min-w-0 rounded border border-emerald-100 bg-emerald-50 px-2 py-1 text-xs'>
                                                     <a href={item.url || source.url || '#'} target='_blank' rel='noreferrer' className='block truncate font-medium text-blue-700 underline' title={item.title}>
                                                       {item.title || item.url || 'Başlıq yoxdur'}
@@ -2460,7 +2463,7 @@ function ChangeMonitorPage() {
                                                 {itemCompare.removed.length > 0 ? (
                                                   <div className='min-w-0'>
                                                     <div className='text-xs font-semibold text-red-700'>Silinənlər</div>
-                                                    {itemCompare.removed.slice(0, 3).map((item, index) => (
+                                                    {itemCompare.removed.slice(0, 2).map((item, index) => (
                                                       <div key={`${item.url || item.title}-removed-${index}`} className='truncate text-xs text-muted-foreground' title={item.title || item.url}>
                                                         {item.title || item.url || 'Silinən element'}
                                                       </div>
@@ -2470,7 +2473,7 @@ function ChangeMonitorPage() {
                                                 {itemCompare.changed.length > 0 ? (
                                                   <div className='min-w-0'>
                                                     <div className='text-xs font-semibold text-amber-700'>Dəyişənlər</div>
-                                                    {itemCompare.changed.slice(0, 3).map((item, index) => (
+                                                    {itemCompare.changed.slice(0, 2).map((item, index) => (
                                                       <div key={`${item.after.url || item.after.title}-changed-${index}`} className='truncate text-xs text-muted-foreground' title={item.after.title || item.after.url}>
                                                         {item.after.title || item.after.url || 'Dəyişən element'}
                                                       </div>
@@ -2483,9 +2486,13 @@ function ChangeMonitorPage() {
                                         ))}
                                       </div>
                                     </div>
-                                  ) : null}
+                                  ) : (
+                                    <div className='rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground'>
+                                      Bu izləmədə göstəriləcək yeni, silinən və ya dəyişən element yoxdur.
+                                    </div>
+                                  )}
 
-                                  {displayNewSnapshot ? (
+                                  {displayNewSnapshot && false ? (
                                     <div className={`min-w-0 rounded-lg border p-3 ${latestInlineEvent ? 'border-emerald-200 bg-emerald-50/50' : 'bg-background'}`}>
                                       <div className='flex flex-wrap items-center justify-between gap-2'>
                                         <div>
@@ -2531,7 +2538,7 @@ function ChangeMonitorPage() {
                                             </div>
                                             <div className='flex items-center gap-2'>
                                               {source.url ? (
-                                                <a href={source.url} target='_blank' rel='noreferrer' className='text-xs text-sky-700 underline'>
+                                                <a href={source.url || undefined} target='_blank' rel='noreferrer' className='text-xs text-sky-700 underline'>
                                                   Saytı ayrıca aç
                                                 </a>
                                               ) : null}
