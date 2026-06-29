@@ -2375,13 +2375,28 @@ function ChangeMonitorPage() {
                                                   </div>
                                                 ) : null}
                                                 {itemCompare.changed.length > 0 ? (
-                                                  <div className='min-w-0'>
-                                                    <div className='text-xs font-semibold text-amber-700'>Dəyişənlər</div>
-                                                    {itemCompare.changed.slice(0, 2).map((item, index) => (
-                                                      <div key={`${item.after.url || item.after.title}-changed-${index}`} className='truncate text-xs text-muted-foreground' title={item.after.title || item.after.url}>
-                                                        {item.after.title || item.after.url || 'Dəyişən element'}
-                                                      </div>
-                                                    ))}
+                                                  <div className='min-w-0 lg:col-span-2'>
+                                                    <div className='text-xs font-semibold text-slate-700'>Dəyişənlər</div>
+                                                    <div className='mt-1 space-y-1'>
+                                                      {itemCompare.changed.slice(0, 2).map((item, index) => (
+                                                        <div key={`${item.after.url || item.after.title}-changed-${index}`} className='grid gap-1 rounded border bg-background p-1.5 text-xs md:grid-cols-2'>
+                                                          <div className='min-w-0 rounded bg-slate-50 px-2 py-1'>
+                                                            <div className='mb-0.5 font-semibold text-slate-600'>Əvvəl</div>
+                                                            <div className='truncate text-muted-foreground' title={item.before.title || item.before.url}>
+                                                              {item.before.title || item.before.url || 'Əvvəlki məlumat'}
+                                                            </div>
+                                                            {item.before.published ? <div className='truncate text-[11px] text-muted-foreground'>{item.before.published}</div> : null}
+                                                          </div>
+                                                          <div className='min-w-0 rounded bg-emerald-50 px-2 py-1'>
+                                                            <div className='mb-0.5 font-semibold text-emerald-700'>İndi</div>
+                                                            <div className='truncate font-medium text-slate-900' title={item.after.title || item.after.url}>
+                                                              {item.after.title || item.after.url || 'Yeni məlumat'}
+                                                            </div>
+                                                            {item.after.published ? <div className='truncate text-[11px] text-emerald-800'>{item.after.published}</div> : null}
+                                                          </div>
+                                                        </div>
+                                                      ))}
+                                                    </div>
                                                   </div>
                                                 ) : null}
                                               </div>
@@ -2524,13 +2539,6 @@ function ChangeMonitorPage() {
                                         </div>
                                       ) : null}
 
-                                    </div>
-                                  ) : source.content_hash ? (
-                                    <div className='rounded-lg border border-amber-200 bg-amber-50 p-3'>
-                                      <div className='text-sm font-semibold text-amber-950'>Snapshot var, amma izlənilən məzmun oxunmadı</div>
-                                      <div className='mt-2 text-sm text-amber-800'>
-                                        Səhifəni yenilə və ya change_snapshots cədvəlində bu izləmə üçün snapshot məzmununun olub-olmadığını yoxla.
-                                      </div>
                                     </div>
                                   ) : null}
                                 </div>
