@@ -1676,8 +1676,10 @@ function ChangeMonitorPage() {
     }
 
     setDeleting(true)
-    const deleteQuery = supabase.from('change_sources').delete().eq('user_id', access.userId).in('id', ids)
-    const { error: deleteError } = await deleteQuery
+    const deleteResults = await Promise.all(
+      ids.map((id) => supabase.rpc('delete_user_change_source', { p_source_id: id }))
+    )
+    const deleteError = deleteResults.find((result) => result.error)?.error
     setDeleting(false)
 
     if (deleteError) {
