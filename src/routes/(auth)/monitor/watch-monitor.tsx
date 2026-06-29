@@ -129,6 +129,14 @@ type SnapshotItemCompare = {
   changed: SnapshotItemChange[]
 }
 
+type SnapshotComparisonStatus = 'normal' | 'new' | 'changed' | 'removed'
+
+type SnapshotComparisonRow = {
+  before: SnapshotItem | null
+  after: SnapshotItem | null
+  status: SnapshotComparisonStatus
+}
+
 type SnapshotViewMode = 'visual' | 'text'
 
 type ChangeAlert = {
@@ -643,6 +651,68 @@ function parseSnapshotItems(text: string | null | undefined): SnapshotItem[] {
   } catch {
     return []
   }
+}
+
+function normalizeSnapshotTitle(value: string | null | undefined) {
+  return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function snapshotTitleChanged(before: SnapshotItem | null | undefined, after: SnapshotItem | null | undefined) {
+  const beforeTitle = normalizeSnapshotTitle(before?.title)
+  const afterTitle = normalizeSnapshotTitle(after?.title)
+  return Boolean(beforeTitle && afterTitle && beforeTitle !== afterTitle)
+}
+
+function buildSnapshotComparisonRows(event: ChangeEvent, snapshots: Record<string, ChangeSnapshot>, limit = 5): SnapshotComparisonRow[] {
+  const oldSnapshot = event.old_snapshot_id ? snapshots[event.old_snapshot_id] : null
+  const newSnapshot = event.new_snapshot_id ? snapshots[event.new_snapshot_id] : null
+  const oldItems = parseSnapshotItems(oldSnapshot?.content_text)
+  const newItems = parseSnapshotItems(newSnapshot?.content_text)
+
+  if (!oldItems.length && !newItems.length) return []
+
+  const oldByUrl = new Map(
+    oldItems
+      .map((item) => [normalizeSnapshotItemUrl(item.url), item] as const)
+      .filter(([url]) => Boolean(url))
+  )
+  const oldUrlSet = new Set(oldByUrl.keys())
+  const newUrlSet = new Set(newItems.map((item) => normalizeSnapshotItemUrl(item.url)).filter(Boolean))
+  const oldTop = oldItems.slice(0, limit)
+  const newTop = newItems.slice(0, limit)
+  const rowCount = Math.max(oldTop.length, newTop.length)
+  const rows: SnapshotComparisonRow[] = []
+
+  for (let index = 0; index < rowCount; index += 1) {
+    const before = oldTop[index] || null
+    const after = newTop[index] || null
+    let status: SnapshotComparisonStatus = 'normal'
+
+    if (after) {
+      const afterUrl = normalizeSnapshotItemUrl(after.url)
+      const oldMatch = afterUrl ? oldByUrl.get(afterUrl) || null : null
+      if (afterUrl && !oldUrlSet.has(afterUrl)) {
+        status = 'new'
+      } else if (oldMatch && snapshotTitleChanged(oldMatch, after)) {
+        status = 'changed'
+      }
+    }
+
+    rows.push({ before, after, status })
+  }
+
+  const existingRemovedUrls = new Set(
+    rows.flatMap((row) => [normalizeSnapshotItemUrl(row.before?.url), normalizeSnapshotItemUrl(row.after?.url)]).filter(Boolean)
+  )
+
+  for (const removedItem of parseConfirmedRemovedItems(event.diff_summary)) {
+    const removedUrl = normalizeSnapshotItemUrl(removedItem.url)
+    if (removedUrl && (newUrlSet.has(removedUrl) || existingRemovedUrls.has(removedUrl))) continue
+    rows.push({ before: removedItem, after: null, status: 'removed' })
+    if (rows.length >= limit) break
+  }
+
+  return rows.slice(0, limit)
 }
 
 function getDiffToneClass(tone: DiffCellTone) {
@@ -2322,17 +2392,19 @@ function ChangeMonitorPage() {
                   const recentChangeCount = recentChangeCountBySourceId.get(source.id) || 0
                   const eventTimeline = (details?.events || []).map((event) => {
                     const itemCompare = getEventItemCompare(event, details?.snapshots || {})
+                    const comparisonRows = buildSnapshotComparisonRows(event, details?.snapshots || {})
+                    const highlightedCount = comparisonRows.filter((row) => row.status !== 'normal').length
                     return {
                       event,
                       itemCompare,
+                      comparisonRows,
                       addedCount: itemCompare.added.length,
                       removedCount: itemCompare.removed.length,
                       changedCount: itemCompare.changed.length,
+                      highlightedCount,
                     }
                   })
-                  const latestVisibleEvent = eventTimeline.find(
-                    ({ addedCount, removedCount, changedCount }) => addedCount > 0 || removedCount > 0 || changedCount > 0
-                  ) || null
+                  const latestVisibleEvent = eventTimeline.find(({ highlightedCount }) => highlightedCount > 0) || null
                   const hasUnreadNotification = unreadNotificationSourceIds.has(source.id)
                   const rowClass =
                     source.status !== 'active'
@@ -2476,7 +2548,7 @@ function ChangeMonitorPage() {
                                       <div className='flex flex-wrap items-center justify-between gap-2'>
                                         <div>
                                           <div className='text-sm font-semibold'>Son yoxlamanın nəticəsi</div>
-                                          <div className='text-xs text-muted-foreground'>Yalnız son yoxlamada aşkar edilən real dəyişikliklər göstərilir.</div>
+                                          <div className='text-xs text-muted-foreground'>Əvvəlki və indiki siyahı eyni sayda göstərilir. Yalnız yeni xəbər və real başlıq dəyişikliyi rənglə işarələnir.</div>
                                         </div>
                                         <div className='text-xs text-muted-foreground'>{formatDate(latestVisibleEvent.event.created_at)}</div>
                                       </div>
@@ -2485,21 +2557,16 @@ function ChangeMonitorPage() {
                                         <div className='rounded-md border bg-slate-50/70 p-2'>
                                           <div className='mb-1 text-xs font-semibold text-slate-600'>Əvvəl</div>
                                           <div className='space-y-1.5'>
-                                            {latestVisibleEvent.itemCompare.added.slice(0, 4).map((item, index) => (
-                                              <div key={`${item.url || item.title}-before-added-${index}`} className='rounded border border-slate-200 bg-white px-2 py-1 text-xs text-muted-foreground'>
-                                                Bu məlumat əvvəl yox idi.
-                                              </div>
-                                            ))}
-                                            {latestVisibleEvent.itemCompare.removed.slice(0, 4).map((item, index) => (
-                                              <div key={`${item.url || item.title}-before-removed-${index}`} className='rounded border border-red-100 bg-white px-2 py-1 text-xs'>
-                                                <div className='truncate font-medium text-slate-900' title={item.title || item.url}>{item.title || item.url || 'Silinən məlumat'}</div>
-                                                {item.url ? <div className='truncate text-[11px] text-muted-foreground' title={item.url}>{item.url}</div> : null}
-                                              </div>
-                                            ))}
-                                            {latestVisibleEvent.itemCompare.changed.slice(0, 4).map((item, index) => (
-                                              <div key={`${item.before.url || item.before.title}-before-changed-${index}`} className='rounded border border-amber-100 bg-white px-2 py-1 text-xs'>
-                                                <div className='truncate font-medium text-slate-900' title={item.before.title || item.before.url}>{item.before.title || item.before.url || 'Əvvəlki məlumat'}</div>
-                                                {item.before.published ? <div className='truncate text-[11px] text-muted-foreground'>{item.before.published}</div> : null}
+                                            {latestVisibleEvent.comparisonRows.map((row, index) => (
+                                              <div key={`${row.before?.url || row.before?.title || index}-before`} className='rounded border border-slate-200 bg-white px-2 py-1 text-xs'>
+                                                {row.before ? (
+                                                  <>
+                                                    <div className='truncate font-medium text-slate-900' title={row.before.title || row.before.url}>{row.before.title || row.before.url || 'Başlıq yoxdur'}</div>
+                                                    {row.before.published ? <div className='truncate text-[11px] text-muted-foreground'>{row.before.published}</div> : null}
+                                                  </>
+                                                ) : (
+                                                  <div className='text-muted-foreground'>Bu məlumat əvvəl yox idi.</div>
+                                                )}
                                               </div>
                                             ))}
                                           </div>
@@ -2508,30 +2575,32 @@ function ChangeMonitorPage() {
                                         <div className='rounded-md border bg-background p-2'>
                                           <div className='mb-1 text-xs font-semibold text-slate-600'>İndi</div>
                                           <div className='space-y-1.5'>
-                                            {latestVisibleEvent.itemCompare.added.slice(0, 4).map((item, index) => (
-                                              <div key={`${item.url || item.title}-now-added-${index}`} className='rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs'>
-                                                <div className='mb-0.5 text-[11px] font-semibold text-emerald-700'>Yeni məlumat</div>
-                                                <a href={item.url || source.url || '#'} target='_blank' rel='noreferrer' className='block truncate font-medium text-blue-700 underline' title={item.title || item.url}>
-                                                  {item.title || item.url || 'Başlıq yoxdur'}
-                                                </a>
-                                                {item.published ? <div className='truncate text-[11px] text-emerald-800'>{item.published}</div> : null}
-                                              </div>
-                                            ))}
-                                            {latestVisibleEvent.itemCompare.removed.slice(0, 4).map((item, index) => (
-                                              <div key={`${item.url || item.title}-now-removed-${index}`} className='rounded border border-red-200 bg-red-50 px-2 py-1 text-xs'>
-                                                <div className='mb-0.5 text-[11px] font-semibold text-red-700'>Silinib</div>
-                                                <div className='truncate font-medium text-red-900' title={item.title || item.url}>{item.title || item.url || 'Silinən məlumat'}</div>
-                                              </div>
-                                            ))}
-                                            {latestVisibleEvent.itemCompare.changed.slice(0, 4).map((item, index) => (
-                                              <div key={`${item.after.url || item.after.title}-now-changed-${index}`} className='rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs'>
-                                                <div className='mb-0.5 text-[11px] font-semibold text-amber-700'>Dəyişib</div>
-                                                <a href={item.after.url || source.url || '#'} target='_blank' rel='noreferrer' className='block truncate font-medium text-slate-900 underline decoration-amber-500' title={item.after.title || item.after.url}>
-                                                  {item.after.title || item.after.url || 'Dəyişən məlumat'}
-                                                </a>
-                                                {item.after.published ? <div className='truncate text-[11px] text-amber-800'>{item.after.published}</div> : null}
-                                              </div>
-                                            ))}
+                                            {latestVisibleEvent.comparisonRows.map((row, index) => {
+                                              const toneClass = row.status === 'new'
+                                                ? 'border-emerald-200 bg-emerald-50'
+                                                : row.status === 'changed'
+                                                  ? 'border-amber-200 bg-amber-50'
+                                                  : row.status === 'removed'
+                                                    ? 'border-red-200 bg-red-50'
+                                                    : 'border-slate-200 bg-white'
+                                              return (
+                                                <div key={`${row.after?.url || row.after?.title || row.before?.url || row.before?.title || index}-after`} className={`rounded border px-2 py-1 text-xs ${toneClass}`}>
+                                                  {row.status === 'new' ? <div className='mb-0.5 text-[11px] font-semibold text-emerald-700'>Yeni məlumat</div> : null}
+                                                  {row.status === 'changed' ? <div className='mb-0.5 text-[11px] font-semibold text-amber-700'>Başlıq dəyişib</div> : null}
+                                                  {row.status === 'removed' ? <div className='mb-0.5 text-[11px] font-semibold text-red-700'>Silinib</div> : null}
+                                                  {row.after ? (
+                                                    <>
+                                                      <a href={row.after.url || source.url || '#'} target='_blank' rel='noreferrer' className={`block truncate font-medium ${row.status === 'new' ? 'text-blue-700 underline' : 'text-slate-900'}`} title={row.after.title || row.after.url}>
+                                                        {row.after.title || row.after.url || 'Başlıq yoxdur'}
+                                                      </a>
+                                                      {row.after.published ? <div className={`truncate text-[11px] ${row.status === 'new' ? 'text-emerald-800' : row.status === 'changed' ? 'text-amber-800' : 'text-muted-foreground'}`}>{row.after.published}</div> : null}
+                                                    </>
+                                                  ) : (
+                                                    <div className='truncate font-medium text-red-900' title={row.before?.title || row.before?.url}>{row.before?.title || row.before?.url || 'Silinən məlumat'}</div>
+                                                  )}
+                                                </div>
+                                              )
+                                            })}
                                           </div>
                                         </div>
                                       </div>
@@ -2540,8 +2609,7 @@ function ChangeMonitorPage() {
                                     <div className='rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground'>
                                       Son yoxlamada göstəriləcək yeni, silinən və ya dəyişən element yoxdur.
                                     </div>
-                                  )}
-                                  {displayNewSnapshot && false ? (
+                                  )}                                  {displayNewSnapshot && false ? (
                                     <div className={`min-w-0 rounded-lg border p-3 ${latestInlineEvent ? 'border-emerald-200 bg-emerald-50/50' : 'bg-background'}`}>
                                       <div className='flex flex-wrap items-center justify-between gap-2'>
                                         <div>
