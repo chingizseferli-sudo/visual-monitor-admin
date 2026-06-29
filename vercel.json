@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "/admin/change-monitor",
+      "destination": "/admin",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/:path*",
