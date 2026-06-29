@@ -28,6 +28,11 @@ type RepairResult = {
   update: Record<string, unknown>;
 };
 
+type ArticleCandidate = {
+  url: string;
+  title: string;
+};
+
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const MAX_RESPONSE_BYTES = 1_500_000;
@@ -56,6 +61,44 @@ function hostname(raw: string | null | undefined) {
 
 function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
+}
+
+function decodeHtmlEntities(value: string) {
+  return value
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function normalizeTitle(value: string | null | undefined) {
+  return decodeHtmlEntities(String(value || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim());
+}
+
+function isUsefulTitle(title: string) {
+  const cleaned = title.trim();
+  if (cleaned.length < 12) return false;
+  if (/^(daha ətraflı|ətraflı|oxu|more|read more|details|читать|подробнее)$/i.test(cleaned)) {
+    return false;
+  }
+  if (/^(ana səhifə|home|menu|login|search|category|tag)$/i.test(cleaned)) return false;
+  return true;
+}
+
+function uniqueCandidates(candidates: ArticleCandidate[]) {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    if (!candidate.url || seen.has(candidate.url)) return false;
+    seen.add(candidate.url);
+    return true;
+  });
 }
 
 async function readLimitedText(response: Response, limitBytes: number) {
@@ -138,11 +181,59 @@ function extractXmlLinks(xml: string, baseUrl: string) {
   );
 }
 
-function extractHtmlLinks(html: string, baseUrl: string) {
-  const links = Array.from(html.matchAll(/<a\b[^>]+href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi))
-    .map((m) => absolutize(m[1].trim(), baseUrl))
-    .filter((link) => /^https?:\/\//i.test(link));
-  return unique(links);
+function extractXmlArticleCandidates(xml: string, baseUrl: string, siteHost: string) {
+  const blocks = Array.from(xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)).map((m) => m[0]);
+  const candidates = blocks
+    .map((block) => {
+      const title = normalizeTitle(block.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]);
+      const hrefLink = block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1];
+      const textLink = block.match(/<link[^>]*>([\s\S]*?)<\/link>/i)?.[1];
+      const permalink = block.match(/<guid[^>]+isPermaLink=["']true["'][^>]*>([\s\S]*?)<\/guid>/i)?.[1];
+      const url = absolutize(String(hrefLink || textLink || permalink || "").trim(), baseUrl);
+      return { url, title };
+    })
+    .filter((candidate) => isUsefulTitle(candidate.title) && isLikelyArticleLink(candidate.url, siteHost));
+
+  return uniqueCandidates(candidates);
+}
+
+
+function extractHtmlArticleCandidates(html: string, baseUrl: string, siteHost: string) {
+  const candidates = Array.from(html.matchAll(/<a\b([^>]+)href=["']([^"'#]+)["']([^>]*)>([\s\S]*?)<\/a>/gi))
+    .map((m) => {
+      const attrs = `${m[1]} ${m[3]}`;
+      const attrTitle = attrs.match(/(?:title|aria-label)=["']([^"']+)["']/i)?.[1];
+      const title = normalizeTitle(attrTitle || m[4]);
+      const url = absolutize(m[2].trim(), baseUrl);
+      return { url, title };
+    })
+    .filter((candidate) => isUsefulTitle(candidate.title) && isLikelyArticleLink(candidate.url, siteHost));
+
+  return uniqueCandidates(candidates);
+}
+
+function extractPageTitle(html: string) {
+  return normalizeTitle(
+    html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
+      html.match(/<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
+      html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1],
+  );
+}
+
+async function validateArticleLinks(links: string[], siteHost: string, limit = 6) {
+  const candidates: ArticleCandidate[] = [];
+  for (const link of unique(links).filter((item) => isLikelyArticleLink(item, siteHost)).slice(0, limit)) {
+    try {
+      const res = await fetchText(link, 8000);
+      const isHtml = /html/i.test(res.contentType) || /<html|<title|<meta/i.test(res.text);
+      if (!res.ok || !isHtml) continue;
+      const title = extractPageTitle(res.text);
+      if (isUsefulTitle(title)) candidates.push({ url: res.url || link, title });
+    } catch (_) {
+      // Try next link.
+    }
+  }
+  return uniqueCandidates(candidates);
 }
 
 function isLikelyArticleLink(link: string, siteHost: string) {
@@ -190,10 +281,13 @@ function buildSuccessUpdate(source: SourceInput, method: string, options: { rssU
 function buildFailUpdate(source: SourceInput, reason: string) {
   return {
     name: hostname(source.base_url || source.latest_url) || source.name || "source",
+    status: "inactive",
     last_error: reason,
     last_result: "repair_failed",
     last_checked_at: new Date().toISOString(),
+    last_success_at: null,
     discovery_status: "needs_manual_selector",
+    consecutive_fail_count: 1,
     notes: `Auto repair failed: ${reason}`,
   };
 }
@@ -214,19 +308,20 @@ async function testRss(source: SourceInput, baseUrl: string, siteHost: string): 
       const res = await fetchText(rssUrl, 10000);
       const isXml = /xml|rss|atom/i.test(res.contentType) || /<(rss|feed)\b/i.test(res.text);
       if (!res.ok || !isXml) continue;
-      const links = extractXmlLinks(res.text, res.url).filter((link) => isLikelyArticleLink(link, siteHost));
-      if (links.length > 0) {
+      const candidates = extractXmlArticleCandidates(res.text, res.url, siteHost);
+      const links = candidates.map((candidate) => candidate.url);
+      if (candidates.length > 0) {
         return {
           ok: true,
           method: "rss",
-          reason: `RSS works: ${links.length} candidate links`,
-          candidateCount: links.length,
+          reason: `RSS works: ${candidates.length} article items`,
+          candidateCount: candidates.length,
           finalUrl: res.url,
           rssUrl,
           sampleLinks: links.slice(0, 5),
           update: buildSuccessUpdate(source, "rss", {
             rssUrl,
-            notes: `Auto repair OK: RSS found ${links.length} candidate links`,
+            notes: `Auto repair OK: RSS found ${candidates.length} article items`,
           }),
         };
       }
@@ -244,16 +339,17 @@ async function testSitemap(source: SourceInput, baseUrl: string, siteHost: strin
     const res = await fetchText(sitemapUrl, 10000);
     if (!res.ok) return null;
     const links = extractXmlLinks(res.text, res.url).filter((link) => isLikelyArticleLink(link, siteHost));
-    if (links.length > 0) {
+    const candidates = await validateArticleLinks(links, siteHost, 8);
+    if (candidates.length > 0) {
       return {
         ok: true,
         method: "sitemap",
-        reason: `Sitemap works: ${links.length} candidate links`,
-        candidateCount: links.length,
+        reason: `Sitemap works: ${candidates.length} verified article pages`,
+        candidateCount: candidates.length,
         finalUrl: res.url,
-        sampleLinks: links.slice(0, 5),
+        sampleLinks: candidates.map((candidate) => candidate.url).slice(0, 5),
         update: buildSuccessUpdate(source, "sitemap", {
-          notes: `Auto repair OK: sitemap found ${links.length} candidate links`,
+          notes: `Auto repair OK: sitemap verified ${candidates.length} article pages`,
         }),
       };
     }
@@ -270,16 +366,17 @@ async function testHtml(source: SourceInput, baseUrl: string, siteHost: string):
     if (!res.ok) return null;
     const isHtml = /html/i.test(res.contentType) || /<html|<a\b/i.test(res.text);
     if (!isHtml) return null;
-    const links = extractHtmlLinks(res.text, res.url).filter((link) => isLikelyArticleLink(link, siteHost));
-    if (links.length > 0) {
+    const candidates = extractHtmlArticleCandidates(res.text, res.url, siteHost);
+    const links = candidates.map((candidate) => candidate.url);
+    if (candidates.length > 0) {
       const hasArticle = /<article\b/i.test(res.text);
       const hasNewsClass = /class=["'][^"']*(news|post|item|article|entry)/i.test(res.text);
       const method = hasArticle || hasNewsClass ? "selector" : "latest_page";
       return {
         ok: true,
         method,
-        reason: `HTML works: ${links.length} candidate links`,
-        candidateCount: links.length,
+        reason: `HTML works: ${candidates.length} titled article links`,
+        candidateCount: candidates.length,
         finalUrl: res.url,
         sampleLinks: links.slice(0, 5),
         update: buildSuccessUpdate(source, method, {
@@ -288,7 +385,7 @@ async function testHtml(source: SourceInput, baseUrl: string, siteHost: string):
             method === "selector"
               ? "article a[href], .news-item a[href], .post a[href], .entry a[href], .item a[href], h2 a[href], h3 a[href]"
               : source.article_pattern ?? null,
-          notes: `Auto repair OK: HTML found ${links.length} candidate links`,
+          notes: `Auto repair OK: HTML found ${candidates.length} titled article links`,
         }),
       };
     }
