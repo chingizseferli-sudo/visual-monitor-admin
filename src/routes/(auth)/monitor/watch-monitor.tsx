@@ -1101,16 +1101,13 @@ function ChangeMonitorPage() {
       const access = await requireChangeMonitorAccess()
       const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-      let sourcesQuery = supabase
+      const sourcesQuery = supabase
         .from('change_sources')
         .select(
           'id,user_id,name,url,domain,selector,status,interval_minutes,telegram_chat_id,next_check_at,last_checked_at,last_changed_at,last_success_at,last_error,consecutive_fail_count,content_hash,created_at,updated_at'
         )
+        .eq('user_id', access.userId)
         .order('created_at', { ascending: false })
-
-      if (!access.isAdmin) {
-        sourcesQuery = sourcesQuery.eq('user_id', access.userId)
-      }
 
       const sourcesRes = await sourcesQuery
 
@@ -1273,6 +1270,9 @@ function ChangeMonitorPage() {
     }
 
     extensionSaveInFlightRef.current.add(dedupeKey)
+    window.setTimeout(() => {
+      extensionSaveInFlightRef.current.delete(dedupeKey)
+    }, 10000)
 
     let access: ChangeMonitorAccess
     try {
@@ -1287,16 +1287,13 @@ function ChangeMonitorPage() {
     const interval = Math.max(5, Number(form.interval_minutes) || 5)
     const name = String(payload.pageTitle || form.name || domain).trim() || domain
 
-    let existingQuery = supabase
+    const existingQuery = supabase
       .from('change_sources')
       .select('id')
       .eq('url', url)
       .eq('selector', selector)
+      .eq('user_id', access.userId)
       .limit(1)
-
-    if (!access.isAdmin) {
-      existingQuery = existingQuery.eq('user_id', access.userId)
-    }
 
     const { data: existing, error: existingError } = await existingQuery
 
@@ -1318,7 +1315,7 @@ function ChangeMonitorPage() {
     }
 
     const { error: insertError } = await supabase.from('change_sources').insert({
-      user_id: access.isAdmin ? null : access.userId,
+      user_id: access.userId,
       name,
       url,
       domain,
@@ -1421,7 +1418,7 @@ function ChangeMonitorPage() {
     const url = normalizeInputUrl(nextForm.url)
     const interval = Math.max(5, Number(nextForm.interval_minutes))
     const payload = {
-      user_id: access.isAdmin ? null : access.userId,
+      user_id: access.userId,
       name: nextForm.name.trim(),
       url,
       domain: getDomainFromUrl(url),
@@ -1435,9 +1432,7 @@ function ChangeMonitorPage() {
     }
 
     const response = editingSource
-      ? await (access.isAdmin
-          ? supabase.from('change_sources').update(payload).eq('id', editingSource.id)
-          : supabase.from('change_sources').update(payload).eq('id', editingSource.id).eq('user_id', access.userId))
+      ? await supabase.from('change_sources').update(payload).eq('id', editingSource.id).eq('user_id', access.userId)
       : await supabase.from('change_sources').insert(payload)
 
     setSaving(false)
@@ -1517,9 +1512,7 @@ function ChangeMonitorPage() {
     }
 
     setDeleting(true)
-    const deleteQuery = access.isAdmin
-      ? supabase.from('change_sources').delete().in('id', ids)
-      : supabase.from('change_sources').delete().eq('user_id', access.userId).in('id', ids)
+    const deleteQuery = supabase.from('change_sources').delete().eq('user_id', access.userId).in('id', ids)
     const { error: deleteError } = await deleteQuery
     setDeleting(false)
 
@@ -1549,14 +1542,11 @@ function ChangeMonitorPage() {
       return
     }
 
-    let statusQuery = supabase
+    const statusQuery = supabase
       .from('change_sources')
       .update({ status: nextStatus, updated_at: new Date().toISOString() })
       .eq('id', source.id)
-
-    if (!access.isAdmin) {
-      statusQuery = statusQuery.eq('user_id', access.userId)
-    }
+      .eq('user_id', access.userId)
 
     const { error: statusError } = await statusQuery
 

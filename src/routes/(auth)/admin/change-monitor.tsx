@@ -1223,6 +1223,9 @@ function ChangeMonitorPage() {
     }
 
     extensionSaveInFlightRef.current.add(dedupeKey)
+    window.setTimeout(() => {
+      extensionSaveInFlightRef.current.delete(dedupeKey)
+    }, 10000)
 
     const interval = Math.max(5, Number(form.interval_minutes) || 5)
     const name = String(payload.pageTitle || form.name || domain).trim() || domain
