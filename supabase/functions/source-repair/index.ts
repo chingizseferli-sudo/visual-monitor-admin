@@ -63,6 +63,10 @@ function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
+function unwrapCdata(value: string | null | undefined) {
+  return String(value || "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1").trim();
+}
+
 function decodeHtmlEntities(value: string) {
   return value
     .replace(/&amp;/gi, "&")
@@ -74,7 +78,7 @@ function decodeHtmlEntities(value: string) {
 }
 
 function normalizeTitle(value: string | null | undefined) {
-  return decodeHtmlEntities(String(value || "")
+  return decodeHtmlEntities(unwrapCdata(value)
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
@@ -176,7 +180,7 @@ function extractXmlLinks(xml: string, baseUrl: string) {
     ...Array.from(xml.matchAll(/<link[^>]+href=["']([^"']+)["']/gi)).map((m) => m[1]),
     ...Array.from(xml.matchAll(/<loc[^>]*>([^<]+)<\/loc>/gi)).map((m) => m[1]),
   ];
-  return unique(links.map((link) => absolutize(link.trim(), baseUrl))).filter(
+  return unique(links.map((link) => absolutize(unwrapCdata(link), baseUrl))).filter(
     (link) => /^https?:\/\//i.test(link),
   );
 }
@@ -189,7 +193,7 @@ function extractXmlArticleCandidates(xml: string, baseUrl: string, siteHost: str
       const hrefLink = block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1];
       const textLink = block.match(/<link[^>]*>([\s\S]*?)<\/link>/i)?.[1];
       const permalink = block.match(/<guid[^>]+isPermaLink=["']true["'][^>]*>([\s\S]*?)<\/guid>/i)?.[1];
-      const url = absolutize(String(hrefLink || textLink || permalink || "").trim(), baseUrl);
+      const url = absolutize(unwrapCdata(hrefLink || textLink || permalink), baseUrl);
       return { url, title };
     })
     .filter((candidate) => isUsefulTitle(candidate.title) && isLikelyArticleLink(candidate.url, siteHost));
