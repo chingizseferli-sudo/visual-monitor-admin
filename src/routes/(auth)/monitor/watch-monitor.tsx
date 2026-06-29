@@ -1,6 +1,7 @@
 import { Fragment, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import { getCurrentSupabaseProfile } from '@/lib/auth-session'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 
 type ChangeSourceStatus = 'active' | 'inactive' | 'paused'
+
+type ChangeMonitorAccess = {
+  userId: string
+  isAdmin: boolean
+}
 
 type WatchFilter = 'all' | 'active' | 'inactive' | 'error' | 'changed24h'
 
@@ -1007,7 +1013,7 @@ function ChangeMonitorPage() {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const notificationRef = useRef<HTMLDivElement | null>(null)
   const previousUnreadCountRef = useRef<number | null>(null)
-  const [currentUserId, setCurrentUserId] = useState('')
+  const [currentAccess, setCurrentAccess] = useState<ChangeMonitorAccess | null>(null)
 
   useEffect(() => {
     try {
@@ -1069,33 +1075,42 @@ function ChangeMonitorPage() {
     }
   }
 
-  async function requireCurrentUserId() {
-    if (currentUserId) return currentUserId
+  async function requireChangeMonitorAccess() {
+    if (currentAccess) return currentAccess
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      throw new Error(userError?.message || 'Sessiya tapılmadı. Yenidən daxil olun.')
+    const sessionProfile = await getCurrentSupabaseProfile()
+    if (!sessionProfile.user) {
+      throw new Error('Sessiya tapılmadı. Yenidən daxil olun.')
     }
 
-    setCurrentUserId(user.id)
-    return user.id
+    const role = sessionProfile.profile?.role || 'customer'
+    const access = {
+      userId: sessionProfile.user.id,
+      isAdmin: role === 'admin' || role === 'superadmin',
+    }
+    setCurrentAccess(access)
+    return access
   }
-
   async function loadData() {
     setLoading(true)
     setError('')
 
     try {
-      const ownerId = await requireCurrentUserId()
+      const access = await requireChangeMonitorAccess()
       const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-      const sourcesRes = await supabase
+      let sourcesQuery = supabase
         .from('change_sources')
         .select(
           'id,user_id,name,url,domain,selector,status,interval_minutes,telegram_chat_id,next_check_at,last_checked_at,last_changed_at,last_success_at,last_error,consecutive_fail_count,content_hash,created_at,updated_at'
         )
-        .eq('user_id', ownerId)
         .order('created_at', { ascending: false })
+
+      if (!access.isAdmin) {
+        sourcesQuery = sourcesQuery.eq('user_id', access.userId)
+      }
+
+      const sourcesRes = await sourcesQuery
 
       if (sourcesRes.error) {
         setError(`İzləmələr oxunmadı: ${sourcesRes.error.message}`)
@@ -1248,9 +1263,9 @@ function ChangeMonitorPage() {
       return
     }
 
-    let ownerId = ''
+    let access: ChangeMonitorAccess
     try {
-      ownerId = await requireCurrentUserId()
+      access = await requireChangeMonitorAccess()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sessiya tapılmadı. Yenidən daxil olun.'
       toast.error(message)
@@ -1261,13 +1276,18 @@ function ChangeMonitorPage() {
     const interval = Math.max(5, Number(form.interval_minutes) || 5)
     const name = String(payload.pageTitle || form.name || domain).trim() || domain
 
-    const { data: existing, error: existingError } = await supabase
+    let existingQuery = supabase
       .from('change_sources')
       .select('id')
-      .eq('user_id', ownerId)
       .eq('url', url)
       .eq('selector', selector)
       .limit(1)
+
+    if (!access.isAdmin) {
+      existingQuery = existingQuery.eq('user_id', access.userId)
+    }
+
+    const { data: existing, error: existingError } = await existingQuery
 
     if (existingError) {
       const message = `İzləmə yoxlanmadı: ${existingError.message}`
@@ -1285,7 +1305,7 @@ function ChangeMonitorPage() {
     }
 
     const { error: insertError } = await supabase.from('change_sources').insert({
-      user_id: ownerId,
+      user_id: access.isAdmin ? null : access.userId,
       name,
       url,
       domain,
@@ -1372,9 +1392,9 @@ function ChangeMonitorPage() {
     setSaving(true)
     setFormError('')
 
-    let ownerId = ''
+    let access: ChangeMonitorAccess
     try {
-      ownerId = await requireCurrentUserId()
+      access = await requireChangeMonitorAccess()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sessiya tapılmadı. Yenidən daxil olun.'
       setSaving(false)
@@ -1386,7 +1406,7 @@ function ChangeMonitorPage() {
     const url = normalizeInputUrl(nextForm.url)
     const interval = Math.max(5, Number(nextForm.interval_minutes))
     const payload = {
-      user_id: ownerId,
+      user_id: access.isAdmin ? null : access.userId,
       name: nextForm.name.trim(),
       url,
       domain: getDomainFromUrl(url),
@@ -1400,7 +1420,9 @@ function ChangeMonitorPage() {
     }
 
     const response = editingSource
-      ? await supabase.from('change_sources').update(payload).eq('id', editingSource.id).eq('user_id', ownerId)
+      ? await (access.isAdmin
+          ? supabase.from('change_sources').update(payload).eq('id', editingSource.id)
+          : supabase.from('change_sources').update(payload).eq('id', editingSource.id).eq('user_id', access.userId))
       : await supabase.from('change_sources').insert(payload)
 
     setSaving(false)
@@ -1469,9 +1491,9 @@ function ChangeMonitorPage() {
     )
     if (!confirmed) return
 
-    let ownerId = ''
+    let access: ChangeMonitorAccess
     try {
-      ownerId = await requireCurrentUserId()
+      access = await requireChangeMonitorAccess()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sessiya tapılmadı. Yenidən daxil olun.'
       toast.error(message)
@@ -1480,7 +1502,10 @@ function ChangeMonitorPage() {
     }
 
     setDeleting(true)
-    const { error: deleteError } = await supabase.from('change_sources').delete().eq('user_id', ownerId).in('id', ids)
+    const deleteQuery = access.isAdmin
+      ? supabase.from('change_sources').delete().in('id', ids)
+      : supabase.from('change_sources').delete().eq('user_id', access.userId).in('id', ids)
+    const { error: deleteError } = await deleteQuery
     setDeleting(false)
 
     if (deleteError) {
@@ -1499,9 +1524,9 @@ function ChangeMonitorPage() {
     const currentStatus = source.status === 'active' ? 'active' : 'inactive'
     const nextStatus = currentStatus === 'active' ? 'inactive' : 'active'
 
-    let ownerId = ''
+    let access: ChangeMonitorAccess
     try {
-      ownerId = await requireCurrentUserId()
+      access = await requireChangeMonitorAccess()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sessiya tapılmadı. Yenidən daxil olun.'
       toast.error(message)
@@ -1509,11 +1534,16 @@ function ChangeMonitorPage() {
       return
     }
 
-    const { error: statusError } = await supabase
+    let statusQuery = supabase
       .from('change_sources')
       .update({ status: nextStatus, updated_at: new Date().toISOString() })
       .eq('id', source.id)
-      .eq('user_id', ownerId)
+
+    if (!access.isAdmin) {
+      statusQuery = statusQuery.eq('user_id', access.userId)
+    }
+
+    const { error: statusError } = await statusQuery
 
     if (statusError) {
       const message = `Status dəyişmədi: ${statusError.message}`
