@@ -40,7 +40,6 @@ import { Route as authMonitorProfileRouteImport } from './routes/(auth)/monitor/
 import { Route as authMonitorMonitorsRouteImport } from './routes/(auth)/monitor/monitors'
 import { Route as authMonitorAlertsRouteImport } from './routes/(auth)/monitor/alerts'
 import { Route as authAdminNewsRouteImport } from './routes/(auth)/admin/news'
-import { Route as authAdminChangeMonitorRouteImport } from './routes/(auth)/admin/change-monitor'
 import { Route as authAdminSettingsRouteRouteImport } from './routes/(auth)/admin/settings/route'
 import { Route as authAdminMonitorRouteRouteImport } from './routes/(auth)/admin/monitor/route'
 import { Route as authAdminUsersIndexRouteImport } from './routes/(auth)/admin/users/index'
@@ -222,11 +221,6 @@ const authAdminNewsRoute = authAdminNewsRouteImport.update({
   path: '/news',
   getParentRoute: () => authAdminRouteRoute,
 } as any)
-const authAdminChangeMonitorRoute = authAdminChangeMonitorRouteImport.update({
-  id: '/change-monitor',
-  path: '/change-monitor',
-  getParentRoute: () => authAdminRouteRoute,
-} as any)
 const authAdminSettingsRouteRoute = authAdminSettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -375,7 +369,6 @@ export interface FileRoutesByFullPath {
   '/admin/sign-in': typeof AdminSignInRoute
   '/admin/monitor': typeof authAdminMonitorRouteRouteWithChildren
   '/admin/settings': typeof authAdminSettingsRouteRouteWithChildren
-  '/admin/change-monitor': typeof authAdminChangeMonitorRoute
   '/admin/news': typeof authAdminNewsRouteWithChildren
   '/monitor/alerts': typeof authMonitorAlertsRoute
   '/monitor/monitors': typeof authMonitorMonitorsRoute
@@ -428,7 +421,6 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/admin/sign-in': typeof AdminSignInRoute
-  '/admin/change-monitor': typeof authAdminChangeMonitorRoute
   '/monitor/alerts': typeof authMonitorAlertsRoute
   '/monitor/monitors': typeof authMonitorMonitorsRoute
   '/monitor/profile': typeof authMonitorProfileRoute
@@ -484,7 +476,6 @@ export interface FileRoutesById {
   '/admin/sign-in': typeof AdminSignInRoute
   '/(auth)/admin/monitor': typeof authAdminMonitorRouteRouteWithChildren
   '/(auth)/admin/settings': typeof authAdminSettingsRouteRouteWithChildren
-  '/(auth)/admin/change-monitor': typeof authAdminChangeMonitorRoute
   '/(auth)/admin/news': typeof authAdminNewsRouteWithChildren
   '/(auth)/monitor/alerts': typeof authMonitorAlertsRoute
   '/(auth)/monitor/monitors': typeof authMonitorMonitorsRoute
@@ -543,7 +534,6 @@ export interface FileRouteTypes {
     | '/admin/sign-in'
     | '/admin/monitor'
     | '/admin/settings'
-    | '/admin/change-monitor'
     | '/admin/news'
     | '/monitor/alerts'
     | '/monitor/monitors'
@@ -596,7 +586,6 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/admin/sign-in'
-    | '/admin/change-monitor'
     | '/monitor/alerts'
     | '/monitor/monitors'
     | '/monitor/profile'
@@ -651,7 +640,6 @@ export interface FileRouteTypes {
     | '/admin/sign-in'
     | '/(auth)/admin/monitor'
     | '/(auth)/admin/settings'
-    | '/(auth)/admin/change-monitor'
     | '/(auth)/admin/news'
     | '/(auth)/monitor/alerts'
     | '/(auth)/monitor/monitors'
@@ -928,13 +916,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authAdminNewsRouteImport
       parentRoute: typeof authAdminRouteRoute
     }
-    '/(auth)/admin/change-monitor': {
-      id: '/(auth)/admin/change-monitor'
-      path: '/change-monitor'
-      fullPath: '/admin/change-monitor'
-      preLoaderRoute: typeof authAdminChangeMonitorRouteImport
-      parentRoute: typeof authAdminRouteRoute
-    }
     '/(auth)/admin/settings': {
       id: '/(auth)/admin/settings'
       path: '/settings'
@@ -1184,7 +1165,6 @@ const authAdminNewsRouteWithChildren = authAdminNewsRoute._addFileChildren(
 interface authAdminRouteRouteChildren {
   authAdminMonitorRouteRoute: typeof authAdminMonitorRouteRouteWithChildren
   authAdminSettingsRouteRoute: typeof authAdminSettingsRouteRouteWithChildren
-  authAdminChangeMonitorRoute: typeof authAdminChangeMonitorRoute
   authAdminNewsRoute: typeof authAdminNewsRouteWithChildren
   authAdminIndexRoute: typeof authAdminIndexRoute
   authAdminErrorsErrorRoute: typeof authAdminErrorsErrorRoute
@@ -1195,7 +1175,6 @@ interface authAdminRouteRouteChildren {
 const authAdminRouteRouteChildren: authAdminRouteRouteChildren = {
   authAdminMonitorRouteRoute: authAdminMonitorRouteRouteWithChildren,
   authAdminSettingsRouteRoute: authAdminSettingsRouteRouteWithChildren,
-  authAdminChangeMonitorRoute: authAdminChangeMonitorRoute,
   authAdminNewsRoute: authAdminNewsRouteWithChildren,
   authAdminIndexRoute: authAdminIndexRoute,
   authAdminErrorsErrorRoute: authAdminErrorsErrorRoute,

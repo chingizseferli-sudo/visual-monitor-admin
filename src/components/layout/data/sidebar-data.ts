@@ -1,5 +1,4 @@
-﻿import {
-  Activity,
+import {
   FileText,
   Globe,
   LayoutDashboard,
@@ -41,11 +40,6 @@ export const sidebarData: SidebarData = {
           title: 'Mənbələr',
           url: '/admin/monitor/sources',
           icon: Globe,
-        },
-        {
-          title: 'Dəyişiklik monitoru',
-          url: '/admin/change-monitor',
-          icon: Activity,
         },
         {
           title: 'Bot logları',
