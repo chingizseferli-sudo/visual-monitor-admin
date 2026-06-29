@@ -466,59 +466,6 @@ function getSimpleProblemReasons(source: Source, sources: Source[]) {
   return Array.from(reasons)
 }
 
-function shouldAttemptRepair(source: Source) {
-  if (hasNonNewsSignal(source)) return false
-
-  const method = source.monitor_method || ''
-  const lastResult = source.last_result || ''
-  const lastError = (source.last_error || '').toLowerCase()
-  const failCount = source.consecutive_fail_count || 0
-
-  if (['blocked', 'dead', 'failed'].includes(method)) return true
-
-  if (['site_error', 'fetch_failed', 'repair_failed'].includes(lastResult)) {
-    return true
-  }
-
-  if (
-    lastError.includes('403') ||
-    lastError.includes('429') ||
-    lastError.includes('timeout') ||
-    lastError.includes('fetch_failed')
-  ) {
-    return true
-  }
-
-  if (failCount >= 3) return true
-
-  if (isRssMethod(source) && !(source.rss_url || '').trim()) return true
-
-  if (
-    isSelectorMethod(source) &&
-    !(source.selector || '').trim() &&
-    !(source.article_pattern || '').trim()
-  ) {
-    return true
-  }
-
-  if (
-    source.discovery_status === 'needs_manual_selector' ||
-    source.discovery_status === 'manual_needed'
-  ) {
-    return true
-  }
-
-  if (
-    lastResult === 'no_candidate' &&
-    !source.last_article_found_at &&
-    !source.last_success_at
-  ) {
-    return true
-  }
-
-  return false
-}
-
 function getSourceHealth(source: Source, sources: Source[]) {
   const issues = getSourceIssues(source, sources)
   const failCount = source.consecutive_fail_count || 0
@@ -1459,12 +1406,10 @@ function SourcesPage() {
     }
 
     const selectedSourceSet = new Set(selectedIds)
-    const recoverableSources = sources
-      .filter((source) => selectedSourceSet.has(source.id))
-      .filter((source) => shouldAttemptRepair(source))
+    const recoverableSources = sources.filter((source) => selectedSourceSet.has(source.id))
 
     if (recoverableSources.length === 0) {
-      alert('Seçilmiş mənbələr arasında bərpa tələb edən mənbə tapılmadı.')
+      alert('Seçilmiş mənbə siyahıda tapılmadı. Səhifəni yeniləyib yenidən seçin.')
       return
     }
 
