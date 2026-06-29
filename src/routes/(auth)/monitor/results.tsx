@@ -79,6 +79,18 @@ function getRowDate(row: ResultRow) {
   return row.monitored_items?.detected_at || row.created_at || row.monitored_items?.published_at || null;
 }
 
+function getResultFoundDate(row: ResultRow) {
+  return row.monitored_items?.detected_at || row.created_at || null;
+}
+
+function getRangeStart(range: ExportRange) {
+  if (range === "all") return null;
+
+  const start = new Date();
+  start.setDate(start.getDate() - Number(range));
+  return start;
+}
+
 function csvCell(value: string | number | null | undefined) {
   const text = String(value ?? "").replace(/"/g, '""');
   return `"${text}"`;
@@ -219,14 +231,18 @@ async function fetchResultsData(): Promise<ResultsData> {
 
   if (monitorIds.length === 0) return { rows: [], errorMessage: "" };
 
+  const retentionStart = new Date();
+  retentionStart.setDate(retentionStart.getDate() - 31);
+
   const { data, error } = await supabase
     .from("monitor_matches")
     .select(
       "id,monitor_id,item_id,matched_keyword,created_at,user_monitors(name),monitored_items(title,url,published_at,detected_at,status)"
     )
     .in("monitor_id", monitorIds)
+    .gte("created_at", retentionStart.toISOString())
     .order("created_at", { ascending: false })
-    .limit(300);
+    .limit(1000);
 
   if (error) {
     console.error("User results error:", error);
@@ -255,34 +271,43 @@ function ResultsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, monitorFilter, keywordFilter, sourceFilter, dateFilter]);
+  }, [search, monitorFilter, keywordFilter, sourceFilter, dateFilter, exportRange]);
+
+  const periodRows = useMemo(() => {
+    const start = getRangeStart(exportRange);
+    if (!start) return rows;
+
+    return rows.filter((row) => {
+      const value = getRowDate(row);
+      return value ? new Date(value) >= start : false;
+    });
+  }, [rows, exportRange]);
 
   const monitorOptions = useMemo<FilterOption[]>((() => {
     const map = new Map<string, string>();
-    rows.forEach((row) => map.set(row.monitor_id, row.user_monitors?.name || "Monitor"));
+    periodRows.forEach((row) => map.set(row.monitor_id, row.user_monitors?.name || "Monitor"));
     return Array.from(map, ([value, label]) => ({ value, label })).sort((a, b) =>
       a.label.localeCompare(b.label, "az")
     );
-  }) as () => FilterOption[], [rows]);
+  }) as () => FilterOption[], [periodRows]);
 
   const keywordOptions = useMemo<FilterOption[]>(() => {
-    const values = Array.from(new Set(rows.map((row) => row.matched_keyword).filter(Boolean))) as string[];
+    const values = Array.from(new Set(periodRows.map((row) => row.matched_keyword).filter(Boolean))) as string[];
     return values.sort((a, b) => a.localeCompare(b, "az")).map((value) => ({ value, label: value }));
-  }, [rows]);
+  }, [periodRows]);
 
   const sourceOptions = useMemo<FilterOption[]>(() => {
-    const values = Array.from(new Set(rows.map((row) => getHost(row.monitored_items?.url)).filter((value) => value !== "-")));
+    const values = Array.from(new Set(periodRows.map((row) => getHost(row.monitored_items?.url)).filter((value) => value !== "-")));
     return values.sort((a, b) => a.localeCompare(b, "az")).map((value) => ({ value, label: value }));
-  }, [rows]);
+  }, [periodRows]);
 
   const filteredRows = useMemo(() => {
     const q = search.toLocaleLowerCase("az-AZ").trim();
 
-    return rows.filter((row) => {
+    return periodRows.filter((row) => {
       const item = row.monitored_items;
       const host = getHost(item?.url);
-      const detectedDate = toDateInputValue(item?.detected_at || row.created_at);
-      const publishedDate = toDateInputValue(item?.published_at || null);
+      const foundDate = toDateInputValue(getResultFoundDate(row));
 
       const matchesSearch =
         !q ||
@@ -296,28 +321,29 @@ function ResultsPage() {
         (monitorFilter === ALL || row.monitor_id === monitorFilter) &&
         (keywordFilter === ALL || row.matched_keyword === keywordFilter) &&
         (sourceFilter === ALL || host === sourceFilter) &&
-        (!dateFilter || detectedDate === dateFilter || publishedDate === dateFilter)
+        (!dateFilter || foundDate === dateFilter)
       );
     });
-  }, [rows, search, monitorFilter, keywordFilter, sourceFilter, dateFilter]);
+  }, [periodRows, search, monitorFilter, keywordFilter, sourceFilter, dateFilter]);
 
   const exportRows = useMemo(() => {
-    if (exportRange === "all") return filteredRows;
-
-    const start = new Date();
-    start.setDate(start.getDate() - Number(exportRange));
-
-    return filteredRows.filter((row) => {
-      const value = getRowDate(row);
-      return value ? new Date(value) >= start : false;
-    });
-  }, [filteredRows, exportRange]);
+    return filteredRows;
+  }, [filteredRows]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginatedRows = filteredRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const uniqueMonitors = new Set(rows.map((row) => row.monitor_id)).size;
-  const uniqueKeywords = new Set(rows.map((row) => row.matched_keyword).filter(Boolean)).size;
+  const uniqueMedia = new Set(filteredRows.map((row) => getHost(row.monitored_items?.url)).filter((value) => value !== "-")).size;
+  const uniqueMonitors = new Set(filteredRows.map((row) => row.monitor_id)).size;
+  const uniqueKeywords = new Set(filteredRows.map((row) => row.matched_keyword).filter(Boolean)).size;
+
+  function clearResultFilters() {
+    setSearch("");
+    setMonitorFilter(ALL);
+    setKeywordFilter(ALL);
+    setSourceFilter(ALL);
+    setDateFilter("");
+  }
 
   function exportResults(format: "csv" | "json" | "html") {
     const mappedRows = exportRows.map(mapExportRow);
@@ -551,18 +577,34 @@ function ResultsPage() {
               <Download className="h-4 w-4" />
               Export
             </span>
-            <span className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600">
+            <button
+              type="button"
+              onClick={clearResultFilters}
+              className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600 transition hover:bg-slate-100"
+            >
               {exportRows.length} nəticə
-            </span>
-            <span className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600">
-              {rows.length} media
-            </span>
-            <span className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600">
+            </button>
+            <button
+              type="button"
+              onClick={() => setSourceFilter(ALL)}
+              className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600 transition hover:bg-slate-100"
+            >
+              {uniqueMedia} media
+            </button>
+            <button
+              type="button"
+              onClick={() => setMonitorFilter(ALL)}
+              className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600 transition hover:bg-slate-100"
+            >
               {uniqueMonitors} monitor
-            </span>
-            <span className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600">
+            </button>
+            <button
+              type="button"
+              onClick={() => setKeywordFilter(ALL)}
+              className="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-600 transition hover:bg-slate-100"
+            >
               {uniqueKeywords} açar söz
-            </span>
+            </button>
           </div>
 
           <div className="flex flex-wrap gap-2">

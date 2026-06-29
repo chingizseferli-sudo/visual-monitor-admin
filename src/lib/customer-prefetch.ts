@@ -199,12 +199,16 @@ async function prefetchResultsData() {
   const monitorIds = await fetchMonitorIds(userId)
   if (monitorIds.length === 0) return { rows: [], errorMessage: '' }
 
+  const retentionStart = new Date()
+  retentionStart.setDate(retentionStart.getDate() - 31)
+
   const { data, error } = await supabase
     .from('monitor_matches')
     .select('id,monitor_id,item_id,matched_keyword,created_at,user_monitors(name),monitored_items(title,url,published_at,detected_at,status)')
     .in('monitor_id', monitorIds)
+    .gte('created_at', retentionStart.toISOString())
     .order('created_at', { ascending: false })
-    .limit(300)
+    .limit(1000)
 
   if (error) {
     return { rows: [], errorMessage: 'Nəticələri yükləmək mümkün olmadı.' }
