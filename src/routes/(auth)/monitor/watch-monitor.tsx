@@ -1018,6 +1018,11 @@ function getEventItemCompare(event: ChangeEvent, snapshots: Record<string, Chang
   }
 }
 
+function getSourceDisplayName(source: ChangeSource | null) {
+  if (!source) return 'Mənbə'
+  return source.name || source.domain || getDomainFromUrl(source.url || '') || 'Mənbə'
+}
+
 function sourceToForm(source: ChangeSource): SourceFormState {
   return {
     name: source.name || '',
@@ -2124,7 +2129,7 @@ function ChangeMonitorPage() {
                           <div className='min-w-0'>
                             <div className='truncate text-sm font-semibold'>{item.title}</div>
                             <div className='mt-1 line-clamp-2 text-xs text-muted-foreground'>{item.summary}</div>
-                            {item.url ? <div className='mt-1 truncate text-[11px] text-blue-700 underline' title={item.url}>Saytdakı məlumata get</div> : null}
+                            {item.url ? <div className='mt-1 truncate text-[11px] text-blue-700 underline' title={item.url}>{getSourceDisplayName(item.source)}</div> : null}
                           </div>
                           <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                             item.kind === 'new'
