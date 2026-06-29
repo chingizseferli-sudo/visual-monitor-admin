@@ -13,7 +13,12 @@ Bu Chrome extension Change Monitor üçün real brauzer tabında CSS selector se
 
 ## İstifadə
 
-1. Admin paneldə `/admin/change-monitor` açıq olsun.
+Extension iki Change Monitor səhifəsi ilə işləyir:
+
+- Admin panel: `/admin/change-monitor`
+- İstifadəçi workspace-i: `/monitor/watch-monitor`
+
+1. Admin və ya istifadəçi panelində uyğun Change Monitor səhifəsi açıq olsun.
 2. Yeni izləmə formunda URL yaz.
 3. `Brauzerdə aç` düyməsi ilə saytı aç.
 4. Açılan saytda sağ altda `Visual Monitor` paneli görünməlidir.
@@ -21,9 +26,8 @@ Bu Chrome extension Change Monitor üçün real brauzer tabında CSS selector se
 6. `Selector seç` kliklə.
 7. İzlənəcək hissəyə kliklə.
 8. Sağ altdakı paneldə `Yadda saxla` kliklə.
-9. Admin panel açıqdırsa, seçim avtomatik `İzləmələr` siyahısına əlavə ediləcək.
+9. Change Monitor səhifəsi açıqdırsa, seçim mövcud sessiya ilə avtomatik izləmələr siyahısına əlavə ediləcək.
 
 ## Qeyd
 
-Bu extension discovery etmir və özü bazaya yazmır. Seçilən selectoru Chrome storage üzərindən admin panelə ötürür; admin panel açıqdırsa, mövcud sessiya ilə yeni izləmə avtomatik yaradılır.
-
+Bu extension discovery etmir və özü bazaya yazmır. Seçilən selectoru Chrome storage üzərindən açıq Change Monitor səhifəsinə ötürür; bazaya yazma əməliyyatı həmin səhifədəki mövcud Supabase sessiyası ilə icra olunur.

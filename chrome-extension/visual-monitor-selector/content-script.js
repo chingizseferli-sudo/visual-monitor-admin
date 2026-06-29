@@ -8,8 +8,8 @@
   const STORE_KEY = 'visualMonitorLastSelection';
   const RESULT_KEY = 'visualMonitorLastSelectionResult';
   const CHANGE_EVENTS_KEY = 'visualMonitorChangeEvents';
-  const ADMIN_PATH = '/admin/change-monitor';
-  const isAdminPage = location.pathname.includes(ADMIN_PATH);
+  const CHANGE_MONITOR_PATHS = ['/admin/change-monitor', '/monitor/watch-monitor'];
+  const isChangeMonitorPage = CHANGE_MONITOR_PATHS.some((path) => location.pathname.includes(path));
 
   const safeCss = (value) => {
     if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(value);
@@ -88,11 +88,11 @@
     return target === document.documentElement ? document.body : target;
   };
 
-  const publishToAdminPage = (payload) => {
+  const publishToChangeMonitorPage = (payload) => {
     window.postMessage({ type: 'visual-monitor-extension-selector', payload }, '*');
   };
 
-  if (isAdminPage) {
+  if (isChangeMonitorPage) {
     window.addEventListener('message', (event) => {
       if (event.data?.type === 'visual-monitor-extension-save-result') {
         chrome.storage.local.set({ [RESULT_KEY]: event.data.payload || {} });
@@ -104,12 +104,12 @@
     });
 
     chrome.storage.local.get(STORE_KEY, (result) => {
-      if (result && result[STORE_KEY]) publishToAdminPage(result[STORE_KEY]);
+      if (result && result[STORE_KEY]) publishToChangeMonitorPage(result[STORE_KEY]);
     });
 
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== 'local' || !changes[STORE_KEY]?.newValue) return;
-      publishToAdminPage(changes[STORE_KEY].newValue);
+      publishToChangeMonitorPage(changes[STORE_KEY].newValue);
     });
     return;
   }
@@ -295,7 +295,7 @@
       event.preventDefault();
       event.stopPropagation();
       setActive(!active);
-    });
+    });
     retry.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
