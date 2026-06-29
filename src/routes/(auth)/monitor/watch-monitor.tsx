@@ -688,7 +688,7 @@ function uniqueSnapshotItems(items: SnapshotItem[]) {
   return unique
 }
 
-function buildSnapshotComparisonRows(event: ChangeEvent, snapshots: Record<string, ChangeSnapshot>, limit = 5): SnapshotComparisonRow[] {
+function buildSnapshotComparisonRows(event: ChangeEvent, snapshots: Record<string, ChangeSnapshot>, limit = 6): SnapshotComparisonRow[] {
   const oldSnapshot = event.old_snapshot_id ? snapshots[event.old_snapshot_id] : null
   const newSnapshot = event.new_snapshot_id ? snapshots[event.new_snapshot_id] : null
   const oldItems = uniqueSnapshotItems(parseSnapshotItems(oldSnapshot?.content_text))
@@ -703,35 +703,21 @@ function buildSnapshotComparisonRows(event: ChangeEvent, snapshots: Record<strin
   )
   const oldUrlSet = new Set(oldByUrl.keys())
   const newUrlSet = new Set(newItems.map((item) => normalizeSnapshotItemUrl(item.url)).filter(Boolean))
-  const oldTop = oldItems.slice(0, limit)
   const newTop = newItems.slice(0, limit)
-  const rowCount = Math.max(oldTop.length, newTop.length)
   const rows: SnapshotComparisonRow[] = []
-  const usedBeforeUrls = new Set<string>()
 
-  for (let index = 0; index < rowCount; index += 1) {
-    const after = newTop[index] || null
-    const afterUrl = normalizeSnapshotItemUrl(after?.url)
+  for (const after of newTop) {
+    const afterUrl = normalizeSnapshotItemUrl(after.url)
     const oldMatch = afterUrl ? oldByUrl.get(afterUrl) || null : null
-    let before = oldMatch || oldTop[index] || null
     let status: SnapshotComparisonStatus = 'normal'
 
-    if (after && afterUrl && !oldUrlSet.has(afterUrl)) {
+    if (afterUrl && !oldUrlSet.has(afterUrl)) {
       status = 'new'
-      before = oldTop.find((item) => {
-        const url = normalizeSnapshotItemUrl(item.url)
-        return !url || !usedBeforeUrls.has(url)
-      }) || oldTop[index] || null
-    } else if (after && oldMatch && snapshotTitleChanged(oldMatch, after)) {
+    } else if (oldMatch && snapshotTitleChanged(oldMatch, after)) {
       status = 'changed'
-      before = oldMatch
-    } else if (after && oldMatch) {
-      before = oldMatch
     }
 
-    const beforeUrl = normalizeSnapshotItemUrl(before?.url)
-    if (beforeUrl) usedBeforeUrls.add(beforeUrl)
-    rows.push({ before, after, status })
+    rows.push({ before: oldMatch, after, status })
   }
 
   const existingRemovedUrls = new Set(
