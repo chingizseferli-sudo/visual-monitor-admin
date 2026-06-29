@@ -1453,24 +1453,30 @@ function SourcesPage() {
   }
 
   async function autoRecoverProblemSources() {
-    const recoverableSources = sources.filter((source) =>
-      shouldAttemptRepair(source)
-    )
+    if (selectedIds.length === 0) {
+      alert('Bərpa ediləcək mənbələri seçin.')
+      return
+    }
+
+    const selectedSourceSet = new Set(selectedIds)
+    const recoverableSources = sources
+      .filter((source) => selectedSourceSet.has(source.id))
+      .filter((source) => shouldAttemptRepair(source))
 
     if (recoverableSources.length === 0) {
-      alert('Düzəldiləcək işləməyən mənbə tapılmadı.')
+      alert('Seçilmiş mənbələr arasında bərpa tələb edən mənbə tapılmadı.')
       return
     }
 
     const ok = window.confirm(
-      `${recoverableSources.length} mənbə üçün oxuma üsulu yenidən yoxlanacaq. Davam edək?`
+      `${recoverableSources.length} seçilmiş mənbə üçün oxuma üsulu yenidən yoxlanacaq. Davam edək?`
     )
 
     if (!ok) return
 
     setRecovering(true)
     setMessage(
-      `${recoverableSources.length} mənbə üçün oxuma üsulu yenidən yoxlanır...`
+      `${recoverableSources.length} seçilmiş mənbə üçün oxuma üsulu yenidən yoxlanır...`
     )
     setRepairRun(null)
 
@@ -1516,7 +1522,7 @@ function SourcesPage() {
       items,
     })
     setMessage(
-      `Avtomatik bərpa bitdi: ${fixed} mənbə real işlək tapıldı, ${failed} mənbə hələ işləmədi.`
+      `Seçilmiş mənbələrin bərpası bitdi: ${fixed} mənbə real işlək tapıldı, ${failed} mənbə hələ işləmədi.`
     )
   }
 
@@ -2079,14 +2085,13 @@ function SourcesPage() {
           <div className='flex flex-col gap-1'>
             <button
               onClick={autoRecoverProblemSources}
-              disabled={recovering}
-              className='rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-100'
+              disabled={recovering || selectedIds.length === 0}
+              className='rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50'
             >
-              İşləməyən mənbələri düzəlt
+              Seçilmişləri bərpa et
             </button>
             <span className='max-w-md text-xs text-muted-foreground'>
-              Sistem işləməyən mənbələri yoxlayır və mümkün olduqda ən uyğun
-              oxuma üsulunu avtomatik yeniləyir.
+              Yalnız seçilmiş problemli mənbələr yoxlanır və uyğun metod tapılarsa sağlam mənbə kimi yenilənir.
             </span>
           </div>
 
