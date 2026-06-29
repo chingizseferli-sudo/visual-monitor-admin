@@ -1736,6 +1736,112 @@ function SourcesPage() {
     : null
   const detailItemById = new Map(detailItems.map((item) => [item.id, item]))
 
+  function applySourcePreset({
+    view = 'all',
+    status = 'all',
+    method = 'all',
+    issue = 'all',
+  }: {
+    view?: 'all' | 'healthy' | 'problem' | 'repair'
+    status?: string
+    method?: string
+    issue?: string
+  }) {
+    setSourceView(view)
+    setStatusFilter(status)
+    setMethodFilter(method)
+    setIssueFilter(issue)
+    setDiscoveryFilter('all')
+    setQualityFilter('all')
+    setSearch('')
+    resetFilteredView()
+  }
+
+  const metricCards = [
+    {
+      key: 'all',
+      label: 'Ümumi mənbə',
+      count: stats.total,
+      tone: 'sky',
+      active: sourceView === 'all' && statusFilter === 'all' && methodFilter === 'all' && issueFilter === 'all',
+      onClick: () => applySourcePreset({ view: 'all' }),
+    },
+    {
+      key: 'active',
+      label: 'Aktiv',
+      count: stats.active,
+      tone: 'emerald',
+      active: sourceView === 'all' && statusFilter === 'active' && methodFilter === 'all' && issueFilter === 'all',
+      onClick: () => applySourcePreset({ status: 'active' }),
+    },
+    {
+      key: 'inactive',
+      label: 'Passiv',
+      count: stats.inactive,
+      tone: 'slate',
+      active: sourceView === 'all' && statusFilter === 'inactive' && methodFilter === 'all' && issueFilter === 'all',
+      onClick: () => applySourcePreset({ status: 'inactive' }),
+    },
+    {
+      key: 'rss',
+      label: 'RSS',
+      count: stats.rss,
+      tone: 'cyan',
+      active: methodFilter === 'rss',
+      onClick: () => applySourcePreset({ method: 'rss' }),
+    },
+    {
+      key: 'fail-limit',
+      label: 'Fail limiti',
+      count: stats.failLimit,
+      tone: 'red',
+      active: issueFilter === 'fail_limit',
+      onClick: () => applySourcePreset({ issue: 'fail_limit' }),
+    },
+    {
+      key: 'subdomain',
+      label: 'Aktiv subdomain',
+      count: stats.subdomains,
+      tone: 'orange',
+      active: issueFilter === 'subdomain',
+      onClick: () => applySourcePreset({ issue: 'subdomain' }),
+    },
+    {
+      key: 'problem',
+      label: 'İşləməyən',
+      count: stats.problems,
+      tone: 'amber',
+      active: sourceView === 'problem',
+      onClick: () => applySourcePreset({ view: 'problem' }),
+    },
+    {
+      key: 'non-news',
+      label: 'Xəbər saytı deyil',
+      count: stats.nonNews,
+      tone: 'fuchsia',
+      active: issueFilter === 'non_news',
+      onClick: () => applySourcePreset({ issue: 'non_news' }),
+    },
+  ]
+
+  const sourceViewTabs = [
+    { key: 'all', label: 'Bütün mənbələr', count: stats.total },
+    { key: 'healthy', label: 'Sağlam mənbələr', count: stats.healthy },
+    { key: 'problem', label: 'İşləməyən mənbələr', count: stats.problems },
+    { key: 'repair', label: 'Bərpa mərkəzi', count: stats.repair },
+  ] as const
+
+  const toneClasses: Record<string, string> = {
+    sky: 'border-sky-100 bg-sky-50 text-sky-700 hover:border-sky-200',
+    emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-200',
+    slate: 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300',
+    cyan: 'border-cyan-100 bg-cyan-50 text-cyan-700 hover:border-cyan-200',
+    red: 'border-red-100 bg-red-50 text-red-600 hover:border-red-200',
+    orange: 'border-orange-100 bg-orange-50 text-orange-700 hover:border-orange-200',
+    amber: 'border-amber-100 bg-amber-50 text-orange-600 hover:border-amber-200',
+    fuchsia: 'border-fuchsia-100 bg-fuchsia-50 text-fuchsia-700 hover:border-fuchsia-200',
+  }
+
   return (
     <div className='grid max-w-full gap-4 overflow-hidden p-4 md:p-6'>
       <div>
@@ -1817,84 +1923,35 @@ function SourcesPage() {
         ) : null}
       </section>
 
-      <div className='grid [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))] gap-4'>
-        <div className='rounded-xl border border-sky-100 bg-sky-50 p-4 shadow-sm'>
-          <div className='text-sm text-muted-foreground'>Ümumi mənbə</div>
-          <div className='text-2xl font-bold text-sky-700'>{stats.total}</div>
-        </div>
-
-        <div className='rounded-xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm'>
-          <div className='text-sm text-muted-foreground'>Aktiv</div>
-          <div className='text-2xl font-bold text-emerald-700'>
-            {stats.active}
-          </div>
-        </div>
-
-        <div className='rounded-xl border border-cyan-100 bg-cyan-50 p-4 shadow-sm'>
-          <div className='text-sm text-muted-foreground'>RSS</div>
-          <div className='text-2xl font-bold text-cyan-700'>{stats.rss}</div>
-        </div>
-
-        <div className='rounded-xl border border-red-100 bg-red-50 p-4 shadow-sm'>
-          <div className='text-sm text-muted-foreground'>Fail limiti</div>
-          <div className='text-2xl font-bold text-red-600'>
-            {stats.failLimit}
-          </div>
-        </div>
-
-        <div className='rounded-xl border border-orange-100 bg-orange-50 p-4 shadow-sm'>
-          <div className='text-sm text-muted-foreground'>Aktiv subdomain</div>
-          <div className='text-2xl font-bold text-red-600'>
-            {stats.subdomains}
-          </div>
-        </div>
-
-        <div className='rounded-xl border border-amber-100 bg-amber-50 p-4 shadow-sm'>
-          <div className='text-sm text-muted-foreground'>İşləməyən</div>
-          <div className='text-2xl font-bold text-orange-600'>
-            {stats.problems}
-          </div>
-        </div>
-
-        <div className='rounded-xl border border-fuchsia-100 bg-fuchsia-50 p-4 shadow-sm'>
-          <div className='text-sm text-muted-foreground'>Xəbər saytı deyil</div>
-          <div className='text-2xl font-bold text-fuchsia-700'>
-            {stats.nonNews}
-          </div>
-        </div>
+      <div className='grid [grid-template-columns:repeat(auto-fit,minmax(145px,1fr))] gap-3'>
+        {metricCards.map((card) => (
+          <button
+            key={card.key}
+            type='button'
+            onClick={card.onClick}
+            className={`rounded-xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+              toneClasses[card.tone]
+            } ${card.active ? 'ring-2 ring-slate-900/70' : ''}`}
+          >
+            <div className='text-sm text-muted-foreground'>{card.label}</div>
+            <div className='text-2xl font-bold'>{card.count}</div>
+          </button>
+        ))}
       </div>
 
       <div className='flex flex-wrap gap-2 rounded-xl border bg-card p-3'>
-        {[
-          { key: 'all', label: 'Bütün mənbələr', count: stats.total },
-          {
-            key: 'healthy',
-            label: 'Sağlam mənbələr',
-            count: stats.healthy,
-          },
-          {
-            key: 'problem',
-            label: 'İşləməyən mənbələr',
-            count: stats.problems,
-          },
-          {
-            key: 'repair',
-            label: 'Bərpa mərkəzi',
-            count: stats.repair,
-          },
-        ].map((tab) => (
+        {sourceViewTabs.map((tab) => (
           <button
             key={tab.key}
             type='button'
             onClick={() => {
-              setSourceView(
-                tab.key as 'all' | 'healthy' | 'problem' | 'repair'
-              )
-              setIssueFilter('all')
-              resetFilteredView()
+              applySourcePreset({ view: tab.key })
             }}
             className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
-              sourceView === tab.key
+              sourceView === tab.key &&
+              statusFilter === 'all' &&
+              methodFilter === 'all' &&
+              issueFilter === 'all'
                 ? tab.key === 'healthy'
                   ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
                   : tab.key === 'problem'
@@ -1922,19 +1979,6 @@ function SourcesPage() {
         />
 
         <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value)
-            resetFilteredView()
-          }}
-          className='min-w-0 rounded-lg border bg-background px-3 py-2'
-        >
-          <option value='all'>Bütün statuslar</option>
-          <option value='active'>Aktiv</option>
-          <option value='inactive'>Passiv</option>
-        </select>
-
-        <select
           value={methodFilter}
           onChange={(e) => {
             setMethodFilter(e.target.value)
@@ -1944,7 +1988,7 @@ function SourcesPage() {
         >
           <option value='all'>Bütün metodlar</option>
           {MONITOR_METHODS.map((method) => (
-            <option key={formatMonitorMethod(method)} value={formatMonitorMethod(method)}>
+            <option key={method} value={method}>
               {formatMonitorMethod(method)}
             </option>
           ))}
