@@ -2330,9 +2330,9 @@ function ChangeMonitorPage() {
                       changedCount: itemCompare.changed.length,
                     }
                   })
-                  const visibleEventTimeline = eventTimeline
-                    .filter(({ addedCount, removedCount, changedCount }) => addedCount > 0 || removedCount > 0 || changedCount > 0)
-                    .slice(0, 3)
+                  const latestVisibleEvent = eventTimeline.find(
+                    ({ addedCount, removedCount, changedCount }) => addedCount > 0 || removedCount > 0 || changedCount > 0
+                  ) || null
                   const hasUnreadNotification = unreadNotificationSourceIds.has(source.id)
                   const rowClass =
                     source.status !== 'active'
@@ -2471,105 +2471,76 @@ function ChangeMonitorPage() {
                                 </div>
                               ) : (
                                 <div className='min-w-0 space-y-3'>
-                                  {visibleEventTimeline.length > 0 ? (
+                                  {latestVisibleEvent ? (
                                     <div className='min-w-0 rounded-lg border bg-background p-2'>
                                       <div className='flex flex-wrap items-center justify-between gap-2'>
                                         <div>
-                                          <div className='text-sm font-semibold'>Son dəyişikliklər</div>
-                                          <div className='text-xs text-muted-foreground'>
-                                            Yalnız yeni, real silinən və dəyişən elementlər göstərilir.
+                                          <div className='text-sm font-semibold'>Son yoxlamanın nəticəsi</div>
+                                          <div className='text-xs text-muted-foreground'>Yalnız son yoxlamada aşkar edilən real dəyişikliklər göstərilir.</div>
+                                        </div>
+                                        <div className='text-xs text-muted-foreground'>{formatDate(latestVisibleEvent.event.created_at)}</div>
+                                      </div>
+
+                                      <div className='mt-2 grid gap-2 md:grid-cols-2'>
+                                        <div className='rounded-md border bg-slate-50/70 p-2'>
+                                          <div className='mb-1 text-xs font-semibold text-slate-600'>Əvvəl</div>
+                                          <div className='space-y-1.5'>
+                                            {latestVisibleEvent.itemCompare.added.slice(0, 4).map((item, index) => (
+                                              <div key={`${item.url || item.title}-before-added-${index}`} className='rounded border border-slate-200 bg-white px-2 py-1 text-xs text-muted-foreground'>
+                                                Bu məlumat əvvəl yox idi.
+                                              </div>
+                                            ))}
+                                            {latestVisibleEvent.itemCompare.removed.slice(0, 4).map((item, index) => (
+                                              <div key={`${item.url || item.title}-before-removed-${index}`} className='rounded border border-red-100 bg-white px-2 py-1 text-xs'>
+                                                <div className='truncate font-medium text-slate-900' title={item.title || item.url}>{item.title || item.url || 'Silinən məlumat'}</div>
+                                                {item.url ? <div className='truncate text-[11px] text-muted-foreground' title={item.url}>{item.url}</div> : null}
+                                              </div>
+                                            ))}
+                                            {latestVisibleEvent.itemCompare.changed.slice(0, 4).map((item, index) => (
+                                              <div key={`${item.before.url || item.before.title}-before-changed-${index}`} className='rounded border border-amber-100 bg-white px-2 py-1 text-xs'>
+                                                <div className='truncate font-medium text-slate-900' title={item.before.title || item.before.url}>{item.before.title || item.before.url || 'Əvvəlki məlumat'}</div>
+                                                {item.before.published ? <div className='truncate text-[11px] text-muted-foreground'>{item.before.published}</div> : null}
+                                              </div>
+                                            ))}
                                           </div>
                                         </div>
-                                      </div>
-                                      <div className='mt-2 max-h-[190px] space-y-1.5 overflow-auto pr-1'>
-                                        {visibleEventTimeline.map(({ event, itemCompare, addedCount, removedCount, changedCount }) => (
-                                          <div key={event.id} className='rounded-md border bg-muted/20 px-2 py-1.5'>
-                                            <div className='flex flex-wrap items-center justify-between gap-2'>
-                                              <div className='text-xs font-medium text-muted-foreground'>{formatDate(event.created_at)}</div>
-                                              <div className='flex flex-wrap gap-1'>
-                                                <span className='rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700'>
-                                                  Yeni {addedCount}
-                                                </span>
-                                                <span className='rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700'>
-                                                  Silinən {removedCount}
-                                                </span>
-                                                <span className='rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700'>
-                                                  Dəyişən {changedCount}
-                                                </span>
-                                              </div>
-                                            </div>
-                                            {false && event.diff_summary ? (
-                                              <div className='mt-1 line-clamp-2 whitespace-pre-line text-xs text-muted-foreground'>
-                                                {event.diff_summary}
-                                              </div>
-                                            ) : null}
 
-                                            {itemCompare.added.length > 0 ? (
-                                              <div className='mt-2 space-y-1'>
-                                                <div className='text-xs font-semibold text-emerald-700'>Yeni paylaşımlar</div>
-                                                {itemCompare.added.slice(0, 2).map((item, index) => (
-                                                  <div key={`${item.url || item.title}-added-${index}`} className='min-w-0 rounded border border-emerald-100 bg-emerald-50 px-2 py-1 text-xs'>
-                                                    <a href={item.url || source.url || '#'} target='_blank' rel='noreferrer' className='block truncate font-medium text-blue-700 underline' title={item.title}>
-                                                      {item.title || item.url || 'Başlıq yoxdur'}
-                                                    </a>
-                                                    <div className='flex min-w-0 flex-wrap gap-x-2 text-muted-foreground'>
-                                                      {item.published ? <span>{item.published}</span> : null}
-                                                      {item.url ? <span className='truncate' title={item.url}>{item.url}</span> : null}
-                                                    </div>
-                                                  </div>
-                                                ))}
+                                        <div className='rounded-md border bg-background p-2'>
+                                          <div className='mb-1 text-xs font-semibold text-slate-600'>İndi</div>
+                                          <div className='space-y-1.5'>
+                                            {latestVisibleEvent.itemCompare.added.slice(0, 4).map((item, index) => (
+                                              <div key={`${item.url || item.title}-now-added-${index}`} className='rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs'>
+                                                <div className='mb-0.5 text-[11px] font-semibold text-emerald-700'>Yeni məlumat</div>
+                                                <a href={item.url || source.url || '#'} target='_blank' rel='noreferrer' className='block truncate font-medium text-blue-700 underline' title={item.title || item.url}>
+                                                  {item.title || item.url || 'Başlıq yoxdur'}
+                                                </a>
+                                                {item.published ? <div className='truncate text-[11px] text-emerald-800'>{item.published}</div> : null}
                                               </div>
-                                            ) : null}
-
-                                            {(itemCompare.removed.length > 0 || itemCompare.changed.length > 0) ? (
-                                              <div className='mt-2 grid gap-2 lg:grid-cols-2'>
-                                                {itemCompare.removed.length > 0 ? (
-                                                  <div className='min-w-0'>
-                                                    <div className='text-xs font-semibold text-red-700'>Silinənlər</div>
-                                                    {itemCompare.removed.slice(0, 2).map((item, index) => (
-                                                      <div key={`${item.url || item.title}-removed-${index}`} className='truncate text-xs text-muted-foreground' title={item.title || item.url}>
-                                                        {item.title || item.url || 'Silinən element'}
-                                                      </div>
-                                                    ))}
-                                                  </div>
-                                                ) : null}
-                                                {itemCompare.changed.length > 0 ? (
-                                                  <div className='min-w-0 lg:col-span-2'>
-                                                    <div className='text-xs font-semibold text-slate-700'>Dəyişənlər</div>
-                                                    <div className='mt-1 space-y-1'>
-                                                      {itemCompare.changed.slice(0, 2).map((item, index) => (
-                                                        <div key={`${item.after.url || item.after.title}-changed-${index}`} className='grid gap-1 rounded border bg-background p-1.5 text-xs md:grid-cols-2'>
-                                                          <div className='min-w-0 rounded bg-slate-50 px-2 py-1'>
-                                                            <div className='mb-0.5 font-semibold text-slate-600'>Əvvəl</div>
-                                                            <div className='truncate text-muted-foreground' title={item.before.title || item.before.url}>
-                                                              {item.before.title || item.before.url || 'Əvvəlki məlumat'}
-                                                            </div>
-                                                            {item.before.published ? <div className='truncate text-[11px] text-muted-foreground'>{item.before.published}</div> : null}
-                                                          </div>
-                                                          <div className='min-w-0 rounded bg-emerald-50 px-2 py-1'>
-                                                            <div className='mb-0.5 font-semibold text-emerald-700'>İndi</div>
-                                                            <div className='truncate font-medium text-slate-900' title={item.after.title || item.after.url}>
-                                                              {item.after.title || item.after.url || 'Yeni məlumat'}
-                                                            </div>
-                                                            {item.after.published ? <div className='truncate text-[11px] text-emerald-800'>{item.after.published}</div> : null}
-                                                          </div>
-                                                        </div>
-                                                      ))}
-                                                    </div>
-                                                  </div>
-                                                ) : null}
+                                            ))}
+                                            {latestVisibleEvent.itemCompare.removed.slice(0, 4).map((item, index) => (
+                                              <div key={`${item.url || item.title}-now-removed-${index}`} className='rounded border border-red-200 bg-red-50 px-2 py-1 text-xs'>
+                                                <div className='mb-0.5 text-[11px] font-semibold text-red-700'>Silinib</div>
+                                                <div className='truncate font-medium text-red-900' title={item.title || item.url}>{item.title || item.url || 'Silinən məlumat'}</div>
                                               </div>
-                                            ) : null}
+                                            ))}
+                                            {latestVisibleEvent.itemCompare.changed.slice(0, 4).map((item, index) => (
+                                              <div key={`${item.after.url || item.after.title}-now-changed-${index}`} className='rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs'>
+                                                <div className='mb-0.5 text-[11px] font-semibold text-amber-700'>Dəyişib</div>
+                                                <a href={item.after.url || source.url || '#'} target='_blank' rel='noreferrer' className='block truncate font-medium text-slate-900 underline decoration-amber-500' title={item.after.title || item.after.url}>
+                                                  {item.after.title || item.after.url || 'Dəyişən məlumat'}
+                                                </a>
+                                                {item.after.published ? <div className='truncate text-[11px] text-amber-800'>{item.after.published}</div> : null}
+                                              </div>
+                                            ))}
                                           </div>
-                                        ))}
+                                        </div>
                                       </div>
                                     </div>
                                   ) : (
                                     <div className='rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground'>
-                                      Bu izləmədə göstəriləcək yeni, silinən və ya dəyişən element yoxdur.
+                                      Son yoxlamada göstəriləcək yeni, silinən və ya dəyişən element yoxdur.
                                     </div>
                                   )}
-
                                   {displayNewSnapshot && false ? (
                                     <div className={`min-w-0 rounded-lg border p-3 ${latestInlineEvent ? 'border-emerald-200 bg-emerald-50/50' : 'bg-background'}`}>
                                       <div className='flex flex-wrap items-center justify-between gap-2'>
