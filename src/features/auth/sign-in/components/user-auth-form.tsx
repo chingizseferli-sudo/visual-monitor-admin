@@ -22,12 +22,12 @@ import { getAuthErrorMessage } from '../../auth-messages'
 
 const formSchema = z.object({
   email: z.email({
-    error: (iss) => (iss.input === '' ? 'Email Ã¼nvanÄ±nÄ±zÄ± daxil edin.' : undefined),
+    error: (iss) => (iss.input === '' ? 'Email ünvanınızı daxil edin.' : undefined),
   }),
   password: z
     .string()
-    .min(1, 'ÅžifrÉ™nizi daxil edin.')
-    .min(7, 'ÅžifrÉ™ É™n azÄ± 7 simvol olmalÄ±dÄ±r.'),
+    .min(1, 'Şifrənizi daxil edin.')
+    .min(7, 'Şifrə ən azı 7 simvol olmalıdır.'),
 })
 
 type AuthMode = 'customer' | 'admin'
@@ -143,8 +143,8 @@ export function UserAuthForm({
       setIsLoading(false)
       toast.error(
         mode === 'admin'
-          ? 'Admin icazÉ™si tapÄ±lmadÄ±.'
-          : 'Ä°stifadÉ™Ã§i profili tapÄ±lmadÄ±. AdminlÉ™ É™laqÉ™ saxlayÄ±n.'
+          ? 'Admin icazəsi tapılmadı.'
+          : 'İstifadəçi profili tapılmadı. Adminlə əlaqə saxlayın.'
       )
       return
     }
@@ -161,14 +161,14 @@ export function UserAuthForm({
     if (mode === 'admin' && !isAdminRole(role)) {
       await supabase.auth.signOut()
       setIsLoading(false)
-      toast.error('Bu giriÅŸ yalnÄ±z admin hesablarÄ± Ã¼Ã§Ã¼ndÃ¼r.')
+      toast.error('Bu giriş yalnız admin hesabları üçündür.')
       return
     }
 
     const safeRedirect = getSafeRedirect(mode, redirectTo)
 
     setIsLoading(false)
-    toast.success('GiriÅŸ uÄŸurludur.')
+    toast.success('Giriş uğurludur.')
     await navigate({
       to: safeRedirect,
       replace: true,
@@ -200,16 +200,16 @@ export function UserAuthForm({
           name='password'
           render={({ field }) => (
             <FormItem className='relative'>
-              <FormLabel>ÅžifrÉ™</FormLabel>
+              <FormLabel>Şifrə</FormLabel>
               <FormControl>
-                <PasswordInput placeholder='â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' autoComplete='current-password' {...field} />
+                <PasswordInput placeholder='••••••••' autoComplete='current-password' {...field} />
               </FormControl>
               <FormMessage />
               <Link
                 to='/forgot-password'
                 className='absolute inset-e-0 -top-0.5 text-sm font-medium text-muted-foreground hover:text-[#1463ff]'
               >
-                ÅžifrÉ™ni unutmusunuz?
+                Şifrəni unutmusunuz?
               </Link>
             </FormItem>
           )}
