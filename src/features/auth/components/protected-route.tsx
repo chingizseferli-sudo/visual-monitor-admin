@@ -7,7 +7,7 @@ import {
 
 type ProtectedRouteProps = {
   allowedRoles: string[]
-  unauthorizedRedirect?: '/monitor' | '/sign-in'
+  unauthorizedRedirect?: '/monitor' | '/sign-in' | '/admin/sign-in'
   unauthenticatedRedirect?: '/sign-in' | '/admin/sign-in'
   children: React.ReactNode
 }
