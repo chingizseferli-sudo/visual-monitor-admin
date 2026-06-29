@@ -899,7 +899,6 @@ function compareSnapshotItems(oldText: string | null | undefined, newText: strin
   const newByUrl = new Map(newItems.filter((item) => item.url).map((item) => [normalizeSnapshotItemUrl(item.url), item]))
 
   const added: SnapshotItem[] = []
-  const removed: SnapshotItem[] = []
   const changed: SnapshotItemChange[] = []
 
   for (const [url, item] of newByUrl) {
@@ -913,11 +912,10 @@ function compareSnapshotItems(oldText: string | null | undefined, newText: strin
     }
   }
 
-  for (const [url, item] of oldByUrl) {
-    if (!newByUrl.has(url)) removed.push(item)
-  }
-
-  return { added, removed, changed }
+  // A URL missing from the current selected list is not necessarily deleted.
+  // It may simply have moved to another page after newer content appeared.
+  // Real removals are counted by the worker only after URL availability checks.
+  return { added, removed: [], changed }
 }
 
 function parseSummaryCount(summary: string | null | undefined, label: string) {
@@ -925,12 +923,43 @@ function parseSummaryCount(summary: string | null | undefined, label: string) {
   return match ? Number(match[1]) || 0 : 0
 }
 
+function parseConfirmedRemovedItems(summary: string | null | undefined): SnapshotItem[] {
+  const lines = String(summary || '').split(/\r?\n/)
+  const startIndex = lines.findIndex((line) => line.trim().toLowerCase() === 'təsdiqlənmiş silinən linklər:')
+  if (startIndex < 0) return []
+
+  const items: SnapshotItem[] = []
+  for (const line of lines.slice(startIndex + 1)) {
+    const trimmed = line.trim()
+    if (!trimmed || !trimmed.startsWith('- ')) break
+    const content = trimmed.slice(2)
+    const match = content.match(/^(.*?)\s+—\s+(https?:\/\/\S+)(?:\s+—\s+.*)?$/)
+    items.push({
+      title: match?.[1]?.trim() || content,
+      url: match?.[2]?.trim() || '',
+    })
+  }
+  return items
+}
+
 function getEventItemCompare(event: ChangeEvent, snapshots: Record<string, ChangeSnapshot>): SnapshotItemCompare {
   const oldSnapshot = event.old_snapshot_id ? snapshots[event.old_snapshot_id] : null
   const newSnapshot = event.new_snapshot_id ? snapshots[event.new_snapshot_id] : null
   const compare = compareSnapshotItems(oldSnapshot?.content_text, newSnapshot?.content_text)
 
-  if (oldSnapshot || newSnapshot) return compare
+  if (oldSnapshot || newSnapshot) {
+    const confirmedRemovedItems = parseConfirmedRemovedItems(event.diff_summary)
+    const realRemovedCount = parseSummaryCount(event.diff_summary, 'Silinən')
+    return {
+      ...compare,
+      removed: confirmedRemovedItems.length > 0
+        ? confirmedRemovedItems
+        : Array.from({ length: realRemovedCount }, (_, index) => ({
+          title: `Təsdiqlənmiş silinən element ${index + 1}`,
+          url: '',
+        })),
+    }
+  }
 
   return {
     added: Array.from({ length: parseSummaryCount(event.diff_summary, 'Əlavə olunan') }, (_, index) => ({
