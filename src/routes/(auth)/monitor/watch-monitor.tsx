@@ -149,6 +149,8 @@ type ChangeNotificationItem = {
   title: string
   summary: string
   time: string | null
+  url: string | null
+  kind: 'new' | 'removed' | 'changed' | 'generic'
 }
 
 type ExpandedSourceDetails = {
@@ -942,6 +944,45 @@ function parseConfirmedRemovedItems(summary: string | null | undefined): Snapsho
   return items
 }
 
+function parseNotificationTarget(summary: string | null | undefined, sourceUrl: string | null | undefined) {
+  const text = String(summary || '')
+  const addedMatch = text.match(/Yeni linklər:\s*\n-\s*(.*?)\s+—\s+(https?:\/\/\S+)/i)
+  if (addedMatch) {
+    return {
+      kind: 'new' as const,
+      title: addedMatch[1]?.trim() || 'Yeni məlumat əlavə olunub',
+      summary: 'Yeni məlumat əlavə olunub.',
+      url: addedMatch[2]?.trim() || null,
+    }
+  }
+
+  const removedMatch = text.match(/Təsdiqlənmiş silinən linklər:\s*\n-\s*(.*?)\s+—\s+(https?:\/\/\S+)/i)
+  if (removedMatch) {
+    return {
+      kind: 'removed' as const,
+      title: removedMatch[1]?.trim() || 'Məlumat silinib',
+      summary: 'Əvvəl mövcud olan məlumat artıq saytda tapılmadı.',
+      url: removedMatch[2]?.trim() || sourceUrl || null,
+    }
+  }
+
+  const changedCount = parseSummaryCount(text, 'Dəyişən')
+  if (changedCount > 0) {
+    return {
+      kind: 'changed' as const,
+      title: 'Məlumatda dəyişiklik var',
+      summary: `${changedCount} məlumatda dəyişiklik aşkarlanıb.`,
+      url: sourceUrl || null,
+    }
+  }
+
+  return {
+    kind: 'generic' as const,
+    title: 'Dəyişiklik bildirişi',
+    summary: 'Yeni dəyişiklik bildirişi var.',
+    url: sourceUrl || null,
+  }
+}
 function getEventItemCompare(event: ChangeEvent, snapshots: Record<string, ChangeSnapshot>): SnapshotItemCompare {
   const oldSnapshot = event.old_snapshot_id ? snapshots[event.old_snapshot_id] : null
   const newSnapshot = event.new_snapshot_id ? snapshots[event.new_snapshot_id] : null
@@ -1730,6 +1771,11 @@ function ChangeMonitorPage() {
     markAlertRead(item.alert.id)
     setNotificationOpen(false)
 
+    if (item.url) {
+      window.open(item.url, '_blank', 'noopener,noreferrer')
+      return
+    }
+
     if (item.source) {
       if (expandedSourceId !== item.source.id) {
         await toggleInlineDetails(item.source)
@@ -1929,16 +1975,21 @@ function ChangeMonitorPage() {
       const source = alert.source_id ? sourceMap.get(alert.source_id) || null : null
       const event = (alert.event_id ? eventMap.get(alert.event_id) : null) ||
         (alert.source_id ? latestEventBySource.get(alert.source_id) || null : null)
-      const summary = event?.diff_summary?.trim() || alert.error || source?.last_error || 'Yeni dəyişiklik bildirişi var.'
+      const target = parseNotificationTarget(event?.diff_summary, source?.url)
+      const title = target.kind === 'generic'
+        ? source?.name || source?.domain || target.title
+        : target.title
 
       return {
         alert,
         source,
         event,
         isRead: readAlertIds.includes(alert.id),
-        title: source?.name || source?.domain || 'Naməlum izləmə',
-        summary,
+        title,
+        summary: target.summary || alert.error || source?.last_error || 'Yeni dəyişiklik bildirişi var.',
         time: alert.sent_at || alert.created_at || event?.created_at || null,
+        url: target.url,
+        kind: target.kind,
       }
     })
   }, [alerts, recentEvents, sources, readAlertIds])
@@ -2073,11 +2124,18 @@ function ChangeMonitorPage() {
                           <div className='min-w-0'>
                             <div className='truncate text-sm font-semibold'>{item.title}</div>
                             <div className='mt-1 line-clamp-2 text-xs text-muted-foreground'>{item.summary}</div>
+                            {item.url ? <div className='mt-1 truncate text-[11px] text-blue-700 underline' title={item.url}>Saytdakı məlumata get</div> : null}
                           </div>
                           <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                            item.isRead ? 'bg-slate-100 text-slate-600' : 'bg-slate-950 text-white'
+                            item.kind === 'new'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : item.kind === 'removed'
+                                ? 'bg-red-100 text-red-700'
+                                : item.kind === 'changed'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : item.isRead ? 'bg-slate-100 text-slate-600' : 'bg-slate-950 text-white'
                           }`}>
-                            {item.isRead ? 'Oxunub' : 'Yeni'}
+                            {item.kind === 'new' ? 'Yeni' : item.kind === 'removed' ? 'Silinib' : item.kind === 'changed' ? 'Dəyişib' : item.isRead ? 'Oxunub' : 'Yeni'}
                           </span>
                         </div>
                         <div className='mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground'>
