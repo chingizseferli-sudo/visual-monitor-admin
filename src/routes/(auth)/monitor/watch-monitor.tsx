@@ -657,6 +657,14 @@ function normalizeSnapshotTitle(value: string | null | undefined) {
   return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase()
 }
 
+function snapshotTitleFingerprint(value: string | null | undefined) {
+  return normalizeSnapshotTitle(value)
+    .replace(/[“”"'«».,:;!?()\[\]{}\-–—]/g, '')
+    .replace(/\s+/g, ' ')
+    .slice(0, 96)
+}
+
+
 function snapshotTitleChanged(before: SnapshotItem | null | undefined, after: SnapshotItem | null | undefined) {
   const beforeTitle = normalizeSnapshotTitle(before?.title)
   const afterTitle = normalizeSnapshotTitle(after?.title)
@@ -668,12 +676,12 @@ function uniqueSnapshotItems(items: SnapshotItem[]) {
   const unique: SnapshotItem[] = []
 
   for (const item of items) {
+    const titleKey = snapshotTitleFingerprint(item.title)
     const urlKey = normalizeSnapshotItemUrl(item.url)
-    const titleKey = normalizeSnapshotTitle(item.title)
-    const key = urlKey || titleKey
-    if (!key || seen.has(key) || (titleKey && seen.has(`title:${titleKey}`))) continue
+    const key = titleKey || urlKey
+    if (!key || seen.has(key) || (urlKey && seen.has(`url:${urlKey}`))) continue
     seen.add(key)
-    if (titleKey) seen.add(`title:${titleKey}`)
+    if (urlKey) seen.add(`url:${urlKey}`)
     unique.push(item)
   }
 
@@ -2587,7 +2595,6 @@ function ChangeMonitorPage() {
                                                 {row.before ? (
                                                   <>
                                                     <div className='truncate font-medium text-slate-900' title={row.before.title || row.before.url}>{row.before.title || row.before.url || 'Başlıq yoxdur'}</div>
-                                                    {row.before.published ? <div className='truncate text-[11px] text-muted-foreground'>{row.before.published}</div> : null}
                                                   </>
                                                 ) : (
                                                   <div className='text-muted-foreground'>Bu məlumat əvvəl yox idi.</div>
@@ -2618,7 +2625,6 @@ function ChangeMonitorPage() {
                                                       <a href={row.after.url || source.url || '#'} target='_blank' rel='noreferrer' className={`block truncate font-medium ${row.status === 'new' ? 'text-blue-700 underline' : 'text-slate-900'}`} title={row.after.title || row.after.url}>
                                                         {row.after.title || row.after.url || 'Başlıq yoxdur'}
                                                       </a>
-                                                      {row.after.published ? <div className={`truncate text-[11px] ${row.status === 'new' ? 'text-emerald-800' : row.status === 'changed' ? 'text-amber-800' : 'text-muted-foreground'}`}>{row.after.published}</div> : null}
                                                     </>
                                                   ) : (
                                                     <div className='truncate font-medium text-red-900' title={row.before?.title || row.before?.url}>{row.before?.title || row.before?.url || 'Silinən məlumat'}</div>
