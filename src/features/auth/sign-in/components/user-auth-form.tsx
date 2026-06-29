@@ -22,12 +22,12 @@ import { getAuthErrorMessage } from '../../auth-messages'
 
 const formSchema = z.object({
   email: z.email({
-    error: (iss) => (iss.input === '' ? 'Email ünvanınızı daxil edin.' : undefined),
+    error: (iss) => (iss.input === '' ? 'Email Ã¼nvanÄ±nÄ±zÄ± daxil edin.' : undefined),
   }),
   password: z
     .string()
-    .min(1, 'Şifrənizi daxil edin.')
-    .min(7, 'Şifrə ən azı 7 simvol olmalıdır.'),
+    .min(1, 'ÅžifrÉ™nizi daxil edin.')
+    .min(7, 'ÅžifrÉ™ É™n azÄ± 7 simvol olmalÄ±dÄ±r.'),
 })
 
 type AuthMode = 'customer' | 'admin'
@@ -35,6 +35,11 @@ type AuthMode = 'customer' | 'admin'
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
   mode?: AuthMode
+}
+
+type SupabaseQueryError = {
+  code?: string | null
+  message?: string | null
 }
 
 type UserProfile = {
@@ -48,6 +53,14 @@ function isAdminRole(role: string) {
   return role === 'admin' || role === 'superadmin'
 }
 
+function isMissingAdminUsersTable(error: SupabaseQueryError | null) {
+  return (
+    error?.code === '42P01' ||
+    error?.code === 'PGRST205' ||
+    error?.message?.includes('admin_users') === true
+  )
+}
+
 function getSafeRedirect(mode: AuthMode, redirectTo: string | undefined) {
   if (mode === 'admin') {
     return redirectTo && redirectTo.startsWith('/admin') && redirectTo !== '/admin/sign-in'
@@ -56,6 +69,36 @@ function getSafeRedirect(mode: AuthMode, redirectTo: string | undefined) {
   }
 
   return redirectTo && redirectTo.startsWith('/monitor') ? redirectTo : '/monitor'
+}
+
+async function loadLoginProfile(mode: AuthMode, userId: string) {
+  if (mode === 'admin') {
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('user_id,email,role,status')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (isMissingAdminUsersTable(error)) {
+      const fallback = await supabase
+        .from('user_profiles')
+        .select('user_id,email,role,status')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      return { profile: fallback.data as UserProfile | null, error: fallback.error }
+    }
+
+    return { profile: data as UserProfile | null, error }
+  }
+
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('user_id,email,role,status')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return { profile: data as UserProfile | null, error }
 }
 
 export function UserAuthForm({
@@ -90,49 +133,42 @@ export function UserAuthForm({
       return
     }
 
-    const { data: profileData, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('user_id,email,role,status')
-      .eq('user_id', authData.user.id)
-      .maybeSingle()
+    const { profile, error: profileError } = await loadLoginProfile(
+      mode,
+      authData.user.id
+    )
 
-    if (profileError || !profileData) {
+    if (profileError || !profile) {
       await supabase.auth.signOut()
       setIsLoading(false)
-      toast.error('Profil tapılmadı. Adminlə əlaqə saxlayın.')
+      toast.error(
+        mode === 'admin'
+          ? 'Admin icazÉ™si tapÄ±lmadÄ±.'
+          : 'Ä°stifadÉ™Ã§i profili tapÄ±lmadÄ±. AdminlÉ™ É™laqÉ™ saxlayÄ±n.'
+      )
       return
     }
 
-    const profile = profileData as UserProfile
-
-    if (profile.status === 'blocked') {
+    if (profile.status === 'blocked' || profile.status === 'inactive') {
       await supabase.auth.signOut()
       setIsLoading(false)
-      toast.error('Hesab bloklanıb.')
+      toast.error('Hesab aktiv deyil.')
       return
     }
 
     const role = profile.role || 'customer'
-    const adminRole = isAdminRole(role)
 
-    if (mode === 'customer' && adminRole) {
+    if (mode === 'admin' && !isAdminRole(role)) {
       await supabase.auth.signOut()
       setIsLoading(false)
-      toast.error('Bu giriş yalnız istifadəçilər üçündür. Admin panelə ayrıca admin girişi ilə daxil olun.')
-      return
-    }
-
-    if (mode === 'admin' && !adminRole) {
-      await supabase.auth.signOut()
-      setIsLoading(false)
-      toast.error('Bu giriş yalnız admin hesabları üçündür.')
+      toast.error('Bu giriÅŸ yalnÄ±z admin hesablarÄ± Ã¼Ã§Ã¼ndÃ¼r.')
       return
     }
 
     const safeRedirect = getSafeRedirect(mode, redirectTo)
 
     setIsLoading(false)
-    toast.success('Giriş uğurludur.')
+    toast.success('GiriÅŸ uÄŸurludur.')
     await navigate({
       to: safeRedirect,
       replace: true,
@@ -164,16 +200,16 @@ export function UserAuthForm({
           name='password'
           render={({ field }) => (
             <FormItem className='relative'>
-              <FormLabel>Şifrə</FormLabel>
+              <FormLabel>ÅžifrÉ™</FormLabel>
               <FormControl>
-                <PasswordInput placeholder='••••••••' autoComplete='current-password' {...field} />
+                <PasswordInput placeholder='â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' autoComplete='current-password' {...field} />
               </FormControl>
               <FormMessage />
               <Link
                 to='/forgot-password'
                 className='absolute inset-e-0 -top-0.5 text-sm font-medium text-muted-foreground hover:text-[#1463ff]'
               >
-                Şifrəni unutmusunuz?
+                ÅžifrÉ™ni unutmusunuz?
               </Link>
             </FormItem>
           )}

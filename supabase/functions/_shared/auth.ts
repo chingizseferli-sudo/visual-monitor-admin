@@ -1,4 +1,4 @@
-﻿export type AuthContext = {
+export type AuthContext = {
   user: {
     id: string;
     email?: string | null;
@@ -35,9 +35,14 @@ async function getUserFromJwt(supabaseUrl: string, serviceRoleKey: string, token
   return await response.json();
 }
 
-async function getProfile(supabaseUrl: string, serviceRoleKey: string, userId: string) {
+async function readSingleProfile(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  table: "user_profiles" | "admin_users",
+  userId: string,
+) {
   const response = await fetch(
-    `${supabaseUrl}/rest/v1/user_profiles?user_id=eq.${encodeURIComponent(userId)}&select=role,status&limit=1`,
+    `${supabaseUrl}/rest/v1/${table}?user_id=eq.${encodeURIComponent(userId)}&select=role,status&limit=1`,
     {
       headers: {
         apikey: serviceRoleKey,
@@ -50,6 +55,14 @@ async function getProfile(supabaseUrl: string, serviceRoleKey: string, userId: s
   if (!response.ok) return null;
   const rows = await response.json();
   return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function getProfile(supabaseUrl: string, serviceRoleKey: string, userId: string) {
+  return readSingleProfile(supabaseUrl, serviceRoleKey, "user_profiles", userId);
+}
+
+async function getAdminProfile(supabaseUrl: string, serviceRoleKey: string, userId: string) {
+  return readSingleProfile(supabaseUrl, serviceRoleKey, "admin_users", userId);
 }
 
 export async function requireAuthenticated(req: Request, json: JsonResponder): Promise<AuthContext | Response> {
@@ -83,13 +96,34 @@ export async function requireAuthenticated(req: Request, json: JsonResponder): P
 }
 
 export async function requireAdmin(req: Request, json: JsonResponder): Promise<AuthContext | Response> {
-  const auth = await requireAuthenticated(req, json);
-  if (auth instanceof Response) return auth;
+  const token = bearerToken(req);
+  if (!token) return json({ error: "Authentication required" }, 401);
 
-  const role = auth.profile?.role || "";
-  if (role !== "admin" && role !== "superadmin") {
+  let supabaseUrl: string;
+  let serviceRoleKey: string;
+  try {
+    supabaseUrl = env("SUPABASE_URL").replace(/\/$/, "");
+    serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
+  }
+
+  const user = await getUserFromJwt(supabaseUrl, serviceRoleKey, token);
+  if (!user?.id) return json({ error: "Invalid or expired session" }, 401);
+
+  const adminProfile = await getAdminProfile(supabaseUrl, serviceRoleKey, user.id);
+  const role = adminProfile?.role || "";
+  const status = adminProfile?.status || "";
+
+  if ((role !== "admin" && role !== "superadmin") || status !== "active") {
     return json({ error: "Admin access required" }, 403);
   }
 
-  return auth;
+  return {
+    user: {
+      id: user.id,
+      email: user.email || null,
+    },
+    profile: adminProfile,
+  };
 }
