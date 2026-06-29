@@ -663,11 +663,28 @@ function snapshotTitleChanged(before: SnapshotItem | null | undefined, after: Sn
   return Boolean(beforeTitle && afterTitle && beforeTitle !== afterTitle)
 }
 
+function uniqueSnapshotItems(items: SnapshotItem[]) {
+  const seen = new Set<string>()
+  const unique: SnapshotItem[] = []
+
+  for (const item of items) {
+    const urlKey = normalizeSnapshotItemUrl(item.url)
+    const titleKey = normalizeSnapshotTitle(item.title)
+    const key = urlKey || titleKey
+    if (!key || seen.has(key) || (titleKey && seen.has(`title:${titleKey}`))) continue
+    seen.add(key)
+    if (titleKey) seen.add(`title:${titleKey}`)
+    unique.push(item)
+  }
+
+  return unique
+}
+
 function buildSnapshotComparisonRows(event: ChangeEvent, snapshots: Record<string, ChangeSnapshot>, limit = 5): SnapshotComparisonRow[] {
   const oldSnapshot = event.old_snapshot_id ? snapshots[event.old_snapshot_id] : null
   const newSnapshot = event.new_snapshot_id ? snapshots[event.new_snapshot_id] : null
-  const oldItems = parseSnapshotItems(oldSnapshot?.content_text)
-  const newItems = parseSnapshotItems(newSnapshot?.content_text)
+  const oldItems = uniqueSnapshotItems(parseSnapshotItems(oldSnapshot?.content_text))
+  const newItems = uniqueSnapshotItems(parseSnapshotItems(newSnapshot?.content_text))
 
   if (!oldItems.length && !newItems.length) return []
 
@@ -682,22 +699,30 @@ function buildSnapshotComparisonRows(event: ChangeEvent, snapshots: Record<strin
   const newTop = newItems.slice(0, limit)
   const rowCount = Math.max(oldTop.length, newTop.length)
   const rows: SnapshotComparisonRow[] = []
+  const usedBeforeUrls = new Set<string>()
 
   for (let index = 0; index < rowCount; index += 1) {
-    const before = oldTop[index] || null
     const after = newTop[index] || null
+    const afterUrl = normalizeSnapshotItemUrl(after?.url)
+    const oldMatch = afterUrl ? oldByUrl.get(afterUrl) || null : null
+    let before = oldMatch || oldTop[index] || null
     let status: SnapshotComparisonStatus = 'normal'
 
-    if (after) {
-      const afterUrl = normalizeSnapshotItemUrl(after.url)
-      const oldMatch = afterUrl ? oldByUrl.get(afterUrl) || null : null
-      if (afterUrl && !oldUrlSet.has(afterUrl)) {
-        status = 'new'
-      } else if (oldMatch && snapshotTitleChanged(oldMatch, after)) {
-        status = 'changed'
-      }
+    if (after && afterUrl && !oldUrlSet.has(afterUrl)) {
+      status = 'new'
+      before = oldTop.find((item) => {
+        const url = normalizeSnapshotItemUrl(item.url)
+        return !url || !usedBeforeUrls.has(url)
+      }) || oldTop[index] || null
+    } else if (after && oldMatch && snapshotTitleChanged(oldMatch, after)) {
+      status = 'changed'
+      before = oldMatch
+    } else if (after && oldMatch) {
+      before = oldMatch
     }
 
+    const beforeUrl = normalizeSnapshotItemUrl(before?.url)
+    if (beforeUrl) usedBeforeUrls.add(beforeUrl)
     rows.push({ before, after, status })
   }
 
