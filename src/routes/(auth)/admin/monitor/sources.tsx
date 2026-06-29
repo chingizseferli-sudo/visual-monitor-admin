@@ -63,6 +63,7 @@ type RepairResponse = {
   method: string
   reason: string
   candidateCount: number
+  finalUrl?: string
   sampleLinks: string[]
   update: Record<string, unknown>
 }
@@ -83,6 +84,15 @@ type RepairRunSummary = {
   methodCounts: Record<string, number>
   reasonCounts: Record<string, number>
   items: RepairRunItem[]
+}
+
+type AddSourceResult = {
+  ok: boolean
+  method: string
+  reason: string
+  candidateCount: number
+  sampleLinks: string[]
+  sourceName: string
 }
 
 const MONITOR_METHODS = [
@@ -276,6 +286,20 @@ function formatLastError(source: Source) {
   }
 
   return '—'
+}
+
+function normalizeSourceUrl(value: string | null | undefined) {
+  const raw = String(value || '').trim()
+  if (!raw) return null
+
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`)
+    if (!['http:', 'https:'].includes(url.protocol)) return null
+    url.hash = ''
+    return url.toString()
+  } catch {
+    return null
+  }
 }
 
 function getHostname(url: string | null) {
@@ -884,6 +908,9 @@ function SourcesPage() {
   const [editing, setEditing] = useState<Source | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [message, setMessage] = useState('')
+  const [newSourceInput, setNewSourceInput] = useState('')
+  const [addingSource, setAddingSource] = useState(false)
+  const [addSourceResult, setAddSourceResult] = useState<AddSourceResult | null>(null)
   const [recovering, setRecovering] = useState(false)
   const [repairRun, setRepairRun] = useState<RepairRunSummary | null>(null)
   const [openActionId, setOpenActionId] = useState<string | null>(null)
@@ -1057,6 +1084,123 @@ function SourcesPage() {
     }
 
     setLoading(false)
+  }
+
+
+
+  async function addSourceByDomain() {
+    const normalizedUrl = normalizeSourceUrl(newSourceInput)
+    const host = getHostname(normalizedUrl)
+
+    if (!normalizedUrl || !host) {
+      setMessage('Düzgün domen və ya URL daxil edin. Məsələn: example.az')
+      return
+    }
+
+    const duplicate = sources.find((source) => {
+      const sourceHost = getHostname(source.base_url) || getHostname(source.latest_url)
+      return sourceHost === host
+    })
+
+    if (duplicate) {
+      setMessage(`${host} artıq mənbələr siyahısında var.`)
+      setSearch(host)
+      return
+    }
+
+    setAddingSource(true)
+    setAddSourceResult(null)
+    setMessage(`${host} yoxlanılır. Sistem RSS, sitemap və səhifə linklərini analiz edir...`)
+
+    const sourceDraft: Source = {
+      id: `new-${Date.now()}`,
+      name: host,
+      base_url: normalizedUrl,
+      latest_url: normalizedUrl,
+      rss_url: null,
+      source_type: 'news_site',
+      status: 'active',
+      trust_level: 'medium',
+      monitor_method: 'latest_page',
+      selector: null,
+      article_pattern: null,
+      discovery_status: 'pending',
+      discovery_score: 0,
+      last_checked_at: null,
+      last_success_at: null,
+      last_article_found_at: null,
+      last_error: null,
+      last_result: null,
+      consecutive_fail_count: 0,
+      last_discovered_at: new Date().toISOString(),
+      notes: null,
+    }
+
+    const { data: repair, error: repairError } =
+      await supabase.functions.invoke<RepairResponse>('source-repair', {
+        body: { source: sourceDraft },
+      })
+
+    if (repairError || !repair) {
+      setAddingSource(false)
+      setMessage(
+        `Mənbə analiz olunmadı: ${repairError?.message || 'source-repair cavab vermədi'}`
+      )
+      return
+    }
+
+    const now = new Date().toISOString()
+    const update = repair.update || {}
+    const insertPayload = {
+      name: host,
+      base_url: normalizedUrl,
+      latest_url: String(repair.finalUrl || normalizedUrl),
+      rss_url: typeof update.rss_url === 'string' ? update.rss_url : null,
+      source_type: 'news_site',
+      status: repair.ok ? 'active' : 'inactive',
+      trust_level: 'medium',
+      monitor_method: repair.ok ? repair.method : 'failed',
+      selector: typeof update.selector === 'string' ? update.selector : null,
+      article_pattern:
+        typeof update.article_pattern === 'string' ? update.article_pattern : null,
+      discovery_status: repair.ok ? 'accepted' : 'needs_review',
+      discovery_score: repair.ok ? Math.min(100, 60 + repair.candidateCount * 4) : 0,
+      last_checked_at: now,
+      last_success_at: repair.ok ? now : null,
+      last_article_found_at: null,
+      last_error: repair.ok ? null : repair.reason,
+      last_result: repair.ok ? 'source_added' : 'source_review_required',
+      consecutive_fail_count: repair.ok ? 0 : 1,
+      last_discovered_at: now,
+      notes: repair.ok
+        ? `[manual_add] ${repair.method} metodu seçildi. ${repair.candidateCount} link tapıldı.`
+        : `[manual_add] Avtomatik izləmə metodu tapılmadı: ${repair.reason}`,
+    }
+
+    const { error: insertError } = await supabase.from('sources').insert(insertPayload)
+
+    if (insertError) {
+      setAddingSource(false)
+      setMessage(`Mənbə əlavə olunmadı: ${insertError.message}`)
+      return
+    }
+
+    setNewSourceInput('')
+    setAddSourceResult({
+      ok: repair.ok,
+      method: repair.method,
+      reason: repair.reason,
+      candidateCount: repair.candidateCount,
+      sampleLinks: repair.sampleLinks || [],
+      sourceName: host,
+    })
+    setMessage(
+      repair.ok
+        ? `${host} əlavə olundu və ${repair.method} metodu ilə sağlam mənbələrə salındı.`
+        : `${host} əlavə olundu, amma avtomatik izləmə metodu tapılmadı. Mənbə yoxlama tələb edir.`
+    )
+    setAddingSource(false)
+    await loadSources()
   }
 
   async function deleteSource(source: Source) {
@@ -1655,6 +1799,72 @@ function SourcesPage() {
           {message}
         </div>
       ) : null}
+
+
+      <section className='grid gap-3 rounded-xl border bg-card p-4 shadow-sm'>
+        <div className='flex flex-wrap items-start justify-between gap-3'>
+          <div>
+            <h2 className='text-base font-semibold'>Yeni mənbə əlavə et</h2>
+            <p className='text-sm text-muted-foreground'>
+              Domen və ya URL daxil edin. Sistem RSS, sitemap və səhifə linklərini yoxlayıb ən uyğun izləmə metodunu seçəcək.
+            </p>
+          </div>
+          <span className='rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700'>
+            Avtomatik analiz
+          </span>
+        </div>
+
+        <div className='grid gap-2 md:grid-cols-[minmax(220px,1fr)_auto]'>
+          <input
+            value={newSourceInput}
+            onChange={(event) => setNewSourceInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !addingSource) {
+                event.preventDefault()
+                void addSourceByDomain()
+              }
+            }}
+            placeholder='Məsələn: apa.az və ya https://apa.az'
+            className='min-w-0 rounded-lg border bg-background px-3 py-2'
+          />
+          <button
+            type='button'
+            onClick={() => void addSourceByDomain()}
+            disabled={addingSource}
+            className='rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60'
+          >
+            {addingSource ? 'Yoxlanılır...' : 'Mənbəni yoxla və əlavə et'}
+          </button>
+        </div>
+
+        {addSourceResult ? (
+          <div
+            className={`rounded-lg border p-3 text-sm ${
+              addSourceResult.ok
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-amber-200 bg-amber-50 text-amber-800'
+            }`}
+          >
+            <div className='font-medium'>
+              {addSourceResult.sourceName} · {addSourceResult.ok ? 'Sağlam mənbə' : 'Yoxlama tələb edir'}
+            </div>
+            <div className='mt-1'>
+              Metod: {addSourceResult.method} · Link sayı: {addSourceResult.candidateCount}
+            </div>
+            {addSourceResult.sampleLinks.length > 0 ? (
+              <div className='mt-2 grid gap-1 text-xs'>
+                {addSourceResult.sampleLinks.slice(0, 3).map((link) => (
+                  <a key={link} href={link} target='_blank' rel='noreferrer' className='line-clamp-1 underline'>
+                    {link}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className='mt-1 text-xs'>{addSourceResult.reason}</div>
+            )}
+          </div>
+        ) : null}
+      </section>
 
       <div className='grid [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))] gap-4'>
         <div className='rounded-xl border border-sky-100 bg-sky-50 p-4 shadow-sm'>
