@@ -1006,6 +1006,8 @@ function ChangeMonitorPage() {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const notificationRef = useRef<HTMLDivElement | null>(null)
   const previousUnreadCountRef = useRef<number | null>(null)
+  const extensionSaveInFlightRef = useRef<Set<string>>(new Set())
+  const lastExtensionSaveRef = useRef<{ key: string; at: number } | null>(null)
 
   useEffect(() => {
     try {
@@ -1205,6 +1207,7 @@ function ChangeMonitorPage() {
     const selector = String(payload.selector || '').trim()
     const url = normalizeInputUrl(payload.pageUrl || form.url)
     const domain = getDomainFromUrl(url)
+    const dedupeKey = `${url}::${selector}`
 
     if (!url || !domain || !selector) {
       const message = 'Selector saxlanmadı: URL və selector məlumatı tam deyil.'
@@ -1212,6 +1215,14 @@ function ChangeMonitorPage() {
       publishExtensionSaveResult(payload, 'error', message)
       return
     }
+
+    const lastSave = lastExtensionSaveRef.current
+    if (extensionSaveInFlightRef.current.has(dedupeKey) || (lastSave?.key === dedupeKey && Date.now() - lastSave.at < 5000)) {
+      publishExtensionSaveResult(payload, 'exists', 'Bu selector artıq emal olunur.')
+      return
+    }
+
+    extensionSaveInFlightRef.current.add(dedupeKey)
 
     const interval = Math.max(5, Number(form.interval_minutes) || 5)
     const name = String(payload.pageTitle || form.name || domain).trim() || domain
@@ -1235,6 +1246,8 @@ function ChangeMonitorPage() {
       toast.message(message)
       publishExtensionSaveResult(payload, 'exists', message)
       await loadData()
+      lastExtensionSaveRef.current = { key: dedupeKey, at: Date.now() }
+      extensionSaveInFlightRef.current.delete(dedupeKey)
       return
     }
 
@@ -1265,6 +1278,8 @@ function ChangeMonitorPage() {
     const message = 'İzləmə siyahısına əlavə edildi.'
     toast.success(message)
     publishExtensionSaveResult(payload, 'saved', message)
+    lastExtensionSaveRef.current = { key: dedupeKey, at: Date.now() }
+    extensionSaveInFlightRef.current.delete(dedupeKey)
     await loadData()
   }
   async function loadVisualPage(nextUrl?: string) {
