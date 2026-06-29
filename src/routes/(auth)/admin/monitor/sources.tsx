@@ -50,13 +50,6 @@ type SourceDetailMatch = {
   created_at: string | null
 }
 
-type RepairSeverity = 'low' | 'medium' | 'high'
-
-type RepairInfo = {
-  category: string
-  severity: RepairSeverity
-  recommendation: string
-}
 
 type RepairResponse = {
   ok: boolean
@@ -674,168 +667,7 @@ function getRepairSuggestion(source: Source, metrics: SourceQualityMetrics) {
   return 'Ciddi problem görünmür.'
 }
 
-function getRepairCategory(
-  source: Source,
-  metrics: SourceQualityMetrics,
-  qualityLabel: string
-) {
-  const failCount = source.consecutive_fail_count || 0
-  const method = source.monitor_method || ''
-  const lastError = (source.last_error || '').toLowerCase()
-  const hasSelector =
-    Boolean((source.selector || '').trim()) ||
-    Boolean((source.article_pattern || '').trim())
 
-  if (failCount >= 5) return 'Frequent failure'
-
-  if (
-    ['blocked', 'dead', 'failed'].includes(method) ||
-    lastError.includes('403') ||
-    lastError.includes('429') ||
-    lastError.includes('timeout')
-  ) {
-    return 'Blocked/rate limited'
-  }
-
-  if (isSelectorMethod(source) && !hasSelector) {
-    return 'Selector problem'
-  }
-
-  if (
-    source.discovery_status === 'needs_manual_selector' ||
-    source.discovery_status === 'manual_needed'
-  ) {
-    return 'Needs manual selector'
-  }
-
-  if (source.last_result === 'no_candidate') return 'No candidate'
-  if (source.last_result === 'old_news') return 'Old news only'
-
-  if (method === 'selector' && (source.rss_url || '').trim()) {
-    return 'Better method available'
-  }
-
-  if (
-    source.status === 'active' &&
-    source.last_success_at &&
-    metrics.loaded &&
-    metrics.items7d === 0 &&
-    metrics.matches7d === 0
-  ) {
-    return 'Low activity'
-  }
-
-  if (!source.last_checked_at || qualityLabel === 'Naməlum') return 'Naməlum'
-
-  return 'Healthy'
-}
-
-function getRepairSeverity(category: string): RepairSeverity {
-  if (
-    [
-      'Frequent failure',
-      'Blocked/rate limited',
-      'Selector problem',
-      'Needs manual selector',
-    ].includes(category)
-  ) {
-    return 'high'
-  }
-
-  if (
-    ['No candidate', 'Better method available', 'Naməlum'].includes(category)
-  ) {
-    return 'medium'
-  }
-
-  return 'low'
-}
-
-function formatRepairCategory(category: string) {
-  if (category === 'Frequent failure') return 'Tez-tez xəta verir'
-  if (category === 'Blocked/rate limited') return 'Bloklanıb və ya limitlənib'
-  if (category === 'Selector problem') return 'Selector problemi'
-  if (category === 'Needs manual selector') return 'Manual selector lazımdır'
-  if (category === 'No candidate') return 'Namizəd xəbər tapılmadı'
-  if (category === 'Old news only') return 'Yalnız köhnə xəbər'
-  if (category === 'Better method available') return 'Daha stabil metod var'
-  if (category === 'Low activity') return 'Az aktiv'
-  if (category === 'Naməlum') return 'Naməlum'
-  if (category === 'Healthy') return 'Sağlam'
-
-  return category
-}
-
-function formatRepairSeverity(severity: RepairSeverity) {
-  if (severity === 'high') return 'Yüksək'
-  if (severity === 'medium') return 'Orta'
-  return 'Aşağı'
-}
-function getRepairRecommendation(category: string) {
-  if (category === 'Frequent failure') {
-    return 'Bərpa/test et, metod və URL yoxlanmalıdır.'
-  }
-
-  if (category === 'Selector problem') {
-    return 'Selector seçilməlidir.'
-  }
-
-  if (category === 'No candidate') {
-    return 'Extraction metodu yenidən baxılmalıdır.'
-  }
-
-  if (category === 'Old news only') {
-    return 'Tarix parseri və mənbə intervalı izlənməlidir.'
-  }
-
-  if (category === 'Blocked/rate limited') {
-    return 'RSS və ya Google News fallback düşünülməlidir.'
-  }
-
-  if (category === 'Low activity') {
-    return 'Hələ silmə, müşahidə et. Rəsmi və universitet saytları az aktiv ola bilər.'
-  }
-
-  if (category === 'Better method available') {
-    return 'RSS daha stabil ola bilər.'
-  }
-
-  if (category === 'Needs manual selector') {
-    return 'Manual selector seç və mənbəni yenidən test et.'
-  }
-
-  if (category === 'Naməlum') {
-    return 'İlk test və detallara bax.'
-  }
-
-  return 'Müdaxilə lazım deyil.'
-}
-
-function getRepairInfo(
-  source: Source,
-  metrics: SourceQualityMetrics,
-  qualityLabel: string
-): RepairInfo {
-  const category = getRepairCategory(source, metrics, qualityLabel)
-
-  return {
-    category,
-    severity: getRepairSeverity(category),
-    recommendation: getRepairRecommendation(category),
-  }
-}
-
-function getSeverityToneClass(severity: RepairSeverity) {
-  if (severity === 'high') {
-    return 'border-red-200 bg-red-100 text-red-700'
-  }
-
-  if (severity === 'medium') {
-    return 'border-amber-200 bg-amber-100 text-amber-800'
-  }
-
-  return 'border-emerald-200 bg-emerald-100 text-emerald-700'
-}
 
 function SourcesPage() {
   const [sources, setSources] = useState<Source[]>([])
@@ -849,7 +681,7 @@ function SourcesPage() {
   const [issueFilter, setIssueFilter] = useState('all')
   const [qualityFilter, setQualityFilter] = useState('all')
   const [sourceView, setSourceView] = useState<
-    'all' | 'healthy' | 'problem' | 'repair'
+    'all' | 'healthy' | 'problem'
   >('all')
   const [bulkMethod, setBulkMethod] = useState('google_news_fallback')
   const [editing, setEditing] = useState<Source | null>(null)
@@ -1570,7 +1402,6 @@ function SourcesPage() {
       const health = getSourceHealth(source, sources)
       const matchesSourceView =
         sourceView === 'all' ||
-        sourceView === 'repair' ||
         (sourceView === 'healthy' && health === 'ok') ||
         (sourceView === 'problem' && health !== 'ok')
 
@@ -1652,15 +1483,6 @@ function SourcesPage() {
   }
 
   const stats = useMemo(() => {
-    const repairCount = sources.filter((item) => {
-      const health = getSourceHealth(item, sources)
-      const metrics = sourceQuality[item.id] || emptyQualityMetrics()
-      const quality = getSourceQualityLabel(item, metrics, health)
-      const repair = getRepairInfo(item, metrics, quality.label)
-
-      return repair.category !== 'Healthy'
-    }).length
-
     return {
       total: sources.length,
       active: sources.filter((item) => item.status === 'active').length,
@@ -1697,9 +1519,8 @@ function SourcesPage() {
       subdomains: sources
         .filter((item) => item.status === 'active')
         .filter((item) => isSubdomain(item, sources)).length,
-      repair: repairCount,
     }
-  }, [sources, sourceQuality])
+  }, [sources])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1742,7 +1563,7 @@ function SourcesPage() {
     method = 'all',
     issue = 'all',
   }: {
-    view?: 'all' | 'healthy' | 'problem' | 'repair'
+    view?: 'all' | 'healthy' | 'problem'
     status?: string
     method?: string
     issue?: string
@@ -1828,7 +1649,6 @@ function SourcesPage() {
     { key: 'all', label: 'Bütün mənbələr', count: stats.total },
     { key: 'healthy', label: 'Sağlam mənbələr', count: stats.healthy },
     { key: 'problem', label: 'İşləməyən mənbələr', count: stats.problems },
-    { key: 'repair', label: 'Bərpa mərkəzi', count: stats.repair },
   ] as const
 
   const toneClasses: Record<string, string> = {
@@ -1956,8 +1776,6 @@ function SourcesPage() {
                   ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
                   : tab.key === 'problem'
                     ? 'border-amber-200 bg-amber-100 text-amber-800'
-                    : tab.key === 'repair'
-                      ? 'border-violet-200 bg-violet-100 text-violet-800'
                       : 'border-sky-200 bg-sky-100 text-sky-800'
                 : 'bg-background hover:bg-muted'
             }`}
@@ -2271,113 +2089,6 @@ function SourcesPage() {
         </div>
       ) : null}
 
-      {sourceView === 'repair' ? (
-        <div className='grid gap-3 rounded-xl border bg-card p-4 shadow-sm'>
-          <div>
-            <h2 className='text-lg font-semibold'>Bərpa mərkəzi</h2>
-            <p className='text-sm text-muted-foreground'>
-              Mənbələr üzrə qayda əsaslı tövsiyələr. Heç bir əməliyyat avtomatik
-              icra olunmur.
-            </p>
-          </div>
-
-          <div className='grid gap-3'>
-            {paginatedSources.map((source) => {
-              const health = getSourceHealth(source, sources)
-              const metrics = sourceQuality[source.id] || emptyQualityMetrics()
-              const quality = getSourceQualityLabel(source, metrics, health)
-              const repair = getRepairInfo(source, metrics, quality.label)
-
-              return (
-                <div
-                  key={source.id}
-                  className='grid gap-3 rounded-xl border bg-background p-4 lg:grid-cols-[minmax(220px,1fr)_minmax(260px,1.3fr)_auto]'
-                >
-                  <div className='min-w-0'>
-                    <div className='line-clamp-1 font-semibold'>
-                      {getSourceTitle(source)}
-                    </div>
-                    <div className='line-clamp-1 text-xs text-muted-foreground'>
-                      {source.base_url}
-                    </div>
-                    <div className='mt-2 flex flex-wrap gap-1 text-[11px]'>
-                      <span className='rounded-full border px-1.5 py-0.5'>
-                        {formatMonitorMethod(source.monitor_method)}
-                      </span>
-                      <span className='rounded-full border px-1.5 py-0.5'>
-                        {formatResult(source.last_result)}
-                      </span>
-                      <span
-                        className={`rounded-full border px-1.5 py-0.5 ${
-                          (source.consecutive_fail_count || 0) >= 5
-                            ? 'border-red-200 text-red-700'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        fail: {source.consecutive_fail_count || 0}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className='grid gap-2 text-sm'>
-                    <div className='flex flex-wrap items-center gap-2'>
-                      <span
-                        className={`rounded-full border px-2 py-1 text-xs font-medium ${getQualityToneClass(
-                          quality.tone
-                        )}`}
-                      >
-                        {quality.label}
-                      </span>
-                      <span className='rounded-full border px-2 py-1 text-xs'>
-                        {formatRepairCategory(repair.category)}
-                      </span>
-                      <span
-                        className={`rounded-full border px-2 py-1 text-xs font-medium ${getSeverityToneClass(
-                          repair.severity
-                        )}`}
-                      >
-                        {formatRepairSeverity(repair.severity)}
-                      </span>
-                    </div>
-                    <div className='text-muted-foreground'>
-                      {repair.recommendation}
-                    </div>
-                  </div>
-
-                  <div className='flex flex-wrap items-start gap-2 lg:justify-end'>
-                    <button
-                      type='button'
-                      onClick={() => void loadSourceDetails(source)}
-                      className='rounded-md border px-3 py-2 text-xs hover:bg-muted'
-                    >
-                      Detallar
-                    </button>
-                    <a
-                      href={`/admin/monitor/picker?sourceId=${source.id}`}
-                      className='rounded-md border px-3 py-2 text-xs hover:bg-muted'
-                    >
-                      Selector seç
-                    </a>
-                    <button
-                      type='button'
-                      onClick={() => setEditing(source)}
-                      className='rounded-md border px-3 py-2 text-xs hover:bg-muted'
-                    >
-                      Redaktə et
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-
-            {filteredSources.length === 0 ? (
-              <div className='rounded-xl border p-8 text-center text-sm text-muted-foreground'>
-                Bərpa üçün mənbə tapılmadı.
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : (
       <div className='rounded-xl border bg-card shadow-sm'>
         <table className='w-full table-fixed text-sm [&_td:nth-child(12)]:hidden [&_td:nth-child(13)]:hidden [&_td:nth-child(6)]:hidden [&_td:nth-child(7)]:hidden [&_th:nth-child(12)]:hidden [&_th:nth-child(13)]:hidden [&_th:nth-child(6)]:hidden [&_th:nth-child(7)]:hidden'>
           <thead className='bg-muted/50'>
@@ -2697,7 +2408,6 @@ function SourcesPage() {
           </tbody>
         </table>
       </div>
-      )}
 
       <div className='flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4'>
         <div className='text-sm text-muted-foreground'>
