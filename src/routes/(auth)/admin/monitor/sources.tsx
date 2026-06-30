@@ -31,6 +31,7 @@ type SourceQualityMetrics = {
   items7d: number
   matches7d: number
   alerts7d: number
+  sentNews7d: number
   lastUsefulItem: string | null
   loaded: boolean
 }
@@ -501,11 +502,52 @@ function getSourceHealthLabel(source: Source, sources: Source[]) {
 }
 
 
+
+function sourceLookupKeys(source: Source) {
+  const keys = new Set<string>()
+  const name = String(source.name || '').trim().toLowerCase()
+  if (name) keys.add(`name:${name}`)
+
+  for (const value of [source.base_url, source.latest_url, source.rss_url]) {
+    const host = getHostname(value || '')
+    if (host) keys.add(`host:${host}`)
+  }
+
+  return Array.from(keys)
+}
+
+function matchSentNewsToSourceId(
+  row: { link?: string | null; source?: string | null; created_at?: string | null },
+  sourceKeyIndex: Map<string, string>
+) {
+  const linkHost = getHostname(String(row.link || ''))
+  if (linkHost) {
+    const exact = sourceKeyIndex.get(`host:${linkHost}`)
+    if (exact) return exact
+
+    const parent = Array.from(sourceKeyIndex.entries()).find(([key]) => {
+      if (!key.startsWith('host:')) return false
+      const host = key.slice(5)
+      return linkHost === host || linkHost.endsWith(`.${host}`)
+    })
+    if (parent) return parent[1]
+  }
+
+  const sourceName = String(row.source || '').trim().toLowerCase()
+  if (!sourceName) return null
+  return (
+    sourceKeyIndex.get(`name:${sourceName}`) ||
+    sourceKeyIndex.get(`host:${sourceName.replace(/^www\./, '')}`) ||
+    null
+  )
+}
+
 function emptyQualityMetrics(): SourceQualityMetrics {
   return {
     items7d: 0,
     matches7d: 0,
     alerts7d: 0,
+    sentNews7d: 0,
     lastUsefulItem: null,
     loaded: false,
   }
@@ -516,7 +558,7 @@ function isHealthySourceQuality(metrics: SourceQualityMetrics | undefined) {
     metrics?.loaded &&
       metrics.items7d > 0 &&
       metrics.matches7d > 0 &&
-      metrics.alerts7d > 0
+      (metrics.alerts7d > 0 || metrics.sentNews7d > 0)
   )
 }
 
@@ -597,7 +639,11 @@ function hasRecentSourceOutput(
   const data = metrics || emptyQualityMetrics()
 
   return Boolean(
-    (data.loaded && (data.items7d > 0 || data.matches7d > 0 || data.alerts7d > 0)) ||
+    (data.loaded &&
+      (data.items7d > 0 ||
+        data.matches7d > 0 ||
+        data.alerts7d > 0 ||
+        data.sentNews7d > 0)) ||
       source.last_article_found_at
   )
 }
@@ -733,7 +779,8 @@ function getSourceQualityLabel(
     source.status === 'active' &&
     source.last_success_at &&
     data.items7d === 0 &&
-    data.matches7d === 0
+    data.matches7d === 0 &&
+    data.sentNews7d === 0
   ) {
     return {
       label: 'Az aktiv',
@@ -949,6 +996,49 @@ function SourcesPage() {
 
       if (itemId) {
         itemToSource.set(itemId, sourceId)
+      }
+    }
+
+    const sourceKeyIndex = new Map<string, string>()
+    for (const source of nextSources) {
+      for (const key of sourceLookupKeys(source)) {
+        if (!sourceKeyIndex.has(key)) sourceKeyIndex.set(key, source.id)
+      }
+    }
+
+    const { data: sentNews, error: sentNewsError } = await supabase
+      .from('sent_news')
+      .select('link,source,created_at')
+      .gte('created_at', since)
+      .limit(10000)
+
+    if (sentNewsError) {
+      console.warn('Source quality sent_news query failed:', sentNewsError.message)
+    } else {
+      for (const row of sentNews || []) {
+        const sourceId = matchSentNewsToSourceId(row, sourceKeyIndex)
+        if (!sourceId) continue
+
+        const metrics = initialQuality.get(sourceId) || {
+          ...emptyQualityMetrics(),
+          loaded: true,
+        }
+        metrics.sentNews7d += 1
+        metrics.alerts7d = Math.max(metrics.alerts7d, metrics.sentNews7d)
+        if (metrics.matches7d === 0) metrics.matches7d = 1
+        if (metrics.items7d === 0) metrics.items7d = 1
+
+        const createdAt = row.created_at ? String(row.created_at) : null
+        if (
+          createdAt &&
+          (!metrics.lastUsefulItem ||
+            new Date(createdAt).getTime() >
+              new Date(metrics.lastUsefulItem).getTime())
+        ) {
+          metrics.lastUsefulItem = createdAt
+        }
+
+        initialQuality.set(sourceId, metrics)
       }
     }
 
@@ -2365,7 +2455,7 @@ function SourcesPage() {
                     <div className='mt-1 truncate text-[11px] text-muted-foreground'>
                       {qualityLoading && !qualityMetrics.loaded
                         ? 'yüklənir'
-                        : `7g: ${qualityMetrics.items7d} xəbər · ${qualityMetrics.matches7d} uyğunluq · ${qualityMetrics.alerts7d} bildiriş`}
+                        : `7g: ${qualityMetrics.items7d} xəbər · ${qualityMetrics.matches7d} uyğunluq · ${Math.max(qualityMetrics.alerts7d, qualityMetrics.sentNews7d)} bildiriş`}
                     </div>
                     <div className='truncate text-[11px] text-muted-foreground'>
                       {quality.reason}
