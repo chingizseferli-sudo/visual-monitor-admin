@@ -37,6 +37,40 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const MAX_RESPONSE_BYTES = 1_500_000;
 const MIN_REPAIR_ARTICLE_COUNT = 2;
+const COMMON_LATEST_PATHS = [
+  "/news",
+  "/xeberler",
+  "/xeber",
+  "/az/news",
+  "/az/xeberler",
+  "/az/xeber",
+  "/son-xeberler",
+  "/latest",
+  "/lastnews",
+  "/gundem",
+  "/media",
+];
+const COMMON_RSS_PATHS = [
+  "/feed/",
+  "/feed",
+  "/rss",
+  "/rss.xml",
+  "/feed.xml",
+  "/atom.xml",
+  "/az/feed/",
+  "/az/feed",
+  "/az/rss",
+  "/az/rss.xml",
+  "/xeberler/rss",
+  "/news/rss",
+];
+const COMMON_SITEMAP_PATHS = [
+  "/sitemap.xml",
+  "/sitemap_index.xml",
+  "/sitemap-news.xml",
+  "/news-sitemap.xml",
+  "/post-sitemap.xml",
+];
 
 function normalizeUrl(raw: string | null | undefined) {
   const value = String(raw || "").trim();
@@ -203,6 +237,47 @@ function extractXmlArticleCandidates(xml: string, baseUrl: string, siteHost: str
 }
 
 
+function getAttr(attrs: string, name: string) {
+  return attrs.match(new RegExp(`${name}=["']([^"']+)["']`, "i"))?.[1] || "";
+}
+
+function isSameSiteUrl(rawUrl: string, siteHost: string) {
+  try {
+    const host = new URL(rawUrl).hostname.replace(/^www\./, "").toLowerCase();
+    return !siteHost || host === siteHost || host.endsWith(`.${siteHost}`);
+  } catch {
+    return false;
+  }
+}
+
+function extractFeedUrlsFromHtml(html: string, baseUrl: string, siteHost: string) {
+  const feedUrls: string[] = [];
+
+  for (const match of html.matchAll(/<link\b([^>]+)>/gi)) {
+    const attrs = match[1];
+    const rel = getAttr(attrs, "rel").toLowerCase();
+    const type = getAttr(attrs, "type").toLowerCase();
+    const title = getAttr(attrs, "title").toLowerCase();
+    const href = getAttr(attrs, "href");
+    const looksLikeFeed =
+      rel.includes("alternate") &&
+      (/(rss|atom|xml)/i.test(type) || /(rss|atom|feed)/i.test(title) || /(rss|atom|feed)/i.test(href));
+    if (!href || !looksLikeFeed) continue;
+    const url = absolutize(href, baseUrl);
+    if (url && isSameSiteUrl(url, siteHost)) feedUrls.push(url);
+  }
+
+  for (const match of html.matchAll(/<a\b([^>]+)href=["']([^"'#]+)["']([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const href = match[2];
+    const label = normalizeTitle(match[4]).toLowerCase();
+    if (!/(rss|atom|feed|xml)/i.test(href) && !/(rss|atom|feed)/i.test(label)) continue;
+    const url = absolutize(href, baseUrl);
+    if (url && isSameSiteUrl(url, siteHost)) feedUrls.push(url);
+  }
+
+  return unique(feedUrls).slice(0, 10);
+}
+
 function extractHtmlArticleCandidates(html: string, baseUrl: string, siteHost: string) {
   const candidates = Array.from(html.matchAll(/<a\b([^>]+)href=["']([^"'#]+)["']([^>]*)>([\s\S]*?)<\/a>/gi))
     .map((m) => {
@@ -324,15 +399,24 @@ function buildFailUpdate(source: SourceInput, reason: string) {
   };
 }
 
+async function discoverFeedCandidates(baseUrl: string, siteHost: string) {
+  try {
+    const res = await fetchText(baseUrl, 10000);
+    const isHtml = /html/i.test(res.contentType) || /<html|<link|<a\b/i.test(res.text);
+    if (!res.ok || !isHtml) return [];
+    return extractFeedUrlsFromHtml(res.text, res.url || baseUrl, siteHost);
+  } catch (_) {
+    return [];
+  }
+}
+
 async function testRss(source: SourceInput, baseUrl: string, siteHost: string): Promise<RepairResult | null> {
   const base = new URL(baseUrl);
+  const discoveredFeeds = await discoverFeedCandidates(baseUrl, siteHost);
   const candidates = unique([
     normalizeUrl(source.rss_url),
-    new URL("/rss", base).toString(),
-    new URL("/rss.xml", base).toString(),
-    new URL("/feed", base).toString(),
-    new URL("/feed/", base).toString(),
-    new URL("/feed.xml", base).toString(),
+    ...discoveredFeeds,
+    ...COMMON_RSS_PATHS.map((path) => new URL(path, base).toString()),
   ].filter(Boolean) as string[]);
 
   for (const rssUrl of candidates) {
@@ -349,12 +433,12 @@ async function testRss(source: SourceInput, baseUrl: string, siteHost: string): 
           method: "rss",
           reason: `RSS verified: ${candidates.length} readable article pages`,
           candidateCount: candidates.length,
-          finalUrl: res.url,
-          rssUrl,
+          finalUrl: baseUrl,
+          rssUrl: res.url || rssUrl,
           sampleLinks: links.slice(0, 5),
           update: buildSuccessUpdate(source, "rss", {
-            rssUrl,
-            notes: `Auto repair OK: RSS verified ${candidates.length} readable article pages`,
+            rssUrl: res.url || rssUrl,
+            notes: `Auto repair OK: RSS verified ${candidates.length} readable article pages; feed=${res.url || rssUrl}`,
           }),
         };
       }
@@ -366,12 +450,38 @@ async function testRss(source: SourceInput, baseUrl: string, siteHost: string): 
   return null;
 }
 
-async function testSitemap(source: SourceInput, baseUrl: string, siteHost: string): Promise<RepairResult | null> {
+async function collectSitemapArticleLinks(sitemapUrl: string, siteHost: string, depth = 0): Promise<string[]> {
   try {
-    const sitemapUrl = new URL("/sitemap.xml", baseUrl).toString();
     const res = await fetchText(sitemapUrl, 10000);
-    if (!res.ok) return null;
-    const links = extractXmlLinks(res.text, res.url).filter((link) => isLikelyArticleLink(link, siteHost));
+    const isXml = /xml/i.test(res.contentType) || /<(urlset|sitemapindex|rss|feed)\b/i.test(res.text);
+    if (!res.ok || !isXml) return [];
+
+    const links = extractXmlLinks(res.text, res.url);
+    const articleLinks = links.filter((link) => isLikelyArticleLink(link, siteHost));
+    if (articleLinks.length >= MIN_REPAIR_ARTICLE_COUNT || depth >= 1) return articleLinks;
+
+    const childSitemaps = links
+      .filter((link) => /sitemap|\.xml(?:$|[?#])/i.test(link) && isSameSiteUrl(link, siteHost))
+      .slice(0, 6);
+    const nested: string[] = [];
+    for (const child of childSitemaps) {
+      nested.push(...await collectSitemapArticleLinks(child, siteHost, depth + 1));
+    }
+    return unique([...articleLinks, ...nested]);
+  } catch (_) {
+    return [];
+  }
+}
+
+async function testSitemap(source: SourceInput, baseUrl: string, siteHost: string): Promise<RepairResult | null> {
+  const base = new URL(baseUrl);
+  const sitemapCandidates = unique([
+    /sitemap|\.xml(?:$|[?#])/i.test(baseUrl) ? baseUrl : "",
+    ...COMMON_SITEMAP_PATHS.map((path) => new URL(path, base).toString()),
+  ].filter(Boolean));
+
+  for (const sitemapUrl of sitemapCandidates) {
+    const links = await collectSitemapArticleLinks(sitemapUrl, siteHost);
     const candidates = await validateArticleLinks(links, siteHost, 8);
     if (hasEnoughVerifiedArticles(candidates)) {
       return {
@@ -379,23 +489,21 @@ async function testSitemap(source: SourceInput, baseUrl: string, siteHost: strin
         method: "sitemap",
         reason: `Sitemap verified: ${candidates.length} readable article pages`,
         candidateCount: candidates.length,
-        finalUrl: res.url,
+        finalUrl: baseUrl,
         sampleLinks: candidates.map((candidate) => candidate.url).slice(0, 5),
         update: buildSuccessUpdate(source, "sitemap", {
-          notes: `Auto repair OK: sitemap verified ${candidates.length} readable article pages`,
+          notes: `Auto repair OK: sitemap verified ${candidates.length} readable article pages; sitemap=${sitemapUrl}`,
         }),
       };
     }
-  } catch (_) {
-    return null;
   }
 
   return null;
 }
 
-async function testHtml(source: SourceInput, baseUrl: string, siteHost: string): Promise<RepairResult | null> {
+async function testHtmlPage(source: SourceInput, pageUrl: string, siteHost: string): Promise<RepairResult | null> {
   try {
-    const res = await fetchText(baseUrl, 12000);
+    const res = await fetchText(pageUrl, 12000);
     if (!res.ok) return null;
     const isHtml = /html/i.test(res.contentType) || /<html|<a\b/i.test(res.text);
     if (!isHtml) return null;
@@ -419,12 +527,28 @@ async function testHtml(source: SourceInput, baseUrl: string, siteHost: string):
             method === "selector"
               ? "article a[href], .news-item a[href], .post a[href], .entry a[href], .item a[href], h2 a[href], h3 a[href]"
               : source.article_pattern ?? null,
-          notes: `Auto repair OK: HTML verified ${candidates.length} readable article pages`,
+          notes: `Auto repair OK: HTML verified ${candidates.length} readable article pages; page=${res.url}`,
         }),
       };
     }
   } catch (_) {
     return null;
+  }
+
+  return null;
+}
+
+async function testHtml(source: SourceInput, baseUrl: string, siteHost: string): Promise<RepairResult | null> {
+  const base = new URL(baseUrl);
+  const pages = unique([
+    normalizeUrl(source.latest_url),
+    baseUrl,
+    ...COMMON_LATEST_PATHS.map((path) => new URL(path, base).toString()),
+  ].filter(Boolean) as string[]);
+
+  for (const pageUrl of pages) {
+    const result = await testHtmlPage(source, pageUrl, siteHost);
+    if (result?.ok) return result;
   }
 
   return null;
