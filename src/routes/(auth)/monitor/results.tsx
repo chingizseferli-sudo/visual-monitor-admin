@@ -7,6 +7,7 @@ import { customerQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
 
 const PAGE_SIZE = 12;
+const RESULT_FETCH_BATCH_SIZE = 1000;
 const ALL = "all";
 
 type ResultRow = {
@@ -234,22 +235,33 @@ async function fetchResultsData(): Promise<ResultsData> {
   const retentionStart = new Date();
   retentionStart.setDate(retentionStart.getDate() - 31);
 
-  const { data, error } = await supabase
-    .from("monitor_matches")
-    .select(
-      "id,monitor_id,item_id,matched_keyword,created_at,user_monitors(name),monitored_items(title,url,published_at,detected_at,status)"
-    )
-    .in("monitor_id", monitorIds)
-    .gte("created_at", retentionStart.toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1000);
+  const rows: ResultRow[] = [];
+  let offset = 0;
 
-  if (error) {
-    console.error("User results error:", error);
-    return { rows: [], errorMessage: "Nəticələri yükləmək mümkün olmadı." };
+  while (true) {
+    const { data, error } = await supabase
+      .from("monitor_matches")
+      .select(
+        "id,monitor_id,item_id,matched_keyword,created_at,user_monitors(name),monitored_items(title,url,published_at,detected_at,status)"
+      )
+      .in("monitor_id", monitorIds)
+      .gte("created_at", retentionStart.toISOString())
+      .order("created_at", { ascending: false })
+      .range(offset, offset + RESULT_FETCH_BATCH_SIZE - 1);
+
+    if (error) {
+      console.error("User results error:", error);
+      return { rows: [], errorMessage: "Nəticələri yükləmək mümkün olmadı." };
+    }
+
+    const batch = (data || []) as unknown as ResultRow[];
+    rows.push(...batch);
+
+    if (batch.length < RESULT_FETCH_BATCH_SIZE) break;
+    offset += RESULT_FETCH_BATCH_SIZE;
   }
 
-  return { rows: (data || []) as unknown as ResultRow[], errorMessage: "" };
+  return { rows, errorMessage: "" };
 }
 
 function ResultsPage() {
