@@ -119,6 +119,7 @@ const DISCOVERY_STATUSES = [
 ]
 
 const SOURCE_QUALITY_LOOKBACK_DAYS = 30
+const SOURCE_QUALITY_BATCH_SIZE = 1000
 
 const PROTECTED_PARENT_DOMAINS = new Set([
   'az',
@@ -540,30 +541,65 @@ function matchItemToSourceId(
   return sourceId && knownSourceIds.has(sourceId) ? sourceId : null
 }
 
-function matchSentNewsToSourceId(
-  row: { link?: string | null; source?: string | null; created_at?: string | null },
+function findSourceIdByHost(
+  host: string,
   sourceKeyIndex: Map<string, string>
 ) {
-  const linkHost = getHostname(String(row.link || ''))
-  if (linkHost) {
-    const exact = sourceKeyIndex.get(`host:${linkHost}`)
-    if (exact) return exact
+  const normalizedHost = host.replace(/^www\./, '').toLowerCase()
+  const exact = sourceKeyIndex.get(`host:${normalizedHost}`)
+  if (exact) return exact
 
-    const parent = Array.from(sourceKeyIndex.entries()).find(([key]) => {
-      if (!key.startsWith('host:')) return false
-      const host = key.slice(5)
-      return linkHost === host || linkHost.endsWith(`.${host}`)
-    })
-    if (parent) return parent[1]
+  const parent = Array.from(sourceKeyIndex.entries()).find(([key]) => {
+    if (!key.startsWith('host:')) return false
+    const sourceHost = key.slice(5)
+    return (
+      normalizedHost === sourceHost ||
+      normalizedHost.endsWith(`.${sourceHost}`) ||
+      sourceHost.endsWith(`.${normalizedHost}`)
+    )
+  })
+  return parent?.[1] || null
+}
+
+function possibleSourceHosts(value: string | null | undefined) {
+  const text = String(value || '').toLowerCase()
+  const hosts = new Set<string>()
+  const directHost = getHostname(text)
+  if (directHost) hosts.add(directHost)
+
+  for (const match of text.matchAll(/(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)/g)) {
+    if (match[1]) hosts.add(match[1].replace(/^www\./, ''))
+  }
+
+  return Array.from(hosts)
+}
+
+function matchSentNewsToSourceId(
+  row: { link?: string | null; source?: string | null; title?: string | null; created_at?: string | null },
+  sourceKeyIndex: Map<string, string>
+) {
+  for (const host of possibleSourceHosts(row.link)) {
+    const sourceId = findSourceIdByHost(host, sourceKeyIndex)
+    if (sourceId) return sourceId
   }
 
   const sourceName = String(row.source || '').trim().toLowerCase()
-  if (!sourceName) return null
-  return (
-    sourceKeyIndex.get(`name:${sourceName}`) ||
-    sourceKeyIndex.get(`host:${sourceName.replace(/^www\./, '')}`) ||
-    null
-  )
+  if (sourceName) {
+    const byName = sourceKeyIndex.get(`name:${sourceName}`)
+    if (byName) return byName
+
+    for (const host of possibleSourceHosts(sourceName)) {
+      const sourceId = findSourceIdByHost(host, sourceKeyIndex)
+      if (sourceId) return sourceId
+    }
+  }
+
+  for (const host of possibleSourceHosts(row.title)) {
+    const sourceId = findSourceIdByHost(host, sourceKeyIndex)
+    if (sourceId) return sourceId
+  }
+
+  return null
 }
 
 function emptyQualityMetrics(): SourceQualityMetrics {
@@ -606,16 +642,6 @@ function isHealthySource(
   )
 }
 
-function isRepairVerifiedSource(source: Source) {
-  const notes = (source.notes || '').toLowerCase()
-
-  return Boolean(
-    source.status === 'active' &&
-      source.last_result === 'repair_ok' &&
-      !source.last_error &&
-      (notes.includes('verified') || notes.includes('readable article pages'))
-  )
-}
 
 
 const REPAIRABLE_SOURCE_RESULTS = new Set([
@@ -654,55 +680,6 @@ function hasCurrentReadFailure(source: Source) {
   return CURRENT_READ_FAILURE_RESULTS.has(source.last_result || '')
 }
 
-function hasRecentSourceOutput(
-  source: Source,
-  metrics: SourceQualityMetrics | undefined
-) {
-  const data = metrics || emptyQualityMetrics()
-
-  return Boolean(
-    (data.loaded &&
-      (data.items7d > 0 ||
-        data.matches7d > 0 ||
-        data.alerts7d > 0 ||
-        data.sentNews7d > 0)) ||
-      source.last_article_found_at
-  )
-}
-
-function isWeakActiveSource(
-  source: Source,
-  metrics: SourceQualityMetrics | undefined
-) {
-  return !isHealthySource(source, metrics) &&
-    !isRepairVerifiedSource(source) &&
-    hasRecentSourceOutput(source, metrics)
-}
-
-function isRepairCandidateSource(
-  source: Source,
-  metrics: SourceQualityMetrics | undefined,
-  sources: Source[]
-) {
-  if (isHealthySource(source, metrics) ||
-    isRepairVerifiedSource(source) ||
-    isWeakActiveSource(source, metrics)) {
-    return false
-  }
-
-  const result = source.last_result || ''
-  const method = source.monitor_method || ''
-  const issues = getSourceIssues(source, sources)
-
-  return Boolean(
-    REPAIRABLE_SOURCE_RESULTS.has(result) ||
-      source.discovery_status === 'needs_manual_selector' ||
-      source.discovery_status === 'manual_needed' ||
-      issues.includes('rss yoxdur') ||
-      issues.includes('selector yoxdur') ||
-      method === 'google_news_fallback'
-  )
-}
 
 
 function getSourceQualityLabel(
@@ -845,7 +822,7 @@ function getRepairSuggestion(source: Source, metrics: SourceQualityMetrics) {
   }
 
   if (source.last_result === 'no_candidate') {
-    return 'Bot namizəd xəbər tapmayıb. Extraction metodu yenidən baxılmalıdır.'
+    return 'Bot uyğun xəbər tapmayıb. Oxuma metodu yenidən yoxlanmalıdır.'
   }
 
   return 'Ciddi problem görünmür.'
@@ -949,16 +926,22 @@ function SourcesPage() {
       }
     }
 
-    const { data: sentNews, error: sentNewsError } = await supabase
-      .from('sent_news')
-      .select('link,source,created_at')
-      .gte('created_at', since)
-      .limit(10000)
+    let sentOffset = 0
+    while (true) {
+      const { data: sentNews, error: sentNewsError } = await supabase
+        .from('sent_news')
+        .select('link,title,source,created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .range(sentOffset, sentOffset + SOURCE_QUALITY_BATCH_SIZE - 1)
 
-    if (sentNewsError) {
-      console.warn('Source quality sent_news query failed:', sentNewsError.message)
-    } else {
-      for (const row of sentNews || []) {
+      if (sentNewsError) {
+        console.warn('Source quality sent_news query failed:', sentNewsError.message)
+        break
+      }
+
+      const batch = sentNews || []
+      for (const row of batch) {
         const sourceId = matchSentNewsToSourceId(row, sourceKeyIndex)
         if (!sourceId) continue
 
@@ -983,6 +966,9 @@ function SourcesPage() {
 
         initialQuality.set(sourceId, metrics)
       }
+
+      if (batch.length < SOURCE_QUALITY_BATCH_SIZE) break
+      sentOffset += SOURCE_QUALITY_BATCH_SIZE
     }
 
     const { data: resultMatches, error: resultMatchesError } = await supabase
@@ -1502,8 +1488,8 @@ function SourcesPage() {
 
     const selectedSourceSet = new Set(selectedIds)
     const selectedSources = sources.filter((source) => selectedSourceSet.has(source.id))
-    const recoverableSources = selectedSources.filter((source) =>
-      isRepairCandidateSource(source, sourceQuality[source.id], sources)
+    const sourcesToRepair = selectedSources.filter(
+      (source) => !isHealthySource(source, sourceQuality[source.id])
     )
 
     if (selectedSources.length === 0) {
@@ -1511,15 +1497,15 @@ function SourcesPage() {
       return
     }
 
-    if (recoverableSources.length === 0) {
-      alert('Seçilmiş mənbələr arasında avtomatik bərpa oluna bilən mənbə tapılmadı.')
+    if (sourcesToRepair.length === 0) {
+      alert('Seçilmiş mənbələr artıq sağlam görünür. İşləməyən mənbələrdən seçim edin.')
       return
     }
 
-    const skippedCount = selectedSources.length - recoverableSources.length
+    const skippedCount = selectedSources.length - sourcesToRepair.length
     const ok = window.confirm(
-      `${recoverableSources.length} bərpa namizədi yenidən yoxlanacaq${
-        skippedCount > 0 ? `; ${skippedCount} uyğun olmayan seçilmiş mənbə ötürüləcək` : ''
+      `${sourcesToRepair.length} seçilmiş mənbə real oxuma testi ilə yenidən yoxlanacaq${
+        skippedCount > 0 ? `; ${skippedCount} artıq sağlam göründüyü üçün ötürüləcək` : ''
       }. Davam edək?`
     )
 
@@ -1527,7 +1513,7 @@ function SourcesPage() {
 
     setRecovering(true)
     setMessage(
-      `${recoverableSources.length} seçilmiş mənbə üçün oxuma üsulu yenidən yoxlanır...`
+      `${sourcesToRepair.length} seçilmiş mənbə üçün oxuma üsulu yenidən yoxlanır...`
     )
     setRepairRun(null)
 
@@ -1537,7 +1523,7 @@ function SourcesPage() {
     const reasonCounts: Record<string, number> = {}
     const items: RepairRunItem[] = []
 
-    for (const source of recoverableSources) {
+    for (const source of sourcesToRepair) {
       const result = await runAutoRepair(source)
       if (result.ok) fixed += 1
       else failed += 1
@@ -1565,7 +1551,7 @@ function SourcesPage() {
     setSelectedIds([])
     await loadSources()
     setRepairRun({
-      attempted: recoverableSources.length,
+      attempted: sourcesToRepair.length,
       fixed,
       failed,
       methodCounts,
@@ -1941,7 +1927,7 @@ function SourcesPage() {
               Seçilmişləri bərpa et
             </button>
             <span className='max-w-md text-xs text-muted-foreground'>
-              Yalnız seçilmiş bərpa namizədləri yoxlanır. Bot qəbul edilən xəbər linki tapmasa mənbə sağlam yazılmır.
+              Yalnız seçilmiş işləməyən mənbələr real oxuma testi ilə yoxlanır. Bot qəbul edilən xəbər linki tapmasa mənbə sağlam yazılmır.
             </span>
           </div>
 
