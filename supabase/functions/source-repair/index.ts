@@ -37,6 +37,21 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const MAX_RESPONSE_BYTES = 1_500_000;
 const MIN_REPAIR_ARTICLE_COUNT = 2;
+const ROOT_SLUG_ARTICLE_HOSTS = new Set(["muallim.edu.az"]);
+const BLOCKED_ROOT_SLUG_WORDS = new Set([
+  "about",
+  "haqqimizda",
+  "elaqe",
+  "contact",
+  "privacy",
+  "category",
+  "kateqoriya",
+  "tag",
+  "archive",
+  "arxiv",
+  "search",
+  "author",
+]);
 const COMMON_LATEST_PATHS = [
   "/news",
   "/xeberler",
@@ -343,6 +358,14 @@ function hasEnoughVerifiedArticles(candidates: ArticleCandidate[]) {
   return candidates.length >= MIN_REPAIR_ARTICLE_COUNT;
 }
 
+function isAllowedRootSlugArticle(host: string, path: string) {
+  if (!ROOT_SLUG_ARTICLE_HOSTS.has(host)) return false;
+  if (!/^\/[a-z0-9%_-]{18,}\/?$/.test(path)) return false;
+  const slug = path.replace(/^\/+|\/+$/g, "");
+  if ((slug.match(/-/g) ?? []).length < 2) return false;
+  return !slug.split("-").some((part) => BLOCKED_ROOT_SLUG_WORDS.has(part));
+}
+
 function isLikelyArticleLink(link: string, siteHost: string) {
   let url: URL;
   try {
@@ -357,6 +380,7 @@ function isLikelyArticleLink(link: string, siteHost: string) {
   if (path.length < 8) return false;
   if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|zip|rar|mp4|mp3)$/i.test(path)) return false;
   if (/(login|register|contact|about|privacy|category|tag|author|search)/i.test(path)) return false;
+  if (isAllowedRootSlugArticle(host, path)) return true;
 
   return (
     /\d{4}[\/-]\d{1,2}[\/-]\d{1,2}/.test(path) ||
