@@ -30,6 +30,7 @@ type Source = {
 type SourceQualityMetrics = {
   items7d: number
   matches7d: number
+  alerts7d: number
   lastUsefulItem: string | null
   loaded: boolean
 }
@@ -501,9 +502,19 @@ function emptyQualityMetrics(): SourceQualityMetrics {
   return {
     items7d: 0,
     matches7d: 0,
+    alerts7d: 0,
     lastUsefulItem: null,
     loaded: false,
   }
+}
+
+function isHealthySourceQuality(metrics: SourceQualityMetrics | undefined) {
+  return Boolean(
+    metrics?.loaded &&
+      metrics.items7d > 0 &&
+      metrics.matches7d > 0 &&
+      metrics.alerts7d > 0
+  )
 }
 
 function getSourceQualityLabel(
@@ -538,19 +549,27 @@ function getSourceQualityLabel(
     }
   }
 
-  if (health === 'ok' && data.items7d > 0 && data.matches7d > 0) {
+  if (isHealthySourceQuality(data)) {
     return {
-      label: 'Yüksək dəyər',
+      label: 'Sağlam mənbə',
       tone: 'emerald',
-      reason: `${data.matches7d} uyğunluq verdi`,
+      reason: `${data.items7d} xəbər, ${data.matches7d} uyğunluq, ${data.alerts7d} bildiriş`,
     }
   }
 
-  if (source.last_success_at && failCount === 0 && data.items7d > 0) {
+  if (data.items7d > 0 && data.matches7d > 0) {
     return {
-      label: 'Sağlam',
+      label: 'Bildirişsiz işləyir',
       tone: 'green',
-      reason: 'son 7 gündə xəbər oxunub',
+      reason: `${data.matches7d} uyğunluq var, bildiriş yaranmayıb`,
+    }
+  }
+
+  if (data.items7d > 0) {
+    return {
+      label: 'Xəbər tapır',
+      tone: 'green',
+      reason: `${data.items7d} xəbər tapılıb, uyğunluq yoxdur`,
     }
   }
 
@@ -563,7 +582,7 @@ function getSourceQualityLabel(
     return {
       label: 'Az aktiv',
       tone: 'amber',
-      reason: 'son 7 gündə aktivlik azdır',
+      reason: 'son 7 gündə real nəticə verməyib',
     }
   }
 
@@ -600,12 +619,20 @@ function getBotConfirmationLabel(
   const data = metrics || emptyQualityMetrics()
   const failCount = source.consecutive_fail_count || 0
 
+  if (data.loaded && data.alerts7d > 0) {
+    return { label: 'Bildiriş yaratdı', tone: 'success' }
+  }
+
   if (data.loaded && data.matches7d > 0) {
     return { label: 'Uyğun xəbər tapdı', tone: 'success' }
   }
 
-  if (source.last_article_found_at) {
+  if (data.loaded && data.items7d > 0) {
     return { label: 'Bot xəbər tapdı', tone: 'success' }
+  }
+
+  if (source.last_article_found_at) {
+    return { label: 'Əvvəl xəbər tapıb', tone: 'success' }
   }
 
   if (source.last_result === 'repair_ok') {
@@ -766,15 +793,18 @@ function SourcesPage() {
     if (itemToSource.size > 0) {
       const { data: matches, error: matchesError } = await supabase
         .from('monitor_matches')
-        .select('item_id,created_at')
+        .select('id,item_id,created_at')
         .gte('created_at', since)
         .limit(10000)
 
       if (matchesError) {
         console.warn('Source quality matches query failed:', matchesError.message)
       } else {
+        const matchToSource = new Map<string, string>()
+
         for (const match of matches || []) {
           const sourceId = itemToSource.get(String(match.item_id || ''))
+          const matchId = String(match.id || '')
           if (!sourceId) continue
 
           const metrics = initialQuality.get(sourceId) || {
@@ -783,6 +813,34 @@ function SourcesPage() {
           }
           metrics.matches7d += 1
           initialQuality.set(sourceId, metrics)
+
+          if (matchId) {
+            matchToSource.set(matchId, sourceId)
+          }
+        }
+
+        if (matchToSource.size > 0) {
+          const { data: alerts, error: alertsError } = await supabase
+            .from('monitor_alerts')
+            .select('match_id,sent_at')
+            .gte('sent_at', since)
+            .limit(10000)
+
+          if (alertsError) {
+            console.warn('Source quality alerts query failed:', alertsError.message)
+          } else {
+            for (const alert of alerts || []) {
+              const sourceId = matchToSource.get(String(alert.match_id || ''))
+              if (!sourceId) continue
+
+              const metrics = initialQuality.get(sourceId) || {
+                ...emptyQualityMetrics(),
+                loaded: true,
+              }
+              metrics.alerts7d += 1
+              initialQuality.set(sourceId, metrics)
+            }
+          }
         }
       }
     }
@@ -1402,7 +1460,7 @@ function SourcesPage() {
       const health = getSourceHealth(source, sources)
       const matchesSourceView =
         sourceView === 'all' ||
-        (sourceView === 'healthy' && health === 'ok') ||
+        (sourceView === 'healthy' && isHealthySourceQuality(sourceQuality[source.id])) ||
         (sourceView === 'problem' && health !== 'ok')
 
       const matchesIssue =
@@ -1486,7 +1544,7 @@ function SourcesPage() {
     return {
       total: sources.length,
       active: sources.filter((item) => item.status === 'active').length,
-      healthy: sources.filter((item) => getSourceHealth(item, sources) === 'ok')
+      healthy: sources.filter((item) => isHealthySourceQuality(sourceQuality[item.id]))
         .length,
       inactive: sources.filter((item) => item.status === 'inactive').length,
       rss: sources.filter((item) => item.monitor_method === 'rss').length,
@@ -1520,7 +1578,7 @@ function SourcesPage() {
         .filter((item) => item.status === 'active')
         .filter((item) => isSubdomain(item, sources)).length,
     }
-  }, [sources])
+  }, [sources, sourceQuality])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1857,8 +1915,9 @@ function SourcesPage() {
           className='min-w-0 rounded-lg border bg-background px-3 py-2'
         >
           <option value='all'>Bütün keyfiyyətlər</option>
-          <option value='Yüksək dəyər'>Yüksək dəyər</option>
-          <option value='Sağlam'>Sağlam</option>
+          <option value='Sağlam mənbə'>Sağlam mənbə</option>
+          <option value='Bildirişsiz işləyir'>Bildirişsiz işləyir</option>
+          <option value='Xəbər tapır'>Xəbər tapır</option>
           <option value='Az aktiv'>Az aktiv</option>
           <option value='Yoxlanmalıdır'>Yoxlanmalıdır</option>
           <option value='Problem'>Problem</option>
@@ -2203,7 +2262,7 @@ function SourcesPage() {
                     <div className='mt-1 truncate text-[11px] text-muted-foreground'>
                       {qualityLoading && !qualityMetrics.loaded
                         ? 'yüklənir'
-                        : `7g: ${qualityMetrics.items7d} xəbər · ${qualityMetrics.matches7d} uyğunluq`}
+                        : `7g: ${qualityMetrics.items7d} xəbər · ${qualityMetrics.matches7d} uyğunluq · ${qualityMetrics.alerts7d} bildiriş`}
                     </div>
                     <div className='truncate text-[11px] text-muted-foreground'>
                       {quality.reason}
