@@ -532,7 +532,10 @@ function isHealthySource(
   source: Source,
   metrics: SourceQualityMetrics | undefined
 ) {
-  return hasSentNews(source) || isHealthySourceQuality(metrics)
+  return (
+    !hasCurrentReadFailure(source) &&
+    (hasSentNews(source) || isHealthySourceQuality(metrics))
+  )
 }
 
 function isRepairVerifiedSource(source: Source) {
@@ -573,6 +576,15 @@ const HARD_SOURCE_RESULTS = new Set([
   'unsafe_url',
   'site_error',
 ])
+
+const CURRENT_READ_FAILURE_RESULTS = new Set([
+  ...HARD_SOURCE_RESULTS,
+  ...REPAIRABLE_SOURCE_RESULTS,
+])
+
+function hasCurrentReadFailure(source: Source) {
+  return CURRENT_READ_FAILURE_RESULTS.has(source.last_result || '')
+}
 
 function hasRecentSourceOutput(
   source: Source,
@@ -667,6 +679,7 @@ function getSourceQualityLabel(
 
   if (
     health === 'error' ||
+    hasCurrentReadFailure(source) ||
     failCount >= 5 ||
     source.last_result === 'site_error' ||
     ['blocked', 'dead', 'failed'].includes(method)
