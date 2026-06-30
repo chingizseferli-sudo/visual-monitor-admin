@@ -1654,6 +1654,35 @@ function ChangeMonitorPage() {
     setSelectedSourceIds(checked ? visibleSources.map((source) => source.id) : [])
   }
 
+  function isMissingDeleteRpcError(message: string) {
+    const normalized = message.toLowerCase()
+    return (
+      normalized.includes('delete_user_change_source') &&
+      (normalized.includes('schema cache') ||
+        normalized.includes('could not find the function') ||
+        normalized.includes('pgrst202'))
+    )
+  }
+
+  async function deleteSourceWithFallback(sourceId: string, userId: string) {
+    const rpcResult = await supabase.rpc('delete_user_change_source', {
+      p_source_id: sourceId,
+    })
+
+    if (!rpcResult.error) return null
+
+    const rpcMessage = rpcResult.error.message || ''
+    if (!isMissingDeleteRpcError(rpcMessage)) return rpcResult.error
+
+    const { error: deleteError } = await supabase
+      .from('change_sources')
+      .delete()
+      .eq('id', sourceId)
+      .eq('user_id', userId)
+
+    return deleteError || null
+  }
+
   async function deleteSources(sourceIds: string[]) {
     const ids = Array.from(new Set(sourceIds)).filter(Boolean)
     if (ids.length === 0) return
@@ -1665,8 +1694,9 @@ function ChangeMonitorPage() {
     )
     if (!confirmed) return
 
+    let access: ChangeMonitorAccess
     try {
-      await requireChangeMonitorAccess()
+      access = await requireChangeMonitorAccess()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sessiya tapılmadı. Yenidən daxil olun.'
       toast.error(message)
@@ -1675,14 +1705,20 @@ function ChangeMonitorPage() {
     }
 
     setDeleting(true)
-    const deleteResults = await Promise.all(
-      ids.map((id) => supabase.rpc('delete_user_change_source', { p_source_id: id }))
-    )
-    const deleteError = deleteResults.find((result) => result.error)?.error
-    setDeleting(false)
+    const deleteErrors: string[] = []
+    try {
+      for (const id of ids) {
+        const error = await deleteSourceWithFallback(id, access.userId)
+        if (error) deleteErrors.push(error.message)
+      }
+    } catch (err) {
+      deleteErrors.push(err instanceof Error ? err.message : 'İzləmə silinmədi.')
+    } finally {
+      setDeleting(false)
+    }
 
-    if (deleteError) {
-      const message = `İzləmə silinmədi: ${deleteError.message}`
+    if (deleteErrors.length > 0) {
+      const message = `İzləmə silinmədi: ${deleteErrors[0]}`
       toast.error(message)
       setError(message)
       return
