@@ -90,6 +90,34 @@ type AddSourceResult = {
   sourceName: string
 }
 
+function formatRepairReason(reason: string | null | undefined) {
+  const text = String(reason || '').trim()
+  if (!text) return 'Səbəb göstərilməyib.'
+
+  const normalized = text.toLowerCase()
+  if (
+    normalized.includes('rss, sitemap and html') ||
+    normalized.includes('did not return article links') ||
+    normalized.includes('did not return enough verified readable article pages')
+  ) {
+    return 'RSS, sitemap və səhifə yoxlamasında oxuna bilən xəbər linki tapılmadı.'
+  }
+
+  if (normalized.includes('valid base_url') || normalized.includes('latest_url not found')) {
+    return 'Mənbənin əsas URL-i düzgün deyil və ya tapılmadı.'
+  }
+
+  if (normalized.includes('source-repair')) {
+    return 'Avtomatik bərpa xidməti cavab vermədi.'
+  }
+
+  if (normalized.includes('failed to fetch') || normalized.includes('fetch')) {
+    return 'Sayta qoşulmaq mümkün olmadı. Domen, SSL və ya şəbəkə problemi ola bilər.'
+  }
+
+  return text
+}
+
 const MONITOR_METHODS = [
   'rss',
   'rss_discovered',
@@ -1202,7 +1230,7 @@ function SourcesPage() {
       last_discovered_at: now,
       notes: repair.ok
         ? `[manual_add] ${repair.method} metodu seçildi. ${repair.candidateCount} link tapıldı.`
-        : `[manual_add] Avtomatik izləmə metodu tapılmadı: ${repair.reason}`,
+        : `[manual_add] Avtomatik izləmə metodu tapılmadı: ${formatRepairReason(repair.reason)}`,
     }
 
     const { error: insertError } = await supabase.from('sources').insert(insertPayload)
@@ -1217,7 +1245,7 @@ function SourcesPage() {
     setAddSourceResult({
       ok: repair.ok,
       method: repair.method,
-      reason: repair.reason,
+      reason: formatRepairReason(repair.reason),
       candidateCount: repair.candidateCount,
       sampleLinks: repair.sampleLinks || [],
       sourceName: host,
@@ -1444,8 +1472,8 @@ function SourcesPage() {
         sourceId: source.id,
         sourceName,
         ok: false,
-        message: repairError?.message || 'source-repair cavab vermədi',
-        reason: repairError?.message || 'source-repair cavab vermədi',
+        message: formatRepairReason(repairError?.message || 'source-repair cavab vermədi'),
+        reason: formatRepairReason(repairError?.message || 'source-repair cavab vermədi'),
       }
     }
 
@@ -1460,9 +1488,9 @@ function SourcesPage() {
         sourceId: source.id,
         sourceName,
         ok: false,
-        message: updateError?.message || 'Supabase mənbəni yeniləmədi',
+        message: formatRepairReason(updateError?.message || 'Supabase mənbəni yeniləmədi'),
         method: repair.method,
-        reason: updateError?.message || 'Supabase mənbəni yeniləmədi',
+        reason: formatRepairReason(updateError?.message || 'Supabase mənbəni yeniləmədi'),
         candidateCount: repair.candidateCount,
       }
     }
@@ -1472,11 +1500,11 @@ function SourcesPage() {
       sourceName,
       ok: repair.ok,
       method: repair.method,
-      reason: repair.reason,
+      reason: formatRepairReason(repair.reason),
       candidateCount: repair.candidateCount,
       message: repair.ok
         ? `${getSourceTitle(source)} işləyir: ${repair.method}, ${repair.candidateCount} link tapıldı.`
-        : `${getSourceTitle(source)} bərpa olunmadı: ${repair.reason}`,
+        : `${getSourceTitle(source)} bərpa olunmadı: ${formatRepairReason(repair.reason)}`,
     }
   }
 
@@ -1529,7 +1557,7 @@ function SourcesPage() {
       else failed += 1
 
       const method = result.method || 'unknown'
-      const reason = result.reason || result.message || 'Naməlum səbəb'
+      const reason = formatRepairReason(result.reason || result.message || 'Naməlum səbəb')
 
       if (result.ok) {
         methodCounts[method] = (methodCounts[method] || 0) + 1
