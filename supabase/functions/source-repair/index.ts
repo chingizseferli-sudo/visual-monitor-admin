@@ -36,6 +36,7 @@ type ArticleCandidate = {
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const MAX_RESPONSE_BYTES = 1_500_000;
+const MIN_REPAIR_ARTICLE_COUNT = 2;
 
 function normalizeUrl(raw: string | null | undefined) {
   const value = String(raw || "").trim();
@@ -224,20 +225,47 @@ function extractPageTitle(html: string) {
   );
 }
 
-async function validateArticleLinks(links: string[], siteHost: string, limit = 6) {
+async function validateArticleCandidates(
+  rawCandidates: ArticleCandidate[],
+  siteHost: string,
+  limit = 8,
+) {
   const candidates: ArticleCandidate[] = [];
-  for (const link of unique(links).filter((item) => isLikelyArticleLink(item, siteHost)).slice(0, limit)) {
+  const uniqueInput = uniqueCandidates(
+    rawCandidates.filter((candidate) =>
+      isUsefulTitle(candidate.title) && isLikelyArticleLink(candidate.url, siteHost)
+    ),
+  );
+
+  for (const candidate of uniqueInput.slice(0, limit)) {
     try {
-      const res = await fetchText(link, 8000);
+      const res = await fetchText(candidate.url, 8000);
       const isHtml = /html/i.test(res.contentType) || /<html|<title|<meta/i.test(res.text);
       if (!res.ok || !isHtml) continue;
-      const title = extractPageTitle(res.text);
-      if (isUsefulTitle(title)) candidates.push({ url: res.url || link, title });
+
+      const pageTitle = extractPageTitle(res.text);
+      const title = isUsefulTitle(pageTitle) ? pageTitle : candidate.title;
+      if (isUsefulTitle(title)) candidates.push({ url: res.url || candidate.url, title });
     } catch (_) {
       // Try next link.
     }
   }
+
   return uniqueCandidates(candidates);
+}
+
+async function validateArticleLinks(links: string[], siteHost: string, limit = 8) {
+  return validateArticleCandidates(
+    unique(links)
+      .filter((item) => isLikelyArticleLink(item, siteHost))
+      .map((url) => ({ url, title: url })),
+    siteHost,
+    limit,
+  );
+}
+
+function hasEnoughVerifiedArticles(candidates: ArticleCandidate[]) {
+  return candidates.length >= MIN_REPAIR_ARTICLE_COUNT;
 }
 
 function isLikelyArticleLink(link: string, siteHost: string) {
@@ -312,20 +340,21 @@ async function testRss(source: SourceInput, baseUrl: string, siteHost: string): 
       const res = await fetchText(rssUrl, 10000);
       const isXml = /xml|rss|atom/i.test(res.contentType) || /<(rss|feed)\b/i.test(res.text);
       if (!res.ok || !isXml) continue;
-      const candidates = extractXmlArticleCandidates(res.text, res.url, siteHost);
+      const feedCandidates = extractXmlArticleCandidates(res.text, res.url, siteHost);
+      const candidates = await validateArticleCandidates(feedCandidates, siteHost, 8);
       const links = candidates.map((candidate) => candidate.url);
-      if (candidates.length > 0) {
+      if (hasEnoughVerifiedArticles(candidates)) {
         return {
           ok: true,
           method: "rss",
-          reason: `RSS works: ${candidates.length} article items`,
+          reason: `RSS verified: ${candidates.length} readable article pages`,
           candidateCount: candidates.length,
           finalUrl: res.url,
           rssUrl,
           sampleLinks: links.slice(0, 5),
           update: buildSuccessUpdate(source, "rss", {
             rssUrl,
-            notes: `Auto repair OK: RSS found ${candidates.length} article items`,
+            notes: `Auto repair OK: RSS verified ${candidates.length} readable article pages`,
           }),
         };
       }
@@ -344,16 +373,16 @@ async function testSitemap(source: SourceInput, baseUrl: string, siteHost: strin
     if (!res.ok) return null;
     const links = extractXmlLinks(res.text, res.url).filter((link) => isLikelyArticleLink(link, siteHost));
     const candidates = await validateArticleLinks(links, siteHost, 8);
-    if (candidates.length > 0) {
+    if (hasEnoughVerifiedArticles(candidates)) {
       return {
         ok: true,
         method: "sitemap",
-        reason: `Sitemap works: ${candidates.length} verified article pages`,
+        reason: `Sitemap verified: ${candidates.length} readable article pages`,
         candidateCount: candidates.length,
         finalUrl: res.url,
         sampleLinks: candidates.map((candidate) => candidate.url).slice(0, 5),
         update: buildSuccessUpdate(source, "sitemap", {
-          notes: `Auto repair OK: sitemap verified ${candidates.length} article pages`,
+          notes: `Auto repair OK: sitemap verified ${candidates.length} readable article pages`,
         }),
       };
     }
@@ -370,16 +399,17 @@ async function testHtml(source: SourceInput, baseUrl: string, siteHost: string):
     if (!res.ok) return null;
     const isHtml = /html/i.test(res.contentType) || /<html|<a\b/i.test(res.text);
     if (!isHtml) return null;
-    const candidates = extractHtmlArticleCandidates(res.text, res.url, siteHost);
+    const extractedCandidates = extractHtmlArticleCandidates(res.text, res.url, siteHost);
+    const candidates = await validateArticleCandidates(extractedCandidates, siteHost, 8);
     const links = candidates.map((candidate) => candidate.url);
-    if (candidates.length > 0) {
+    if (hasEnoughVerifiedArticles(candidates)) {
       const hasArticle = /<article\b/i.test(res.text);
       const hasNewsClass = /class=["'][^"']*(news|post|item|article|entry)/i.test(res.text);
       const method = hasArticle || hasNewsClass ? "selector" : "latest_page";
       return {
         ok: true,
         method,
-        reason: `HTML works: ${candidates.length} titled article links`,
+        reason: `HTML verified: ${candidates.length} readable article pages`,
         candidateCount: candidates.length,
         finalUrl: res.url,
         sampleLinks: links.slice(0, 5),
@@ -389,7 +419,7 @@ async function testHtml(source: SourceInput, baseUrl: string, siteHost: string):
             method === "selector"
               ? "article a[href], .news-item a[href], .post a[href], .entry a[href], .item a[href], h2 a[href], h3 a[href]"
               : source.article_pattern ?? null,
-          notes: `Auto repair OK: HTML found ${candidates.length} titled article links`,
+          notes: `Auto repair OK: HTML verified ${candidates.length} readable article pages`,
         }),
       };
     }
@@ -426,7 +456,7 @@ async function repairSource(source: SourceInput): Promise<RepairResult> {
     if (result?.ok) return result;
   }
 
-  const reason = "RSS, sitemap and HTML did not return article links";
+  const reason = "RSS, sitemap and HTML did not return enough verified readable article pages";
   return {
     ok: false,
     method: "failed",
