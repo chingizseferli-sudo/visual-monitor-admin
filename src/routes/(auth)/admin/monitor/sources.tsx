@@ -167,7 +167,6 @@ const SELECTOR_TEMPLATES = [
   },
 ]
 
-const PICK_ELEMENT_BOOKMARKLET = `javascript:(()=>{const old=document.getElementById('__vm_picker_box');if(old)old.remove();let box=document.createElement('div');box.id='__vm_picker_box';box.style.cssText='position:fixed;z-index:2147483647;pointer-events:none;border:3px solid #f59e0b;background:rgba(245,158,11,.12);display:none';document.body.appendChild(box);const cssPath=(el)=>{if(!el)return'';if(el.id)return'#'+CSS.escape(el.id);const parts=[];while(el&&el.nodeType===1&&el!==document.body){let part=el.tagName.toLowerCase();if(el.classList&&el.classList.length){part+='.'+[...el.classList].slice(0,3).map(CSS.escape).join('.')}else{const parent=el.parentElement;if(parent){const same=[...parent.children].filter(x=>x.tagName===el.tagName);if(same.length>1)part+=':nth-of-type('+(same.indexOf(el)+1)+')'}}parts.unshift(part);el=el.parentElement;if(parts.length>=5)break}return parts.join(' > ')};const pick=(target)=>target.closest('a[href]')||target.closest('article')||target.closest('li')||target.closest('div')||target;const over=(e)=>{const el=pick(e.target);const r=el.getBoundingClientRect();box.style.display='block';box.style.left=r.left+'px';box.style.top=r.top+'px';box.style.width=r.width+'px';box.style.height=r.height+'px'};const click=async(e)=>{e.preventDefault();e.stopPropagation();const el=pick(e.target);const selector=cssPath(el);cleanup();try{await navigator.clipboard.writeText(selector);alert('Selector kopyalandı:\\n'+selector)}catch{prompt('Selector:',selector)}};const cleanup=()=>{document.removeEventListener('mouseover',over,true);document.removeEventListener('click',click,true);box.remove()};document.addEventListener('mouseover',over,true);document.addEventListener('click',click,true);alert('Pick Element aktivdir. Xəbər başlığına və ya xəbər kartına klik et. Selector kopyalanacaq.')})();`
 
 function formatDate(value: string | null) {
   if (!value) return '—'
@@ -294,6 +293,10 @@ function normalizeSourceUrl(value: string | null | undefined) {
   } catch {
     return null
   }
+}
+
+function getSelectorPickerUrl(sourceId: string) {
+  return `/admin/monitor/picker?sourceId=${encodeURIComponent(sourceId)}`
 }
 
 function getHostname(url: string | null) {
@@ -2478,7 +2481,7 @@ function SourcesPage() {
                           </button>
 
                           <a
-                            href={`/admin/monitor/pickerNosourceId=${source.id}`}
+                            href={getSelectorPickerUrl(source.id)}
                             onClick={() => setOpenActionId(null)}
                             className='rounded-md px-3 py-2 text-xs hover:bg-muted'
                           >
@@ -3046,7 +3049,7 @@ function SourcesPage() {
                     Vizual selector köməkçisi
                   </div>
                   <div className='text-xs text-muted-foreground'>
-                    Saytı aç, xəbər blokuna bax və ən uyğun şablonu seç.
+                    Change Monitor tipli vizual pəncərədə xəbər blokunu seç və selectoru mənbəyə yaz.
                   </div>
                 </div>
 
@@ -3059,27 +3062,14 @@ function SourcesPage() {
                   Saytı aç
                 </a>
 
-                <button
-                  type='button'
-                  onClick={() => {
-                    navigator.clipboard
-                      .writeText(PICK_ELEMENT_BOOKMARKLET)
-                      .then(() =>
-                        alert(
-                          'Pick Element aləti kopyalandı. Brauzerdə yeni bookmark yarat və URL hissəsinə yapışdır.'
-                        )
-                      )
-                      .catch(() =>
-                        prompt(
-                          'Bu kodu bookmark URL hissəsinə yapışdır:',
-                          PICK_ELEMENT_BOOKMARKLET
-                        )
-                      )
-                  }}
-                  className='rounded-md border bg-background px-3 py-2 text-xs hover:bg-muted'
+                <a
+                  href={getSelectorPickerUrl(editing.id)}
+                  target='_blank'
+                  rel='noreferrer'
+                  className='rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100'
                 >
-                  Pick Element alətini kopyala
-                </button>
+                  Vizual selector pəncərəsində seç
+                </a>
               </div>
 
               <div className='grid gap-2 md:grid-cols-2'>
