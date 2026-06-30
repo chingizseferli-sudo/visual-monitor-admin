@@ -1461,7 +1461,7 @@ function SourcesPage() {
       const matchesSourceView =
         sourceView === 'all' ||
         (sourceView === 'healthy' && isHealthySourceQuality(sourceQuality[source.id])) ||
-        (sourceView === 'problem' && health !== 'ok')
+        (sourceView === 'problem' && !isHealthySourceQuality(sourceQuality[source.id]))
 
       const matchesIssue =
         issueFilter === 'all' ||
@@ -1557,7 +1557,7 @@ function SourcesPage() {
       blocked: sources.filter((item) => item.monitor_method === 'blocked')
         .length,
       dead: sources.filter((item) => item.monitor_method === 'dead').length,
-      problems: sources.filter((item) => getSourceHealth(item, sources) !== 'ok').length,
+      problems: sources.filter((item) => !isHealthySourceQuality(sourceQuality[item.id])).length,
       missingRss: sources.filter(
         (item) => isRssMethod(item) && !(item.rss_url || '').trim()
       ).length,
