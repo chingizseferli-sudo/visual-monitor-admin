@@ -118,6 +118,8 @@ const DISCOVERY_STATUSES = [
   'rejected',
 ]
 
+const SOURCE_QUALITY_LOOKBACK_DAYS = 30
+
 const PROTECTED_PARENT_DOMAINS = new Set([
   'az',
   'com.az',
@@ -785,7 +787,7 @@ function getSourceQualityLabel(
     return {
       label: 'Az aktiv',
       tone: 'amber',
-      reason: 'son 7 gündə real nəticə verməyib',
+      reason: 'son 30 gündə real nəticə verməyib',
     }
   }
 
@@ -953,7 +955,7 @@ function SourcesPage() {
 
     setQualityLoading(true)
 
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const since = new Date(Date.now() - SOURCE_QUALITY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString()
     const { data: items, error: itemsError } = await supabase
       .from('monitored_items')
       .select('id,source_id,created_at')
@@ -2455,7 +2457,7 @@ function SourcesPage() {
                     <div className='mt-1 truncate text-[11px] text-muted-foreground'>
                       {qualityLoading && !qualityMetrics.loaded
                         ? 'yüklənir'
-                        : `7g: ${qualityMetrics.items7d} xəbər · ${qualityMetrics.matches7d} uyğunluq · ${Math.max(qualityMetrics.alerts7d, qualityMetrics.sentNews7d)} bildiriş`}
+                        : `30g: ${qualityMetrics.items7d} xəbər · ${qualityMetrics.matches7d} uyğunluq · ${Math.max(qualityMetrics.alerts7d, qualityMetrics.sentNews7d)} bildiriş`}
                     </div>
                     <div className='truncate text-[11px] text-muted-foreground'>
                       {quality.reason}
