@@ -517,6 +517,100 @@ function isHealthySourceQuality(metrics: SourceQualityMetrics | undefined) {
   )
 }
 
+const REPAIRABLE_SOURCE_RESULTS = new Set([
+  'fallback_empty',
+  'rss_empty',
+  'invalid_xml',
+  'selector_empty',
+  'xpath_empty',
+  'sitemap_empty',
+  'homepage_empty',
+  'latest_page_empty',
+  'no_candidate',
+  'no_article',
+  'repair_failed',
+  'fetch_failed',
+  'source_review_required',
+])
+
+const HARD_SOURCE_RESULTS = new Set([
+  'http_403',
+  'http_404',
+  'http_429',
+  'timeout',
+  'dns_failure',
+  'ssl_failure',
+  'unsafe_url',
+  'site_error',
+])
+
+function hasRecentSourceOutput(
+  source: Source,
+  metrics: SourceQualityMetrics | undefined
+) {
+  const data = metrics || emptyQualityMetrics()
+
+  return Boolean(
+    (data.loaded && (data.items7d > 0 || data.matches7d > 0 || data.alerts7d > 0)) ||
+      source.last_article_found_at
+  )
+}
+
+function isWeakActiveSource(
+  source: Source,
+  metrics: SourceQualityMetrics | undefined
+) {
+  return !isHealthySourceQuality(metrics) && hasRecentSourceOutput(source, metrics)
+}
+
+function isRepairCandidateSource(
+  source: Source,
+  metrics: SourceQualityMetrics | undefined,
+  sources: Source[]
+) {
+  if (isHealthySourceQuality(metrics) || isWeakActiveSource(source, metrics)) {
+    return false
+  }
+
+  const result = source.last_result || ''
+  const method = source.monitor_method || ''
+  const issues = getSourceIssues(source, sources)
+
+  return Boolean(
+    REPAIRABLE_SOURCE_RESULTS.has(result) ||
+      source.discovery_status === 'needs_manual_selector' ||
+      source.discovery_status === 'manual_needed' ||
+      issues.includes('rss yoxdur') ||
+      issues.includes('selector yoxdur') ||
+      method === 'google_news_fallback'
+  )
+}
+
+function isRealProblemSource(
+  source: Source,
+  metrics: SourceQualityMetrics | undefined,
+  sources: Source[]
+) {
+  if (
+    isHealthySourceQuality(metrics) ||
+    isWeakActiveSource(source, metrics) ||
+    isRepairCandidateSource(source, metrics, sources)
+  ) {
+    return false
+  }
+
+  const result = source.last_result || ''
+  const method = source.monitor_method || ''
+  const failCount = source.consecutive_fail_count || 0
+
+  return Boolean(
+    HARD_SOURCE_RESULTS.has(result) ||
+      failCount >= 5 ||
+      ['blocked', 'dead', 'failed'].includes(method) ||
+      source.status === 'inactive'
+  )
+}
+
 function getSourceQualityLabel(
   source: Source,
   metrics: SourceQualityMetrics | undefined,
@@ -708,7 +802,7 @@ function SourcesPage() {
   const [issueFilter, setIssueFilter] = useState('all')
   const [qualityFilter, setQualityFilter] = useState('all')
   const [sourceView, setSourceView] = useState<
-    'all' | 'healthy' | 'problem'
+    'all' | 'healthy' | 'problem' | 'repair' | 'weak' | 'real_problem'
   >('all')
   const [bulkMethod, setBulkMethod] = useState('google_news_fallback')
   const [editing, setEditing] = useState<Source | null>(null)
@@ -1296,15 +1390,26 @@ function SourcesPage() {
     }
 
     const selectedSourceSet = new Set(selectedIds)
-    const recoverableSources = sources.filter((source) => selectedSourceSet.has(source.id))
+    const selectedSources = sources.filter((source) => selectedSourceSet.has(source.id))
+    const recoverableSources = selectedSources.filter((source) =>
+      isRepairCandidateSource(source, sourceQuality[source.id], sources)
+    )
 
-    if (recoverableSources.length === 0) {
+    if (selectedSources.length === 0) {
       alert('Seçilmiş mənbə siyahıda tapılmadı. Səhifəni yeniləyib yenidən seçin.')
       return
     }
 
+    if (recoverableSources.length === 0) {
+      alert('Seçilmiş mənbələr arasında bərpa namizədi tapılmadı. Zəif aktiv və real problem mənbələri ayrıca yoxlanmalıdır.')
+      return
+    }
+
+    const skippedCount = selectedSources.length - recoverableSources.length
     const ok = window.confirm(
-      `${recoverableSources.length} seçilmiş mənbə üçün oxuma üsulu yenidən yoxlanacaq. Davam edək?`
+      `${recoverableSources.length} bərpa namizədi yenidən yoxlanacaq${
+        skippedCount > 0 ? `; ${skippedCount} uyğun olmayan seçilmiş mənbə ötürüləcək` : ''
+      }. Davam edək?`
     )
 
     if (!ok) return
@@ -1458,10 +1563,14 @@ function SourcesPage() {
 
       const issues = getSourceIssues(source, sources)
       const health = getSourceHealth(source, sources)
+      const qualityMetrics = sourceQuality[source.id]
       const matchesSourceView =
         sourceView === 'all' ||
-        (sourceView === 'healthy' && isHealthySourceQuality(sourceQuality[source.id])) ||
-        (sourceView === 'problem' && !isHealthySourceQuality(sourceQuality[source.id]))
+        (sourceView === 'healthy' && isHealthySourceQuality(qualityMetrics)) ||
+        (sourceView === 'problem' && !isHealthySourceQuality(qualityMetrics)) ||
+        (sourceView === 'repair' && isRepairCandidateSource(source, qualityMetrics, sources)) ||
+        (sourceView === 'weak' && isWeakActiveSource(source, qualityMetrics)) ||
+        (sourceView === 'real_problem' && isRealProblemSource(source, qualityMetrics, sources))
 
       const matchesIssue =
         issueFilter === 'all' ||
@@ -1558,6 +1667,13 @@ function SourcesPage() {
         .length,
       dead: sources.filter((item) => item.monitor_method === 'dead').length,
       problems: sources.filter((item) => !isHealthySourceQuality(sourceQuality[item.id])).length,
+      repairable: sources.filter((item) =>
+        isRepairCandidateSource(item, sourceQuality[item.id], sources)
+      ).length,
+      weak: sources.filter((item) => isWeakActiveSource(item, sourceQuality[item.id])).length,
+      realProblem: sources.filter((item) =>
+        isRealProblemSource(item, sourceQuality[item.id], sources)
+      ).length,
       missingRss: sources.filter(
         (item) => isRssMethod(item) && !(item.rss_url || '').trim()
       ).length,
@@ -1694,6 +1810,30 @@ function SourcesPage() {
       onClick: () => applySourcePreset({ view: 'problem' }),
     },
     {
+      key: 'repair',
+      label: 'Bərpa namizədi',
+      count: stats.repairable,
+      tone: 'emerald',
+      active: sourceView === 'repair',
+      onClick: () => applySourcePreset({ view: 'repair' }),
+    },
+    {
+      key: 'weak',
+      label: 'Zəif aktiv',
+      count: stats.weak,
+      tone: 'cyan',
+      active: sourceView === 'weak',
+      onClick: () => applySourcePreset({ view: 'weak' }),
+    },
+    {
+      key: 'real-problem',
+      label: 'Real problem',
+      count: stats.realProblem,
+      tone: 'red',
+      active: sourceView === 'real_problem',
+      onClick: () => applySourcePreset({ view: 'real_problem' }),
+    },
+    {
       key: 'non-news',
       label: 'Xəbər saytı deyil',
       count: stats.nonNews,
@@ -1707,6 +1847,9 @@ function SourcesPage() {
     { key: 'all', label: 'Bütün mənbələr', count: stats.total },
     { key: 'healthy', label: 'Sağlam mənbələr', count: stats.healthy },
     { key: 'problem', label: 'İşləməyən mənbələr', count: stats.problems },
+    { key: 'repair', label: 'Bərpa edilə bilər', count: stats.repairable },
+    { key: 'weak', label: 'Zəif aktiv', count: stats.weak },
+    { key: 'real_problem', label: 'Real problem', count: stats.realProblem },
   ] as const
 
   const toneClasses: Record<string, string> = {
@@ -1957,7 +2100,7 @@ function SourcesPage() {
               Seçilmişləri bərpa et
             </button>
             <span className='max-w-md text-xs text-muted-foreground'>
-              Yalnız seçilmiş problemli mənbələr yoxlanır və uyğun metod tapılarsa sağlam mənbə kimi yenilənir.
+              Yalnız seçilmiş bərpa namizədləri yoxlanır. Bot qəbul edilən xəbər linki tapmasa mənbə sağlam yazılmır.
             </span>
           </div>
 
