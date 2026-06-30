@@ -169,6 +169,30 @@ function getRejectLabel(category: string) {
   return labels[category] || category
 }
 
+function formatMonitorMethod(value: string | null) {
+  const labels: Record<string, string> = {
+    rss: 'RSS',
+    rss_discovered: 'RSS',
+    latest_page: 'Son xəbərlər səhifəsi',
+    sitemap: 'Sitemap',
+    homepage: 'Ana səhifə',
+    selector: 'CSS Selector',
+    xpath_pattern: 'XPath',
+    google_news_fallback: 'Google News',
+    recoverable: 'Bərpa rejimi',
+    blocked: 'Bloklanıb',
+    dead: 'İşləmir',
+    failed: 'Xəta',
+  }
+  return labels[value || ''] || value || 'Avtomatik'
+}
+
+function matchesMonitorMethodFilter(method: string | null, filter: string) {
+  if (filter === 'all') return true
+  if (filter === 'rss') return ['rss', 'rss_discovered'].includes(method || '')
+  return method === filter
+}
+
 function LogsPage() {
   const [sources, setSources] = useState<SourceCheck[]>([])
   const [logs, setLogs] = useState<DiscoveryLog[]>([])
@@ -228,8 +252,10 @@ function LogsPage() {
       .filter((source) => {
         const state = getSourceState(source)
         const matchesState = stateFilter === 'all' || state === stateFilter
-        const matchesMethod =
-          methodFilter === 'all' || source.monitor_method === methodFilter
+        const matchesMethod = matchesMonitorMethodFilter(
+          source.monitor_method,
+          methodFilter
+        )
 
         if (!matchesState || !matchesMethod) return false
         if (!q) return true
@@ -310,9 +336,20 @@ function LogsPage() {
   )
 
   const methods = useMemo(() => {
-    return Array.from(
-      new Set(sources.map((source) => source.monitor_method).filter(Boolean))
-    ).sort() as string[]
+    const seen = new Set<string>()
+    return sources
+      .map((source) =>
+        source.monitor_method === 'rss_discovered'
+          ? 'rss'
+          : source.monitor_method
+      )
+      .filter((method): method is string => Boolean(method))
+      .filter((method) => {
+        if (seen.has(method)) return false
+        seen.add(method)
+        return true
+      })
+      .sort()
   }, [sources])
 
   const stats = useMemo(() => {
@@ -449,7 +486,7 @@ function LogsPage() {
           <option value='all'>Bütün metodlar</option>
           {methods.map((method) => (
             <option key={method} value={method}>
-              {method}
+              {formatMonitorMethod(method)}
             </option>
           ))}
         </select>

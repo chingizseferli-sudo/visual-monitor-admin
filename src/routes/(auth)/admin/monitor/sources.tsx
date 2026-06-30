@@ -128,10 +128,21 @@ const MONITOR_METHODS = [
   'xpath_pattern',
   'google_news_fallback',
   'recoverable',
-  'blocked',
-  'dead',
-  'failed',
 ]
+
+const METHOD_FILTER_OPTIONS = [
+  { value: 'rss', label: 'RSS' },
+  { value: 'latest_page', label: 'Son xəbərlər səhifəsi' },
+  { value: 'sitemap', label: 'Sitemap' },
+  { value: 'homepage', label: 'Ana səhifə' },
+  { value: 'selector', label: 'CSS Selector' },
+  { value: 'xpath_pattern', label: 'XPath' },
+  { value: 'google_news_fallback', label: 'Google News' },
+]
+
+const METHOD_FILTER_GROUPS: Record<string, string[]> = {
+  rss: ['rss', 'rss_discovered'],
+}
 
 const DISCOVERY_STATUSES = [
   'readable',
@@ -272,15 +283,24 @@ function formatSourceType(value: string | null) {
 
 function formatMonitorMethod(value: string | null) {
   return mapValue(value, {
-    rss: 'RSS Feed',
-    rss_discovered: 'RSS Feed',
+    rss: 'RSS',
+    rss_discovered: 'RSS',
     selector: 'CSS Selector',
     xpath_pattern: 'XPath',
     latest_page: 'Son xəbərlər səhifəsi',
     homepage: 'Ana səhifə',
     google_news_fallback: 'Google News',
     recoverable: 'Bərpa rejimi',
+    blocked: 'Bloklanıb',
+    dead: 'İşləmir',
+    failed: 'Xəta',
   })
+}
+
+function matchesMonitorMethodFilter(method: string | null, filter: string) {
+  if (filter === 'all') return true
+  const methods = METHOD_FILTER_GROUPS[filter] || [filter]
+  return methods.includes(method || '')
 }
 
 function formatResult(value: string | null) {
@@ -1677,8 +1697,10 @@ function SourcesPage() {
         (source.discovery_status || '').toLowerCase().includes(q) ||
         (source.notes || '').toLowerCase().includes(q)
 
-      const matchesMethod =
-        methodFilter === 'all' || source.monitor_method === methodFilter
+      const matchesMethod = matchesMonitorMethodFilter(
+        source.monitor_method,
+        methodFilter
+      )
 
       const qualityMetrics = sourceQuality[source.id]
       const matchesSourceView =
@@ -1915,9 +1937,9 @@ function SourcesPage() {
           className='min-w-0 rounded-lg border bg-background px-3 py-2'
         >
           <option value='all'>Bütün metodlar</option>
-          {MONITOR_METHODS.map((method) => (
-            <option key={method} value={method}>
-              {formatMonitorMethod(method)}
+          {METHOD_FILTER_OPTIONS.map((method) => (
+            <option key={method.value} value={method.value}>
+              {method.label}
             </option>
           ))}
         </select>
@@ -1970,10 +1992,8 @@ function SourcesPage() {
                 onChange={(e) => setBulkMethod(e.target.value)}
                 className='min-w-0 rounded-md border bg-background px-3 py-2 text-sm'
               >
-                {MONITOR_METHODS.filter(
-                  (method) => !['dead', 'failed'].includes(method)
-                ).map((method) => (
-                  <option key={formatMonitorMethod(method)} value={formatMonitorMethod(method)}>
+                {MONITOR_METHODS.map((method) => (
+                  <option key={method} value={method}>
                     {formatMonitorMethod(method)}
                   </option>
                 ))}
@@ -2851,7 +2871,7 @@ function SourcesPage() {
                   className='rounded-lg border bg-background px-3 py-2'
                 >
                   {MONITOR_METHODS.map((method) => (
-                    <option key={formatMonitorMethod(method)} value={formatMonitorMethod(method)}>
+                    <option key={method} value={method}>
                       {formatMonitorMethod(method)}
                     </option>
                   ))}
