@@ -580,9 +580,7 @@ function emptyQualityMetrics(): SourceQualityMetrics {
 function isHealthySourceQuality(metrics: SourceQualityMetrics | undefined) {
   return Boolean(
     metrics?.loaded &&
-      metrics.items7d > 0 &&
-      metrics.matches7d > 0 &&
-      (metrics.alerts7d > 0 || metrics.sentNews7d > 0)
+      (metrics.items7d > 0 || metrics.matches7d > 0 || metrics.alerts7d > 0 || metrics.sentNews7d > 0)
   )
 }
 
@@ -771,7 +769,7 @@ function getSourceQualityLabel(
       tone: 'emerald',
       reason: hasSentNews(source)
         ? 'Bot Telegram bildirişi göndərib'
-        : `${data.items7d} xəbər, ${data.matches7d} uyğunluq, ${data.alerts7d} bildiriş`,
+        : `${data.items7d} xəbər, ${data.matches7d} uyğunluq, ${Math.max(data.alerts7d, data.sentNews7d)} bildiriş`,
     }
   }
 
@@ -1063,6 +1061,45 @@ function SourcesPage() {
         }
 
         initialQuality.set(sourceId, metrics)
+      }
+    }
+
+    const { data: resultMatches, error: resultMatchesError } = await supabase
+      .from('monitor_matches')
+      .select('id,item_id,created_at,monitored_items(source_id,url)')
+      .gte('created_at', since)
+      .limit(10000)
+
+    if (resultMatchesError) {
+      console.warn('Source quality result matches query failed:', resultMatchesError.message)
+    } else {
+      for (const match of resultMatches || []) {
+        const item = Array.isArray(match.monitored_items)
+          ? match.monitored_items[0]
+          : match.monitored_items
+        const sourceId = matchItemToSourceId(item || {}, sourceKeyIndex, knownSourceIds)
+        const matchId = String(match.id || '')
+        if (!sourceId) continue
+
+        const metrics = initialQuality.get(sourceId) || {
+          ...emptyQualityMetrics(),
+          loaded: true,
+        }
+        metrics.items7d = Math.max(metrics.items7d, 1)
+        metrics.matches7d += 1
+
+        const createdAt = match.created_at ? String(match.created_at) : null
+        if (
+          createdAt &&
+          (!metrics.lastUsefulItem ||
+            new Date(createdAt).getTime() >
+              new Date(metrics.lastUsefulItem).getTime())
+        ) {
+          metrics.lastUsefulItem = createdAt
+        }
+
+        initialQuality.set(sourceId, metrics)
+        if (matchId) itemToSource.set(String(match.item_id || ''), sourceId)
       }
     }
 
