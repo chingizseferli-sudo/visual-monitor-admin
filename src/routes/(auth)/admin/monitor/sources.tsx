@@ -144,18 +144,6 @@ const METHOD_FILTER_GROUPS: Record<string, string[]> = {
   rss: ['rss', 'rss_discovered'],
 }
 
-const DISCOVERY_STATUSES = [
-  'readable',
-  'recoverable',
-  'needs_review',
-  'needs_manual_selector',
-  'blocked',
-  'dead',
-  'manual_needed',
-  'pending',
-  'accepted',
-  'rejected',
-]
 
 const SOURCE_QUALITY_LOOKBACK_DAYS = 30
 const SOURCE_QUALITY_BATCH_SIZE = 1000
@@ -1647,19 +1635,13 @@ function SourcesPage() {
     const { error } = await supabase
       .from('sources')
       .update({
-        name: getSourceTitle(editing),
+        name: editing.name?.trim() || getSourceTitle(editing),
         base_url: editing.base_url,
         latest_url: editing.latest_url || null,
         rss_url: editing.rss_url || null,
-        source_type: editing.source_type || 'news_site',
-        status: editing.status || 'active',
-        trust_level: editing.trust_level || 'medium',
         monitor_method: editing.monitor_method || 'latest_page',
         selector: editing.selector || null,
         article_pattern: editing.article_pattern || null,
-        discovery_status: editing.discovery_status || 'needs_review',
-        discovery_score: editing.discovery_score || 0,
-        notes: editing.notes || null,
       })
       .eq('id', editing.id)
 
@@ -2807,261 +2789,217 @@ function SourcesPage() {
 
       {editing ? (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'>
-          <div className='max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border bg-background p-6 shadow-lg'>
-            <div className='mb-6'>
+          <div className='max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border bg-background p-6 shadow-lg'>
+            <div className='mb-5'>
               <h2 className='text-2xl font-bold'>Mənbəni redaktə et</h2>
-              <p className='text-muted-foreground'>
-                Mənbənin izləmə məlumatlarını dəyiş
+              <p className='text-sm text-muted-foreground'>
+                Yalnız mənbənin oxunması üçün vacib sahələri dəyiş.
               </p>
             </div>
 
-            <div className='grid gap-4 md:grid-cols-2'>
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>Ad</span>
-                <input
-                  value={editing.name}
-                  onChange={(e) =>
-                    setEditing({ ...editing, name: e.target.value })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                />
-              </label>
-
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>Base URL</span>
-                <input
-                  value={editing.base_url}
-                  onChange={(e) =>
-                    setEditing({ ...editing, base_url: e.target.value })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                />
-              </label>
-
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>Latest URL</span>
-                <input
-                  value={editing.latest_url || ''}
-                  onChange={(e) =>
-                    setEditing({ ...editing, latest_url: e.target.value })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                />
-              </label>
-
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>RSS URL</span>
-                <input
-                  value={editing.rss_url || ''}
-                  onChange={(e) =>
-                    setEditing({ ...editing, rss_url: e.target.value })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                />
-              </label>
-
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>Status</span>
-                <select
-                  value={editing.status || 'active'}
-                  onChange={(e) =>
-                    setEditing({ ...editing, status: e.target.value })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                >
-                  <option value='active'>Aktiv</option>
-                  <option value='inactive'>Passiv</option>
-                </select>
-              </label>
-
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>Monitor metodu</span>
-                <select
-                  value={editing.monitor_method || 'latest_page'}
-                  onChange={(e) =>
-                    setEditing({ ...editing, monitor_method: e.target.value })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                >
-                  {MONITOR_METHODS.map((method) => (
-                    <option key={method} value={method}>
-                      {formatMonitorMethod(method)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>CSS selector</span>
-                <input
-                  value={editing.selector || ''}
-                  onChange={(e) =>
-                    setEditing({ ...editing, selector: e.target.value })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                />
-              </label>
-
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>Etibar səviyyəsi</span>
-                <select
-                  value={editing.trust_level || 'medium'}
-                  onChange={(e) =>
-                    setEditing({ ...editing, trust_level: e.target.value })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                >
-                  <option value='high'>Yüksək</option>
-                  <option value='medium'>Orta</option>
-                  <option value='low'>Aşağı</option>
-                </select>
-              </label>
-
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>Aşkarlama statusu</span>
-                <select
-                  value={editing.discovery_status || 'needs_review'}
-                  onChange={(e) =>
-                    setEditing({
-                      ...editing,
-                      discovery_status: e.target.value,
-                    })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                >
-                  {DISCOVERY_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {formatDiscoveryStatus(status)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className='grid gap-2'>
-                <span className='text-sm font-medium'>Score</span>
-                <input
-                  type='number'
-                  value={editing.discovery_score || 0}
-                  onChange={(e) =>
-                    setEditing({
-                      ...editing,
-                      discovery_score: Number(e.target.value),
-                    })
-                  }
-                  className='rounded-lg border bg-background px-3 py-2'
-                />
-              </label>
-            </div>
-
-            <div className='mt-4 grid gap-3 rounded-xl border bg-muted/20 p-4 text-sm md:grid-cols-3'>
-              <div>
-                <div className='text-xs text-muted-foreground'>Son nəticə</div>
-                <div className='font-medium'>{formatResult(editing.last_result)}</div>
-              </div>
-              <div>
-                <div className='text-xs text-muted-foreground'>Fail sayı</div>
-                <div className='font-medium'>
-                  {editing.consecutive_fail_count || 0}
+            <div className='space-y-4'>
+              <section className='rounded-xl border p-4'>
+                <div className='mb-3'>
+                  <h3 className='font-semibold'>Əsas məlumat</h3>
+                  <p className='text-xs text-muted-foreground'>
+                    Domen, son xəbərlər səhifəsi və RSS linki.
+                  </p>
                 </div>
-              </div>
-              <div>
-                <div className='text-xs text-muted-foreground'>Son yoxlama</div>
-                <div className='font-medium'>
-                  {formatDate(editing.last_checked_at)}
-                </div>
-              </div>
-              <div>
-                <div className='text-xs text-muted-foreground'>Son uğur</div>
-                <div className='font-medium'>
-                  {formatDate(editing.last_success_at)}
-                </div>
-              </div>
-              <div>
-                <div className='text-xs text-muted-foreground'>Son xəbər</div>
-                <div className='font-medium'>
-                  {formatDate(editing.last_article_found_at)}
-                </div>
-              </div>
-              <div>
-                <div className='text-xs text-muted-foreground'>Son xəta</div>
-                <div className='line-clamp-2 font-medium'>
-                  {editing.last_error || '-'}
-                </div>
-              </div>
-            </div>
 
-            <label className='mt-4 grid gap-2'>
-              <span className='text-sm font-medium'>
-                Article pattern / XPath
-              </span>
-              <textarea
-                value={editing.article_pattern || ''}
-                onChange={(e) =>
-                  setEditing({ ...editing, article_pattern: e.target.value })
-                }
-                rows={3}
-                className='rounded-lg border bg-background px-3 py-2'
-              />
-            </label>
+                <div className='grid gap-3 md:grid-cols-2'>
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-medium'>Mənbə adı</span>
+                    <input
+                      value={editing.name}
+                      onChange={(e) =>
+                        setEditing({ ...editing, name: e.target.value })
+                      }
+                      className='rounded-lg border bg-background px-3 py-2'
+                    />
+                  </label>
 
-            <div className='mt-4 rounded-xl border bg-muted/20 p-4'>
-              <div className='mb-3 flex flex-wrap items-center justify-between gap-3'>
-                <div>
-                  <div className='text-sm font-semibold'>
-                    Vizual selector köməkçisi
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-medium'>Əsas URL</span>
+                    <input
+                      value={editing.base_url}
+                      onChange={(e) =>
+                        setEditing({ ...editing, base_url: e.target.value })
+                      }
+                      className='rounded-lg border bg-background px-3 py-2'
+                    />
+                  </label>
+
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-medium'>Son xəbərlər səhifəsi</span>
+                    <input
+                      value={editing.latest_url || ''}
+                      onChange={(e) =>
+                        setEditing({ ...editing, latest_url: e.target.value })
+                      }
+                      className='rounded-lg border bg-background px-3 py-2'
+                    />
+                  </label>
+
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-medium'>RSS URL</span>
+                    <input
+                      value={editing.rss_url || ''}
+                      onChange={(e) =>
+                        setEditing({ ...editing, rss_url: e.target.value })
+                      }
+                      className='rounded-lg border bg-background px-3 py-2'
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className='rounded-xl border p-4'>
+                <div className='mb-3 flex flex-wrap items-start justify-between gap-3'>
+                  <div>
+                    <h3 className='font-semibold'>Oxuma üsulu</h3>
+                    <p className='text-xs text-muted-foreground'>
+                      Mənbənin hansı yolla oxunacağını seç.
+                    </p>
                   </div>
-                  <div className='text-xs text-muted-foreground'>
-                    Change Monitor tipli vizual pəncərədə xəbər blokunu seç və selectoru mənbəyə yaz.
+
+                  <div className='flex flex-wrap gap-2'>
+                    <a
+                      href={editing.latest_url || editing.base_url}
+                      target='_blank'
+                      rel='noreferrer'
+                      className='rounded-md border bg-background px-3 py-2 text-xs hover:bg-muted'
+                    >
+                      Saytı aç
+                    </a>
+
+                    <a
+                      href={getSelectorPickerUrl(editing.id)}
+                      target='_blank'
+                      rel='noreferrer'
+                      className='rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100'
+                    >
+                      Selector seç
+                    </a>
                   </div>
                 </div>
 
-                <a
-                  href={editing.latest_url || editing.base_url}
-                  target='_blank'
-                  rel='noreferrer'
-                  className='rounded-md border bg-background px-3 py-2 text-xs hover:bg-muted'
-                >
-                  Saytı aç
-                </a>
+                <div className='grid gap-3 md:grid-cols-2'>
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-medium'>Monitor metodu</span>
+                    <select
+                      value={editing.monitor_method || 'latest_page'}
+                      onChange={(e) =>
+                        setEditing({ ...editing, monitor_method: e.target.value })
+                      }
+                      className='rounded-lg border bg-background px-3 py-2'
+                    >
+                      {MONITOR_METHODS.map((method) => (
+                        <option key={method} value={method}>
+                          {formatMonitorMethod(method)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                <a
-                  href={getSelectorPickerUrl(editing.id)}
-                  target='_blank'
-                  rel='noreferrer'
-                  className='rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100'
-                >
-                  Vizual selector pəncərəsində seç
-                </a>
-              </div>
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-medium'>CSS selector</span>
+                    <input
+                      value={editing.selector || ''}
+                      onChange={(e) =>
+                        setEditing({ ...editing, selector: e.target.value })
+                      }
+                      className='rounded-lg border bg-background px-3 py-2'
+                    />
+                  </label>
+                </div>
 
-              <div className='grid gap-2 md:grid-cols-2'>
-                {SELECTOR_TEMPLATES.map((template) => (
-                  <button
-                    key={template.name}
-                    type='button'
-                    onClick={() => applySelectorTemplate(template)}
-                    className='rounded-lg border bg-background p-3 text-left text-xs hover:bg-muted'
-                  >
-                    <div className='font-medium'>{template.name}</div>
-                    <div className='mt-1 line-clamp-2 text-muted-foreground'>
-                      {template.articlePattern}
+                <details className='mt-4 rounded-lg border bg-muted/20 p-3'>
+                  <summary className='cursor-pointer text-sm font-medium'>
+                    Ətraflı selector və XPath
+                  </summary>
+
+                  <label className='mt-3 grid gap-2'>
+                    <span className='text-sm font-medium'>Article pattern / XPath</span>
+                    <textarea
+                      value={editing.article_pattern || ''}
+                      onChange={(e) =>
+                        setEditing({ ...editing, article_pattern: e.target.value })
+                      }
+                      rows={3}
+                      className='rounded-lg border bg-background px-3 py-2'
+                    />
+                  </label>
+
+                  <div className='mt-3 grid gap-2 md:grid-cols-2'>
+                    {SELECTOR_TEMPLATES.map((template) => (
+                      <button
+                        key={template.name}
+                        type='button'
+                        onClick={() => applySelectorTemplate(template)}
+                        className='rounded-lg border bg-background p-3 text-left text-xs hover:bg-muted'
+                      >
+                        <div className='font-medium'>{template.name}</div>
+                        <div className='mt-1 line-clamp-2 text-muted-foreground'>
+                          {template.articlePattern}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              </section>
+
+              <section className='rounded-xl border bg-muted/20 p-4'>
+                <div className='mb-3'>
+                  <h3 className='font-semibold'>Cari vəziyyət</h3>
+                  <p className='text-xs text-muted-foreground'>
+                    Bu məlumatlar sistem tərəfindən yazılır və burada yalnız oxunur.
+                  </p>
+                </div>
+
+                <div className='grid gap-3 text-sm md:grid-cols-3'>
+                  <div>
+                    <div className='text-xs text-muted-foreground'>Status</div>
+                    <div className='font-medium'>
+                      {editing.status === 'active' ? 'Aktiv' : 'Passiv'}
                     </div>
-                  </button>
-                ))}
-              </div>
+                  </div>
+                  <div>
+                    <div className='text-xs text-muted-foreground'>Son nəticə</div>
+                    <div className='font-medium'>{formatResult(editing.last_result)}</div>
+                  </div>
+                  <div>
+                    <div className='text-xs text-muted-foreground'>Fail sayı</div>
+                    <div className='font-medium'>
+                      {editing.consecutive_fail_count || 0}
+                    </div>
+                  </div>
+                  <div>
+                    <div className='text-xs text-muted-foreground'>Son yoxlama</div>
+                    <div className='font-medium'>
+                      {formatDate(editing.last_checked_at)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className='text-xs text-muted-foreground'>Son uğur</div>
+                    <div className='font-medium'>
+                      {formatDate(editing.last_success_at)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className='text-xs text-muted-foreground'>Son xəbər</div>
+                    <div className='font-medium'>
+                      {formatDate(editing.last_article_found_at)}
+                    </div>
+                  </div>
+                  <div className='md:col-span-3'>
+                    <div className='text-xs text-muted-foreground'>Son xəta</div>
+                    <div className='line-clamp-2 font-medium'>
+                      {editing.last_error || '-'}
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
-
-            <label className='mt-4 grid gap-2'>
-              <span className='text-sm font-medium'>Qeyd</span>
-              <textarea
-                value={editing.notes || ''}
-                onChange={(e) =>
-                  setEditing({ ...editing, notes: e.target.value })
-                }
-                rows={4}
-                className='rounded-lg border bg-background px-3 py-2'
-              />
-            </label>
 
             <div className='mt-6 flex justify-end gap-2'>
               <button
@@ -3084,7 +3022,6 @@ function SourcesPage() {
     </div>
   )
 }
-
 export const Route = createFileRoute('/(auth)/admin/monitor/sources')({
   component: SourcesPage,
 })
