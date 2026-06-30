@@ -521,10 +521,14 @@ function isHealthySourceQuality(metrics: SourceQualityMetrics | undefined) {
 }
 
 function hasSentNews(source: Source) {
+  const notes = (source.notes || '').toLowerCase()
+
   return Boolean(
     source.status === 'active' &&
-      source.last_result === 'sent' &&
-      !source.last_error
+      !source.last_error &&
+      (source.last_result === 'sent' ||
+        notes.includes('[telegram_success]') ||
+        notes.includes('[sent_news_sync]'))
   )
 }
 
