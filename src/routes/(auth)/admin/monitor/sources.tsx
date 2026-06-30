@@ -520,6 +520,21 @@ function isHealthySourceQuality(metrics: SourceQualityMetrics | undefined) {
   )
 }
 
+function hasSentNews(source: Source) {
+  return Boolean(
+    source.status === 'active' &&
+      source.last_result === 'sent' &&
+      !source.last_error
+  )
+}
+
+function isHealthySource(
+  source: Source,
+  metrics: SourceQualityMetrics | undefined
+) {
+  return hasSentNews(source) || isHealthySourceQuality(metrics)
+}
+
 function isRepairVerifiedSource(source: Source) {
   const notes = (source.notes || '').toLowerCase()
 
@@ -575,7 +590,7 @@ function isWeakActiveSource(
   source: Source,
   metrics: SourceQualityMetrics | undefined
 ) {
-  return !isHealthySourceQuality(metrics) &&
+  return !isHealthySource(source, metrics) &&
     !isRepairVerifiedSource(source) &&
     hasRecentSourceOutput(source, metrics)
 }
@@ -585,7 +600,7 @@ function isRepairCandidateSource(
   metrics: SourceQualityMetrics | undefined,
   sources: Source[]
 ) {
-  if (isHealthySourceQuality(metrics) ||
+  if (isHealthySource(source, metrics) ||
     isRepairVerifiedSource(source) ||
     isWeakActiveSource(source, metrics)) {
     return false
@@ -611,7 +626,7 @@ function isRealProblemSource(
   sources: Source[]
 ) {
   if (
-    isHealthySourceQuality(metrics) ||
+    isHealthySource(source, metrics) ||
     isRepairVerifiedSource(source) ||
     isWeakActiveSource(source, metrics) ||
     isRepairCandidateSource(source, metrics, sources)
@@ -663,11 +678,13 @@ function getSourceQualityLabel(
     }
   }
 
-  if (isHealthySourceQuality(data)) {
+  if (isHealthySource(source, data)) {
     return {
       label: 'Sağlam mənbə',
       tone: 'emerald',
-      reason: `${data.items7d} xəbər, ${data.matches7d} uyğunluq, ${data.alerts7d} bildiriş`,
+      reason: hasSentNews(source)
+        ? 'Bot Telegram bildirişi göndərib'
+        : `${data.items7d} xəbər, ${data.matches7d} uyğunluq, ${data.alerts7d} bildiriş`,
     }
   }
 
@@ -1600,10 +1617,10 @@ function SourcesPage() {
       const qualityMetrics = sourceQuality[source.id]
       const matchesSourceView =
         sourceView === 'all' ||
-        (sourceView === 'healthy' && isHealthySourceQuality(qualityMetrics)) ||
+        (sourceView === 'healthy' && isHealthySource(source, qualityMetrics)) ||
         (sourceView === 'verified' && isRepairVerifiedSource(source)) ||
         (sourceView === 'problem' &&
-          !isHealthySourceQuality(qualityMetrics) &&
+          !isHealthySource(source, qualityMetrics) &&
           !isRepairVerifiedSource(source)) ||
         (sourceView === 'repair' && isRepairCandidateSource(source, qualityMetrics, sources)) ||
         (sourceView === 'weak' && isWeakActiveSource(source, qualityMetrics)) ||
@@ -1690,7 +1707,7 @@ function SourcesPage() {
     return {
       total: sources.length,
       active: sources.filter((item) => item.status === 'active').length,
-      healthy: sources.filter((item) => isHealthySourceQuality(sourceQuality[item.id]))
+      healthy: sources.filter((item) => isHealthySource(item, sourceQuality[item.id]))
         .length,
       verified: sources.filter((item) => isRepairVerifiedSource(item)).length,
       inactive: sources.filter((item) => item.status === 'inactive').length,
@@ -1706,7 +1723,7 @@ function SourcesPage() {
       dead: sources.filter((item) => item.monitor_method === 'dead').length,
       problems: sources.filter(
         (item) =>
-          !isHealthySourceQuality(sourceQuality[item.id]) &&
+          !isHealthySource(item, sourceQuality[item.id]) &&
           !isRepairVerifiedSource(item)
       ).length,
       repairable: sources.filter((item) =>
