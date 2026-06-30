@@ -517,6 +517,18 @@ function isHealthySourceQuality(metrics: SourceQualityMetrics | undefined) {
   )
 }
 
+function isRepairVerifiedSource(source: Source) {
+  const notes = (source.notes || '').toLowerCase()
+
+  return Boolean(
+    source.status === 'active' &&
+      source.last_result === 'repair_ok' &&
+      !source.last_error &&
+      (notes.includes('verified') || notes.includes('readable article pages'))
+  )
+}
+
+
 const REPAIRABLE_SOURCE_RESULTS = new Set([
   'fallback_empty',
   'rss_empty',
@@ -560,7 +572,9 @@ function isWeakActiveSource(
   source: Source,
   metrics: SourceQualityMetrics | undefined
 ) {
-  return !isHealthySourceQuality(metrics) && hasRecentSourceOutput(source, metrics)
+  return !isHealthySourceQuality(metrics) &&
+    !isRepairVerifiedSource(source) &&
+    hasRecentSourceOutput(source, metrics)
 }
 
 function isRepairCandidateSource(
@@ -568,7 +582,9 @@ function isRepairCandidateSource(
   metrics: SourceQualityMetrics | undefined,
   sources: Source[]
 ) {
-  if (isHealthySourceQuality(metrics) || isWeakActiveSource(source, metrics)) {
+  if (isHealthySourceQuality(metrics) ||
+    isRepairVerifiedSource(source) ||
+    isWeakActiveSource(source, metrics)) {
     return false
   }
 
@@ -593,6 +609,7 @@ function isRealProblemSource(
 ) {
   if (
     isHealthySourceQuality(metrics) ||
+    isRepairVerifiedSource(source) ||
     isWeakActiveSource(source, metrics) ||
     isRepairCandidateSource(source, metrics, sources)
   ) {
@@ -648,6 +665,14 @@ function getSourceQualityLabel(
       label: 'Sağlam mənbə',
       tone: 'emerald',
       reason: `${data.items7d} xəbər, ${data.matches7d} uyğunluq, ${data.alerts7d} bildiriş`,
+    }
+  }
+
+  if (isRepairVerifiedSource(source)) {
+    return {
+      label: 'Bərpa təsdiqləndi',
+      tone: 'emerald',
+      reason: 'oxuna bilən xəbər səhifələri tapıldı; bot dövründən sonra sağlam statusu təsdiqlənəcək',
     }
   }
 
@@ -802,7 +827,13 @@ function SourcesPage() {
   const [issueFilter, setIssueFilter] = useState('all')
   const [qualityFilter, setQualityFilter] = useState('all')
   const [sourceView, setSourceView] = useState<
-    'all' | 'healthy' | 'problem' | 'repair' | 'weak' | 'real_problem'
+    | 'all'
+    | 'healthy'
+    | 'verified'
+    | 'problem'
+    | 'repair'
+    | 'weak'
+    | 'real_problem'
   >('all')
   const [bulkMethod, setBulkMethod] = useState('google_news_fallback')
   const [editing, setEditing] = useState<Source | null>(null)
@@ -1567,7 +1598,10 @@ function SourcesPage() {
       const matchesSourceView =
         sourceView === 'all' ||
         (sourceView === 'healthy' && isHealthySourceQuality(qualityMetrics)) ||
-        (sourceView === 'problem' && !isHealthySourceQuality(qualityMetrics)) ||
+        (sourceView === 'verified' && isRepairVerifiedSource(source)) ||
+        (sourceView === 'problem' &&
+          !isHealthySourceQuality(qualityMetrics) &&
+          !isRepairVerifiedSource(source)) ||
         (sourceView === 'repair' && isRepairCandidateSource(source, qualityMetrics, sources)) ||
         (sourceView === 'weak' && isWeakActiveSource(source, qualityMetrics)) ||
         (sourceView === 'real_problem' && isRealProblemSource(source, qualityMetrics, sources))
@@ -1655,6 +1689,7 @@ function SourcesPage() {
       active: sources.filter((item) => item.status === 'active').length,
       healthy: sources.filter((item) => isHealthySourceQuality(sourceQuality[item.id]))
         .length,
+      verified: sources.filter((item) => isRepairVerifiedSource(item)).length,
       inactive: sources.filter((item) => item.status === 'inactive').length,
       rss: sources.filter((item) => item.monitor_method === 'rss').length,
       selector: sources.filter((item) => item.monitor_method === 'selector')
@@ -1666,7 +1701,11 @@ function SourcesPage() {
       blocked: sources.filter((item) => item.monitor_method === 'blocked')
         .length,
       dead: sources.filter((item) => item.monitor_method === 'dead').length,
-      problems: sources.filter((item) => !isHealthySourceQuality(sourceQuality[item.id])).length,
+      problems: sources.filter(
+        (item) =>
+          !isHealthySourceQuality(sourceQuality[item.id]) &&
+          !isRepairVerifiedSource(item)
+      ).length,
       repairable: sources.filter((item) =>
         isRepairCandidateSource(item, sourceQuality[item.id], sources)
       ).length,
@@ -1755,6 +1794,7 @@ function SourcesPage() {
   const sourceViewTabs = [
     { key: 'all', label: 'Bütün mənbələr', count: stats.total },
     { key: 'healthy', label: 'Sağlam mənbələr', count: stats.healthy },
+    { key: 'verified', label: 'Bərpa təsdiqləndi', count: stats.verified },
     { key: 'problem', label: 'İşləməyən mənbələr', count: stats.problems },
     { key: 'repair', label: 'Bərpa edilə bilər', count: stats.repairable },
     { key: 'weak', label: 'Zəif aktiv', count: stats.weak },
@@ -1941,6 +1981,7 @@ function SourcesPage() {
         >
           <option value='all'>Bütün keyfiyyətlər</option>
           <option value='Sağlam mənbə'>Sağlam mənbə</option>
+          <option value='Bərpa təsdiqləndi'>Bərpa təsdiqləndi</option>
           <option value='Bildirişsiz işləyir'>Bildirişsiz işləyir</option>
           <option value='Xəbər tapır'>Xəbər tapır</option>
           <option value='Az aktiv'>Az aktiv</option>
