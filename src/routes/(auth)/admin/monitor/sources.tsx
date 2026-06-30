@@ -309,6 +309,8 @@ function formatResult(value: string | null) {
     old_news: 'Köhnə xəbər',
     sent: 'Göndərildi',
     duplicate: 'Təkrar xəbər',
+    repair_readable: 'Oxuna bilir',
+    repair_failed: 'Bərpa alınmadı',
     site_error: 'Sayt oxunmadı',
     timeout: 'Vaxt limiti',
     parse_error: 'Parse xətası',
@@ -761,6 +763,14 @@ function getSourceQualityLabel(
     }
   }
 
+  if (source.last_result === 'repair_readable') {
+    return {
+      label: 'Oxuna bilir',
+      tone: 'amber',
+      reason: 'Oxuma metodu tapıldı; sağlam status üçün botun real nəticəsi gözlənilir',
+    }
+  }
+
   if (isHealthySource(source, data)) {
     const deliveredCount = Math.max(data.alerts7d, data.sentNews7d)
     return {
@@ -819,6 +829,10 @@ function getBotConfirmationLabel(
 
   if (data.loaded && data.matches7d > 0) {
     return { label: `${data.matches7d} uyğun nəticə`, tone: 'success' }
+  }
+
+  if (source.last_result === 'repair_readable') {
+    return { label: 'Bot yoxlaması gözlənilir', tone: 'neutral' }
   }
 
   if (
@@ -1523,7 +1537,7 @@ function SourcesPage() {
       reason: formatRepairReason(repair.reason),
       candidateCount: repair.candidateCount,
       message: repair.ok
-        ? `${getSourceTitle(source)} işləyir: ${repair.method}, ${repair.candidateCount} link tapıldı.`
+        ? `${getSourceTitle(source)} oxuna bilir: ${repair.method}, ${repair.candidateCount} link tapıldı. Bot təsdiqi gözlənilir.`
         : `${getSourceTitle(source)} bərpa olunmadı: ${formatRepairReason(repair.reason)}`,
     }
   }
@@ -1565,7 +1579,7 @@ function SourcesPage() {
     )
     setRepairRun(null)
 
-    let fixed = 0
+    let readable = 0
     let failed = 0
     const methodCounts: Record<string, number> = {}
     const reasonCounts: Record<string, number> = {}
@@ -1573,7 +1587,7 @@ function SourcesPage() {
 
     for (const source of sourcesToRepair) {
       const result = await runAutoRepair(source)
-      if (result.ok) fixed += 1
+      if (result.ok) readable += 1
       else failed += 1
 
       const method = result.method || 'unknown'
@@ -1600,14 +1614,14 @@ function SourcesPage() {
     await loadSources()
     setRepairRun({
       attempted: sourcesToRepair.length,
-      fixed,
+      fixed: readable,
       failed,
       methodCounts,
       reasonCounts,
       items,
     })
     setMessage(
-      `Seçilmiş mənbələrin bərpası bitdi: ${fixed} mənbə real işlək tapıldı, ${failed} mənbə hələ işləmədi.`
+      `Seçilmiş mənbələrin bərpa yoxlaması bitdi: ${readable} mənbə oxuna bilir, ${failed} mənbə hələ oxunmadı. Sağlam statusu bot real nəticə verdikdən sonra təsdiqlənəcək.`
     )
   }
 
@@ -2044,10 +2058,9 @@ function SourcesPage() {
         <div className='grid gap-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-sm'>
           <div className='flex flex-wrap items-start justify-between gap-3'>
             <div>
-              <h2 className='text-base font-semibold'>Son düzəltmə nəticəsi</h2>
+              <h2 className='text-base font-semibold'>Son bərpa yoxlaması</h2>
               <p className='text-sm text-muted-foreground'>
-                Bu nəticə yalnız bu səhifədə saxlanır. Səhifə yenilənəndə
-                təmizlənəcək.
+                Bu nəticə mənbənin oxuna bilib-bilmədiyini göstərir. Sağlam statusu bot real nəticə verdikdən sonra təsdiqlənir.
               </p>
             </div>
             <button
@@ -2065,7 +2078,7 @@ function SourcesPage() {
               <div className='text-2xl font-bold'>{repairRun.attempted}</div>
             </div>
             <div className='rounded-lg border border-emerald-200 bg-emerald-50 p-3'>
-              <div className='text-xs text-emerald-700'>Düzəldi</div>
+              <div className='text-xs text-emerald-700'>Oxuna bilir</div>
               <div className='text-2xl font-bold text-emerald-700'>
                 {repairRun.fixed}
               </div>
@@ -2080,7 +2093,7 @@ function SourcesPage() {
 
           <div className='grid gap-3 lg:grid-cols-2'>
             <div className='rounded-lg border bg-background p-3'>
-              <div className='mb-2 text-sm font-medium'>Tapılan metodlar</div>
+              <div className='mb-2 text-sm font-medium'>Oxuna bilən metodlar</div>
               {Object.entries(repairRun.methodCounts).length > 0 ? (
                 <div className='flex flex-wrap gap-2'>
                   {Object.entries(repairRun.methodCounts).map(
@@ -2096,7 +2109,7 @@ function SourcesPage() {
                 </div>
               ) : (
                 <div className='text-sm text-muted-foreground'>
-                  Uğurlu metod tapılmadı.
+                  Oxuna bilən metod tapılmadı.
                 </div>
               )}
             </div>
@@ -2153,7 +2166,7 @@ function SourcesPage() {
                         : 'border-red-200 bg-red-50 text-red-700'
                     }`}
                   >
-                    {item.ok ? 'Düzəldi' : 'Düzəlmədi'}
+                    {item.ok ? 'Oxuna bilir' : 'Oxunmadı'}
                     {item.ok && item.method ? ` · ${item.method}` : ''}
                   </span>
                   <div className='line-clamp-2 text-xs text-muted-foreground'>

@@ -426,7 +426,7 @@ function buildSuccessUpdate(source: SourceInput, method: string, options: { rssU
     discovery_status: "accepted",
     consecutive_fail_count: 0,
     last_error: null,
-    last_result: "repair_ok",
+    last_result: "repair_readable",
     last_checked_at: now,
     last_success_at: now,
     notes: options.notes,
@@ -486,7 +486,7 @@ async function testRss(source: SourceInput, baseUrl: string, siteHost: string): 
           sampleLinks: links.slice(0, 5),
           update: buildSuccessUpdate(source, "rss", {
             rssUrl: res.url || rssUrl,
-            notes: `Auto repair OK: RSS verified ${candidates.length} readable article pages; feed=${res.url || rssUrl}`,
+            notes: `Auto repair readable: RSS verified ${candidates.length} readable article pages; feed=${res.url || rssUrl}`,
           }),
         };
       }
@@ -540,7 +540,7 @@ async function testSitemap(source: SourceInput, baseUrl: string, siteHost: strin
         finalUrl: baseUrl,
         sampleLinks: candidates.map((candidate) => candidate.url).slice(0, 5),
         update: buildSuccessUpdate(source, "sitemap", {
-          notes: `Auto repair OK: sitemap verified ${candidates.length} readable article pages; sitemap=${sitemapUrl}`,
+          notes: `Auto repair readable: sitemap verified ${candidates.length} readable article pages; sitemap=${sitemapUrl}`,
         }),
       };
     }
@@ -575,7 +575,7 @@ async function testHtmlPage(source: SourceInput, pageUrl: string, siteHost: stri
             method === "selector"
               ? "article a[href], .news-item a[href], .post a[href], .entry a[href], .item a[href], h2 a[href], h3 a[href]"
               : source.article_pattern ?? null,
-          notes: `Auto repair OK: HTML verified ${candidates.length} readable article pages; page=${res.url}`,
+          notes: `Auto repair readable: HTML verified ${candidates.length} readable article pages; page=${res.url}`,
         }),
       };
     }
