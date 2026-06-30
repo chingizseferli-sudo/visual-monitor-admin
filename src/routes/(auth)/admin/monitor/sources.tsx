@@ -613,9 +613,19 @@ function possibleSourceHosts(value: string | null | undefined) {
 }
 
 function matchSentNewsToSourceId(
-  row: { link?: string | null; source?: string | null; title?: string | null; created_at?: string | null },
-  sourceKeyIndex: Map<string, string>
+  row: {
+    source_id?: string | null
+    link?: string | null
+    source?: string | null
+    title?: string | null
+    created_at?: string | null
+  },
+  sourceKeyIndex: Map<string, string>,
+  knownSourceIds: Set<string>
 ) {
+  const directSourceId = String(row.source_id || '')
+  if (directSourceId && knownSourceIds.has(directSourceId)) return directSourceId
+
   for (const host of possibleSourceHosts(row.link)) {
     const sourceId = findSourceIdByHost(host, sourceKeyIndex)
     if (sourceId) return sourceId
@@ -638,6 +648,16 @@ function matchSentNewsToSourceId(
   }
 
   return null
+}
+
+function isMissingSentNewsSourceIdError(message: string) {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes('source_id') &&
+    (normalized.includes('schema cache') ||
+      normalized.includes('column') ||
+      normalized.includes('could not find'))
+  )
 }
 
 function emptyQualityMetrics(): SourceQualityMetrics {
@@ -977,22 +997,45 @@ function SourcesPage() {
     }
 
     let sentOffset = 0
+    let includeSentNewsSourceId = true
     while (true) {
+      const sentNewsSelect: string = includeSentNewsSourceId
+        ? 'source_id,link,title,source,created_at'
+        : 'link,title,source,created_at'
       const { data: sentNews, error: sentNewsError } = await supabase
         .from('sent_news')
-        .select('link,title,source,created_at')
+        .select(sentNewsSelect)
         .gte('created_at', since)
         .order('created_at', { ascending: false })
         .range(sentOffset, sentOffset + SOURCE_QUALITY_BATCH_SIZE - 1)
 
       if (sentNewsError) {
+        if (
+          includeSentNewsSourceId &&
+          isMissingSentNewsSourceIdError(sentNewsError.message)
+        ) {
+          includeSentNewsSourceId = false
+          sentOffset = 0
+          continue
+        }
+
         console.warn('Source quality sent_news query failed:', sentNewsError.message)
         break
       }
 
-      const batch = sentNews || []
+      const batch = (sentNews || []) as unknown as Array<{
+        source_id?: string | null
+        link?: string | null
+        source?: string | null
+        title?: string | null
+        created_at?: string | null
+      }>
       for (const row of batch) {
-        const sourceId = matchSentNewsToSourceId(row, sourceKeyIndex)
+        const sourceId = matchSentNewsToSourceId(
+          row,
+          sourceKeyIndex,
+          knownSourceIds
+        )
         if (!sourceId) continue
 
         const metrics = initialQuality.get(sourceId) || {
