@@ -580,7 +580,7 @@ function emptyQualityMetrics(): SourceQualityMetrics {
 function isHealthySourceQuality(metrics: SourceQualityMetrics | undefined) {
   return Boolean(
     metrics?.loaded &&
-      (metrics.items7d > 0 || metrics.matches7d > 0 || metrics.alerts7d > 0 || metrics.sentNews7d > 0)
+      (metrics.sentNews7d > 0 || metrics.alerts7d > 0 || metrics.matches7d > 0)
   )
 }
 
@@ -704,31 +704,6 @@ function isRepairCandidateSource(
   )
 }
 
-function isRealProblemSource(
-  source: Source,
-  metrics: SourceQualityMetrics | undefined,
-  sources: Source[]
-) {
-  if (
-    isHealthySource(source, metrics) ||
-    isRepairVerifiedSource(source) ||
-    isWeakActiveSource(source, metrics) ||
-    isRepairCandidateSource(source, metrics, sources)
-  ) {
-    return false
-  }
-
-  const result = source.last_result || ''
-  const method = source.monitor_method || ''
-  const failCount = source.consecutive_fail_count || 0
-
-  return Boolean(
-    HARD_SOURCE_RESULTS.has(result) ||
-      failCount >= 5 ||
-      ['blocked', 'dead', 'failed'].includes(method) ||
-      source.status === 'inactive'
-  )
-}
 
 function getSourceQualityLabel(
   source: Source,
@@ -739,13 +714,11 @@ function getSourceQualityLabel(
   const method = source.monitor_method || ''
   const data = metrics || emptyQualityMetrics()
 
-  if (!source.last_checked_at || !data.loaded) {
+  if (!data.loaded) {
     return {
-      label: 'Naməlum',
+      label: 'Yoxlanır',
       tone: 'slate',
-      reason: !source.last_checked_at
-        ? 'hələ yoxlanmayıb'
-        : 'keyfiyyət məlumatı yüklənir',
+      reason: '30 günlük nəticə məlumatı yüklənir',
     }
   }
 
@@ -757,64 +730,31 @@ function getSourceQualityLabel(
     ['blocked', 'dead', 'failed'].includes(method)
   ) {
     return {
-      label: 'Problem',
+      label: 'İşləmir',
       tone: 'red',
       reason: source.last_error || source.last_result || `fail ${failCount}`,
     }
   }
 
   if (isHealthySource(source, data)) {
+    const deliveredCount = Math.max(data.alerts7d, data.sentNews7d)
     return {
       label: 'Sağlam mənbə',
       tone: 'emerald',
-      reason: hasSentNews(source)
-        ? 'Bot Telegram bildirişi göndərib'
-        : `${data.items7d} xəbər, ${data.matches7d} uyğunluq, ${Math.max(data.alerts7d, data.sentNews7d)} bildiriş`,
-    }
-  }
-
-  if (isRepairVerifiedSource(source)) {
-    return {
-      label: 'Bərpa təsdiqləndi',
-      tone: 'emerald',
-      reason: 'oxuna bilən xəbər səhifələri tapıldı; bot dövründən sonra sağlam statusu təsdiqlənəcək',
-    }
-  }
-
-  if (data.items7d > 0 && data.matches7d > 0) {
-    return {
-      label: 'Bildirişsiz işləyir',
-      tone: 'green',
-      reason: `${data.matches7d} uyğunluq var, bildiriş yaranmayıb`,
-    }
-  }
-
-  if (data.items7d > 0) {
-    return {
-      label: 'Xəbər tapır',
-      tone: 'green',
-      reason: `${data.items7d} xəbər tapılıb, uyğunluq yoxdur`,
-    }
-  }
-
-  if (
-    source.status === 'active' &&
-    source.last_success_at &&
-    data.items7d === 0 &&
-    data.matches7d === 0 &&
-    data.sentNews7d === 0
-  ) {
-    return {
-      label: 'Az aktiv',
-      tone: 'amber',
-      reason: 'son 30 gündə real nəticə verməyib',
+      reason:
+        deliveredCount > 0
+          ? `${deliveredCount} Telegram bildirişi · ${data.matches7d} uyğun nəticə`
+          : `${data.matches7d} uyğun nəticə tapılıb`,
     }
   }
 
   return {
-    label: 'Yoxlanmalıdır',
-    tone: 'orange',
-    reason: failCount > 0 ? `fail ${failCount}` : 'əl ilə yoxlama faydalı olar',
+    label: 'İşləməyən mənbə',
+    tone: 'amber',
+    reason:
+      data.items7d > 0
+        ? `${data.items7d} xəbər oxunub, amma Telegrama uyğun nəticə göndərilməyib`
+        : 'son 30 gündə Telegrama uyğun nəticə göndərilməyib',
   }
 }
 
@@ -844,24 +784,16 @@ function getBotConfirmationLabel(
   const data = metrics || emptyQualityMetrics()
   const failCount = source.consecutive_fail_count || 0
 
+  if (data.loaded && data.sentNews7d > 0) {
+    return { label: `${data.sentNews7d} bildiriş`, tone: 'success' }
+  }
+
   if (data.loaded && data.alerts7d > 0) {
-    return { label: 'Bildiriş yaratdı', tone: 'success' }
+    return { label: `${data.alerts7d} bildiriş`, tone: 'success' }
   }
 
   if (data.loaded && data.matches7d > 0) {
-    return { label: 'Uyğun xəbər tapdı', tone: 'success' }
-  }
-
-  if (data.loaded && data.items7d > 0) {
-    return { label: 'Bot xəbər tapdı', tone: 'success' }
-  }
-
-  if (source.last_article_found_at) {
-    return { label: 'Əvvəl xəbər tapıb', tone: 'success' }
-  }
-
-  if (source.last_result === 'repair_ok') {
-    return { label: 'Bot təsdiqi gözlənilir', tone: 'warning' }
+    return { label: `${data.matches7d} uyğun nəticə`, tone: 'success' }
   }
 
   if (
@@ -870,10 +802,10 @@ function getBotConfirmationLabel(
     ) ||
     failCount > 0
   ) {
-    return { label: 'Yenə problem var', tone: 'danger' }
+    return { label: 'Problem var', tone: 'danger' }
   }
 
-  return { label: 'Yoxlanır', tone: 'neutral' }
+  return { label: 'Nəticə yoxdur', tone: 'neutral' }
 }
 
 function getBotConfirmationToneClass(tone: string) {
@@ -927,20 +859,8 @@ function SourcesPage() {
   const [qualityLoading, setQualityLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [methodFilter, setMethodFilter] = useState('all')
-  const [discoveryFilter, setDiscoveryFilter] = useState('all')
-  const [issueFilter, setIssueFilter] = useState('all')
-  const [qualityFilter, setQualityFilter] = useState('all')
-  const [sourceView, setSourceView] = useState<
-    | 'all'
-    | 'healthy'
-    | 'verified'
-    | 'problem'
-    | 'repair'
-    | 'weak'
-    | 'real_problem'
-  >('all')
+  const [sourceView, setSourceView] = useState<'all' | 'healthy' | 'problem'>('all')
   const [bulkMethod, setBulkMethod] = useState('google_news_fallback')
   const [editing, setEditing] = useState<Source | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -998,6 +918,7 @@ function SourcesPage() {
     }
 
     const itemToSource = new Map<string, string>()
+    const matchToSource = new Map<string, string>()
 
     for (const item of items || []) {
       const sourceId = matchItemToSourceId(item, sourceKeyIndex, knownSourceIds)
@@ -1046,9 +967,9 @@ function SourcesPage() {
           loaded: true,
         }
         metrics.sentNews7d += 1
+        metrics.items7d = Math.max(metrics.items7d, metrics.sentNews7d)
+        metrics.matches7d = Math.max(metrics.matches7d, metrics.sentNews7d)
         metrics.alerts7d = Math.max(metrics.alerts7d, metrics.sentNews7d)
-        if (metrics.matches7d === 0) metrics.matches7d = 1
-        if (metrics.items7d === 0) metrics.items7d = 1
 
         const createdAt = row.created_at ? String(row.created_at) : null
         if (
@@ -1077,7 +998,9 @@ function SourcesPage() {
         const item = Array.isArray(match.monitored_items)
           ? match.monitored_items[0]
           : match.monitored_items
-        const sourceId = matchItemToSourceId(item || {}, sourceKeyIndex, knownSourceIds)
+        const sourceId =
+          matchItemToSourceId(item || {}, sourceKeyIndex, knownSourceIds) ||
+          itemToSource.get(String(match.item_id || ''))
         const matchId = String(match.id || '')
         if (!sourceId) continue
 
@@ -1099,61 +1022,30 @@ function SourcesPage() {
         }
 
         initialQuality.set(sourceId, metrics)
-        if (matchId) itemToSource.set(String(match.item_id || ''), sourceId)
+        if (matchId) matchToSource.set(matchId, sourceId)
       }
     }
 
-    if (itemToSource.size > 0) {
-      const { data: matches, error: matchesError } = await supabase
-        .from('monitor_matches')
-        .select('id,item_id,created_at')
-        .gte('created_at', since)
+    if (matchToSource.size > 0) {
+      const { data: alerts, error: alertsError } = await supabase
+        .from('monitor_alerts')
+        .select('match_id,sent_at')
+        .gte('sent_at', since)
         .limit(10000)
 
-      if (matchesError) {
-        console.warn('Source quality matches query failed:', matchesError.message)
+      if (alertsError) {
+        console.warn('Source quality alerts query failed:', alertsError.message)
       } else {
-        const matchToSource = new Map<string, string>()
-
-        for (const match of matches || []) {
-          const sourceId = itemToSource.get(String(match.item_id || ''))
-          const matchId = String(match.id || '')
+        for (const alert of alerts || []) {
+          const sourceId = matchToSource.get(String(alert.match_id || ''))
           if (!sourceId) continue
 
           const metrics = initialQuality.get(sourceId) || {
             ...emptyQualityMetrics(),
             loaded: true,
           }
-          metrics.matches7d += 1
+          metrics.alerts7d += 1
           initialQuality.set(sourceId, metrics)
-
-          if (matchId) {
-            matchToSource.set(matchId, sourceId)
-          }
-        }
-
-        if (matchToSource.size > 0) {
-          const { data: alerts, error: alertsError } = await supabase
-            .from('monitor_alerts')
-            .select('match_id,sent_at')
-            .gte('sent_at', since)
-            .limit(10000)
-
-          if (alertsError) {
-            console.warn('Source quality alerts query failed:', alertsError.message)
-          } else {
-            for (const alert of alerts || []) {
-              const sourceId = matchToSource.get(String(alert.match_id || ''))
-              if (!sourceId) continue
-
-              const metrics = initialQuality.get(sourceId) || {
-                ...emptyQualityMetrics(),
-                loaded: true,
-              }
-              metrics.alerts7d += 1
-              initialQuality.set(sourceId, metrics)
-            }
-          }
         }
       }
     }
@@ -1620,7 +1512,7 @@ function SourcesPage() {
     }
 
     if (recoverableSources.length === 0) {
-      alert('Seçilmiş mənbələr arasında bərpa namizədi tapılmadı. Zəif aktiv və real problem mənbələri ayrıca yoxlanmalıdır.')
+      alert('Seçilmiş mənbələr arasında avtomatik bərpa oluna bilən mənbə tapılmadı.')
       return
     }
 
@@ -1771,76 +1663,26 @@ function SourcesPage() {
         (source.discovery_status || '').toLowerCase().includes(q) ||
         (source.notes || '').toLowerCase().includes(q)
 
-      const matchesStatus =
-        statusFilter === 'all' || source.status === statusFilter
-
       const matchesMethod =
         methodFilter === 'all' || source.monitor_method === methodFilter
 
-      const matchesDiscovery =
-        discoveryFilter === 'all' || source.discovery_status === discoveryFilter
-
-      const issues = getSourceIssues(source, sources)
-      const health = getSourceHealth(source, sources)
       const qualityMetrics = sourceQuality[source.id]
       const matchesSourceView =
         sourceView === 'all' ||
         (sourceView === 'healthy' && isHealthySource(source, qualityMetrics)) ||
-        (sourceView === 'verified' && isRepairVerifiedSource(source)) ||
-        (sourceView === 'problem' &&
-          !isHealthySource(source, qualityMetrics) &&
-          !isRepairVerifiedSource(source)) ||
-        (sourceView === 'repair' && isRepairCandidateSource(source, qualityMetrics, sources)) ||
-        (sourceView === 'weak' && isWeakActiveSource(source, qualityMetrics)) ||
-        (sourceView === 'real_problem' && isRealProblemSource(source, qualityMetrics, sources))
-
-      const matchesIssue =
-        issueFilter === 'all' ||
-        (issueFilter === 'problem' && issues.length > 0) ||
-        (issueFilter === 'subdomain' && issues.includes('subdomain')) ||
-        (issueFilter === 'missing_rss' && issues.includes('rss yoxdur')) ||
-        (issueFilter === 'missing_selector' &&
-          issues.includes('selector yoxdur')) ||
-        (issueFilter === 'blocked' &&
-          ['blocked', 'dead', 'failed'].includes(
-            source.monitor_method || ''
-          )) ||
-        (issueFilter === 'fail_limit' &&
-          (source.consecutive_fail_count || 0) >= 5) ||
-        (issueFilter === 'site_error' && source.last_result === 'site_error') ||
-        (issueFilter === 'non_news' && hasNonNewsSignal(source)) ||
-        (issueFilter === 'stale' && issues.includes('24 saat+ yoxlanmayıb'))
-
-      const quality = getSourceQualityLabel(
-        source,
-        sourceQuality[source.id],
-        health
-      )
-      const matchesQuality =
-        qualityFilter === 'all' ||
-        qualityLoading ||
-        quality.label === qualityFilter
+        (sourceView === 'problem' && !isHealthySource(source, qualityMetrics))
 
       return (
         matchesSourceView &&
         matchesSearch &&
-        matchesStatus &&
-        matchesMethod &&
-        matchesDiscovery &&
-        matchesIssue &&
-        matchesQuality
+        matchesMethod
       )
     })
   }, [
     sources,
     sourceQuality,
-    qualityLoading,
     search,
-    statusFilter,
     methodFilter,
-    discoveryFilter,
-    issueFilter,
-    qualityFilter,
     sourceView,
   ])
 
@@ -1877,49 +1719,7 @@ function SourcesPage() {
       active: sources.filter((item) => item.status === 'active').length,
       healthy: sources.filter((item) => isHealthySource(item, sourceQuality[item.id]))
         .length,
-      verified: sources.filter((item) => isRepairVerifiedSource(item)).length,
-      inactive: sources.filter((item) => item.status === 'inactive').length,
-      rss: sources.filter((item) => item.monitor_method === 'rss').length,
-      selector: sources.filter((item) => item.monitor_method === 'selector')
-        .length,
-      google: sources.filter(
-        (item) => item.monitor_method === 'google_news_fallback'
-      ).length,
-      failed: sources.filter((item) => item.monitor_method === 'failed').length,
-      blocked: sources.filter((item) => item.monitor_method === 'blocked')
-        .length,
-      dead: sources.filter((item) => item.monitor_method === 'dead').length,
-      problems: sources.filter(
-        (item) =>
-          !isHealthySource(item, sourceQuality[item.id]) &&
-          !isRepairVerifiedSource(item)
-      ).length,
-      repairable: sources.filter((item) =>
-        isRepairCandidateSource(item, sourceQuality[item.id], sources)
-      ).length,
-      weak: sources.filter((item) => isWeakActiveSource(item, sourceQuality[item.id])).length,
-      realProblem: sources.filter((item) =>
-        isRealProblemSource(item, sourceQuality[item.id], sources)
-      ).length,
-      missingRss: sources.filter(
-        (item) => isRssMethod(item) && !(item.rss_url || '').trim()
-      ).length,
-      missingSelector: sources.filter(
-        (item) =>
-          isSelectorMethod(item) &&
-          !(item.selector || '').trim() &&
-          !(item.article_pattern || '').trim()
-      ).length,
-      stale: sources.filter((item) => isStale(item)).length,
-      failLimit: sources.filter(
-        (item) => (item.consecutive_fail_count || 0) >= 5
-      ).length,
-      siteError: sources.filter((item) => item.last_result === 'site_error')
-        .length,
-      nonNews: sources.filter((item) => hasNonNewsSignal(item)).length,
-      subdomains: sources
-        .filter((item) => item.status === 'active')
-        .filter((item) => isSubdomain(item, sources)).length,
+      problems: sources.filter((item) => !isHealthySource(item, sourceQuality[item.id])).length,
     }
   }, [sources, sourceQuality])
 
@@ -1960,21 +1760,13 @@ function SourcesPage() {
 
   function applySourcePreset({
     view = 'all',
-    status = 'all',
     method = 'all',
-    issue = 'all',
   }: {
     view?: 'all' | 'healthy' | 'problem'
-    status?: string
     method?: string
-    issue?: string
   }) {
     setSourceView(view)
-    setStatusFilter(status)
     setMethodFilter(method)
-    setIssueFilter(issue)
-    setDiscoveryFilter('all')
-    setQualityFilter('all')
     setSearch('')
     resetFilteredView()
   }
@@ -1982,11 +1774,7 @@ function SourcesPage() {
   const sourceViewTabs = [
     { key: 'all', label: 'Bütün mənbələr', count: stats.total },
     { key: 'healthy', label: 'Sağlam mənbələr', count: stats.healthy },
-    { key: 'verified', label: 'Bərpa təsdiqləndi', count: stats.verified },
     { key: 'problem', label: 'İşləməyən mənbələr', count: stats.problems },
-    { key: 'repair', label: 'Bərpa edilə bilər', count: stats.repairable },
-    { key: 'weak', label: 'Zəif aktiv', count: stats.weak },
-    { key: 'real_problem', label: 'Real problem', count: stats.realProblem },
   ] as const
 
   return (
@@ -2079,10 +1867,7 @@ function SourcesPage() {
               applySourcePreset({ view: tab.key })
             }}
             className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
-              sourceView === tab.key &&
-              statusFilter === 'all' &&
-              methodFilter === 'all' &&
-              issueFilter === 'all'
+              sourceView === tab.key && methodFilter === 'all'
                 ? tab.key === 'healthy'
                   ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
                   : tab.key === 'problem'
@@ -2096,14 +1881,14 @@ function SourcesPage() {
         ))}
       </div>
 
-      <div className='grid [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))] gap-3 rounded-xl border bg-card p-4'>
+      <div className='grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[minmax(260px,1fr)_240px]'>
         <input
           value={search}
           onChange={(e) => {
             setSearch(e.target.value)
             resetFilteredView()
           }}
-          placeholder='Mənbə adı, domen, metod, qeyd üzrə axtar...'
+          placeholder='Mənbə adı, domen və ya metod üzrə axtar...'
           className='min-w-0 rounded-lg border bg-background px-3 py-2'
         />
 
@@ -2121,61 +1906,6 @@ function SourcesPage() {
               {formatMonitorMethod(method)}
             </option>
           ))}
-        </select>
-
-        <select
-          value={discoveryFilter}
-          onChange={(e) => {
-            setDiscoveryFilter(e.target.value)
-            resetFilteredView()
-          }}
-          className='min-w-0 rounded-lg border bg-background px-3 py-2'
-        >
-          <option value='all'>Bütün aşkarlama statusları</option>
-          {DISCOVERY_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={issueFilter}
-          onChange={(e) => {
-            setIssueFilter(e.target.value)
-            resetFilteredView()
-          }}
-          className='min-w-0 rounded-lg border bg-background px-3 py-2'
-        >
-          <option value='all'>Bütün səbəblər</option>
-          <option value='problem'>Yalnız işləməyən</option>
-          <option value='subdomain'>Aktiv subdomain</option>
-          <option value='missing_rss'>RSS URL yoxdur</option>
-          <option value='missing_selector'>Selector/XPath yoxdur</option>
-          <option value='blocked'>Bloklanıb / ölü / xətalı</option>
-          <option value='fail_limit'>Fail limiti</option>
-          <option value='site_error'>Sayt oxunmadı</option>
-          <option value='non_news'>Xəbər saytı deyil</option>
-          <option value='stale'>24 saat+ yoxlanmayıb</option>
-        </select>
-
-        <select
-          value={qualityFilter}
-          onChange={(e) => {
-            setQualityFilter(e.target.value)
-            resetFilteredView()
-          }}
-          className='min-w-0 rounded-lg border bg-background px-3 py-2'
-        >
-          <option value='all'>Bütün keyfiyyətlər</option>
-          <option value='Sağlam mənbə'>Sağlam mənbə</option>
-          <option value='Bərpa təsdiqləndi'>Bərpa təsdiqləndi</option>
-          <option value='Bildirişsiz işləyir'>Bildirişsiz işləyir</option>
-          <option value='Xəbər tapır'>Xəbər tapır</option>
-          <option value='Az aktiv'>Az aktiv</option>
-          <option value='Yoxlanmalıdır'>Yoxlanmalıdır</option>
-          <option value='Problem'>Problem</option>
-          <option value='Naməlum'>Naməlum</option>
         </select>
       </div>
 
@@ -2403,7 +2133,7 @@ function SourcesPage() {
       ) : null}
 
       <div className='rounded-xl border bg-card shadow-sm'>
-        <table className='w-full table-fixed text-sm [&_td:nth-child(12)]:hidden [&_td:nth-child(13)]:hidden [&_td:nth-child(6)]:hidden [&_td:nth-child(7)]:hidden [&_th:nth-child(12)]:hidden [&_th:nth-child(13)]:hidden [&_th:nth-child(6)]:hidden [&_th:nth-child(7)]:hidden'>
+        <table className='w-full table-fixed text-sm [&_td:nth-child(13)]:hidden [&_td:nth-child(12)]:hidden [&_td:nth-child(7)]:hidden [&_td:nth-child(6)]:hidden [&_td:nth-child(4)]:hidden [&_th:nth-child(13)]:hidden [&_th:nth-child(12)]:hidden [&_th:nth-child(7)]:hidden [&_th:nth-child(6)]:hidden [&_th:nth-child(4)]:hidden'>
           <thead className='bg-muted/50'>
             <tr>
               <th className='w-10 p-3 text-left'>
@@ -2516,7 +2246,7 @@ function SourcesPage() {
                     <div className='mt-1 truncate text-[11px] text-muted-foreground'>
                       {qualityLoading && !qualityMetrics.loaded
                         ? 'yüklənir'
-                        : `30g: ${qualityMetrics.items7d} xəbər · ${qualityMetrics.matches7d} uyğunluq · ${Math.max(qualityMetrics.alerts7d, qualityMetrics.sentNews7d)} bildiriş`}
+                        : `30g: ${qualityMetrics.items7d} xəbər · ${qualityMetrics.matches7d} uyğun nəticə · ${Math.max(qualityMetrics.alerts7d, qualityMetrics.sentNews7d)} bildiriş`}
                     </div>
                     <div className='truncate text-[11px] text-muted-foreground'>
                       {quality.reason}

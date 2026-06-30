@@ -1665,9 +1665,8 @@ function ChangeMonitorPage() {
     )
     if (!confirmed) return
 
-    let access: ChangeMonitorAccess
     try {
-      access = await requireChangeMonitorAccess()
+      await requireChangeMonitorAccess()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sessiya tapılmadı. Yenidən daxil olun.'
       toast.error(message)
