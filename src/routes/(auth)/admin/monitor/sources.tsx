@@ -1752,97 +1752,6 @@ function SourcesPage() {
     resetFilteredView()
   }
 
-  const metricCards = [
-    {
-      key: 'all',
-      label: 'Ümumi mənbə',
-      count: stats.total,
-      tone: 'sky',
-      active: sourceView === 'all' && statusFilter === 'all' && methodFilter === 'all' && issueFilter === 'all',
-      onClick: () => applySourcePreset({ view: 'all' }),
-    },
-    {
-      key: 'active',
-      label: 'Aktiv',
-      count: stats.active,
-      tone: 'emerald',
-      active: sourceView === 'all' && statusFilter === 'active' && methodFilter === 'all' && issueFilter === 'all',
-      onClick: () => applySourcePreset({ status: 'active' }),
-    },
-    {
-      key: 'inactive',
-      label: 'Passiv',
-      count: stats.inactive,
-      tone: 'slate',
-      active: sourceView === 'all' && statusFilter === 'inactive' && methodFilter === 'all' && issueFilter === 'all',
-      onClick: () => applySourcePreset({ status: 'inactive' }),
-    },
-    {
-      key: 'rss',
-      label: 'RSS',
-      count: stats.rss,
-      tone: 'cyan',
-      active: methodFilter === 'rss',
-      onClick: () => applySourcePreset({ method: 'rss' }),
-    },
-    {
-      key: 'fail-limit',
-      label: 'Fail limiti',
-      count: stats.failLimit,
-      tone: 'red',
-      active: issueFilter === 'fail_limit',
-      onClick: () => applySourcePreset({ issue: 'fail_limit' }),
-    },
-    {
-      key: 'subdomain',
-      label: 'Aktiv subdomain',
-      count: stats.subdomains,
-      tone: 'orange',
-      active: issueFilter === 'subdomain',
-      onClick: () => applySourcePreset({ issue: 'subdomain' }),
-    },
-    {
-      key: 'problem',
-      label: 'İşləməyən',
-      count: stats.problems,
-      tone: 'amber',
-      active: sourceView === 'problem',
-      onClick: () => applySourcePreset({ view: 'problem' }),
-    },
-    {
-      key: 'repair',
-      label: 'Bərpa namizədi',
-      count: stats.repairable,
-      tone: 'emerald',
-      active: sourceView === 'repair',
-      onClick: () => applySourcePreset({ view: 'repair' }),
-    },
-    {
-      key: 'weak',
-      label: 'Zəif aktiv',
-      count: stats.weak,
-      tone: 'cyan',
-      active: sourceView === 'weak',
-      onClick: () => applySourcePreset({ view: 'weak' }),
-    },
-    {
-      key: 'real-problem',
-      label: 'Real problem',
-      count: stats.realProblem,
-      tone: 'red',
-      active: sourceView === 'real_problem',
-      onClick: () => applySourcePreset({ view: 'real_problem' }),
-    },
-    {
-      key: 'non-news',
-      label: 'Xəbər saytı deyil',
-      count: stats.nonNews,
-      tone: 'fuchsia',
-      active: issueFilter === 'non_news',
-      onClick: () => applySourcePreset({ issue: 'non_news' }),
-    },
-  ]
-
   const sourceViewTabs = [
     { key: 'all', label: 'Bütün mənbələr', count: stats.total },
     { key: 'healthy', label: 'Sağlam mənbələr', count: stats.healthy },
@@ -1851,17 +1760,6 @@ function SourcesPage() {
     { key: 'weak', label: 'Zəif aktiv', count: stats.weak },
     { key: 'real_problem', label: 'Real problem', count: stats.realProblem },
   ] as const
-
-  const toneClasses: Record<string, string> = {
-    sky: 'border-sky-100 bg-sky-50 text-sky-700 hover:border-sky-200',
-    emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-200',
-    slate: 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300',
-    cyan: 'border-cyan-100 bg-cyan-50 text-cyan-700 hover:border-cyan-200',
-    red: 'border-red-100 bg-red-50 text-red-600 hover:border-red-200',
-    orange: 'border-orange-100 bg-orange-50 text-orange-700 hover:border-orange-200',
-    amber: 'border-amber-100 bg-amber-50 text-orange-600 hover:border-amber-200',
-    fuchsia: 'border-fuchsia-100 bg-fuchsia-50 text-fuchsia-700 hover:border-fuchsia-200',
-  }
 
   return (
     <div className='grid max-w-full gap-4 overflow-hidden p-4 md:p-6'>
@@ -1943,22 +1841,6 @@ function SourcesPage() {
           </div>
         ) : null}
       </section>
-
-      <div className='grid [grid-template-columns:repeat(auto-fit,minmax(145px,1fr))] gap-3'>
-        {metricCards.map((card) => (
-          <button
-            key={card.key}
-            type='button'
-            onClick={card.onClick}
-            className={`rounded-xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-              toneClasses[card.tone]
-            } ${card.active ? 'ring-2 ring-slate-900/70' : ''}`}
-          >
-            <div className='text-sm text-muted-foreground'>{card.label}</div>
-            <div className='text-2xl font-bold'>{card.count}</div>
-          </button>
-        ))}
-      </div>
 
       <div className='flex flex-wrap gap-2 rounded-xl border bg-card p-3'>
         {sourceViewTabs.map((tab) => (
