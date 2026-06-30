@@ -518,6 +518,28 @@ function sourceLookupKeys(source: Source) {
   return Array.from(keys)
 }
 
+function matchItemToSourceId(
+  row: { source_id?: string | null; url?: string | null },
+  sourceKeyIndex: Map<string, string>,
+  knownSourceIds: Set<string>
+) {
+  const linkHost = getHostname(String(row.url || ''))
+  if (linkHost) {
+    const exact = sourceKeyIndex.get(`host:${linkHost}`)
+    if (exact) return exact
+
+    const parent = Array.from(sourceKeyIndex.entries()).find(([key]) => {
+      if (!key.startsWith('host:')) return false
+      const host = key.slice(5)
+      return linkHost === host || linkHost.endsWith(`.${host}`)
+    })
+    if (parent) return parent[1]
+  }
+
+  const sourceId = String(row.source_id || '')
+  return sourceId && knownSourceIds.has(sourceId) ? sourceId : null
+}
+
 function matchSentNewsToSourceId(
   row: { link?: string | null; source?: string | null; created_at?: string | null },
   sourceKeyIndex: Map<string, string>
@@ -942,6 +964,7 @@ function SourcesPage() {
 
   async function loadSourceQuality(nextSources: Source[]) {
     const sourceIds = nextSources.map((source) => source.id).filter(Boolean)
+    const knownSourceIds = new Set(sourceIds)
     const initialQuality = new Map<string, SourceQualityMetrics>()
 
     for (const sourceId of sourceIds) {
@@ -956,10 +979,16 @@ function SourcesPage() {
     setQualityLoading(true)
 
     const since = new Date(Date.now() - SOURCE_QUALITY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    const sourceKeyIndex = new Map<string, string>()
+    for (const source of nextSources) {
+      for (const key of sourceLookupKeys(source)) {
+        if (!sourceKeyIndex.has(key)) sourceKeyIndex.set(key, source.id)
+      }
+    }
+
     const { data: items, error: itemsError } = await supabase
       .from('monitored_items')
-      .select('id,source_id,created_at')
-      .in('source_id', sourceIds)
+      .select('id,source_id,url,created_at')
       .gte('created_at', since)
       .limit(10000)
 
@@ -973,7 +1002,7 @@ function SourcesPage() {
     const itemToSource = new Map<string, string>()
 
     for (const item of items || []) {
-      const sourceId = String(item.source_id || '')
+      const sourceId = matchItemToSourceId(item, sourceKeyIndex, knownSourceIds)
       const itemId = String(item.id || '')
 
       if (!sourceId || !initialQuality.has(sourceId)) continue
@@ -998,13 +1027,6 @@ function SourcesPage() {
 
       if (itemId) {
         itemToSource.set(itemId, sourceId)
-      }
-    }
-
-    const sourceKeyIndex = new Map<string, string>()
-    for (const source of nextSources) {
-      for (const key of sourceLookupKeys(source)) {
-        if (!sourceKeyIndex.has(key)) sourceKeyIndex.set(key, source.id)
       }
     }
 
