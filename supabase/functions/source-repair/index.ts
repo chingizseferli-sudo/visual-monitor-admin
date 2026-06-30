@@ -31,6 +31,7 @@ type RepairResult = {
 type ArticleCandidate = {
   url: string;
   title: string;
+  sourceContext?: "rss" | "html" | "sitemap";
 };
 
 const USER_AGENT =
@@ -244,9 +245,9 @@ function extractXmlArticleCandidates(xml: string, baseUrl: string, siteHost: str
       const textLink = block.match(/<link[^>]*>([\s\S]*?)<\/link>/i)?.[1];
       const permalink = block.match(/<guid[^>]+isPermaLink=["']true["'][^>]*>([\s\S]*?)<\/guid>/i)?.[1];
       const url = absolutize(unwrapCdata(hrefLink || textLink || permalink), baseUrl);
-      return { url, title };
+      return { url, title, sourceContext: "rss" as const };
     })
-    .filter((candidate) => isUsefulTitle(candidate.title) && isLikelyArticleLink(candidate.url, siteHost));
+    .filter((candidate) => isUsefulTitle(candidate.title) && isAcceptableArticleCandidate(candidate, siteHost));
 
   return uniqueCandidates(candidates);
 }
@@ -323,7 +324,7 @@ async function validateArticleCandidates(
   const candidates: ArticleCandidate[] = [];
   const uniqueInput = uniqueCandidates(
     rawCandidates.filter((candidate) =>
-      isUsefulTitle(candidate.title) && isLikelyArticleLink(candidate.url, siteHost)
+      isUsefulTitle(candidate.title) && isAcceptableArticleCandidate(candidate, siteHost)
     ),
   );
 
@@ -364,6 +365,29 @@ function isAllowedRootSlugArticle(host: string, path: string) {
   const slug = path.replace(/^\/+|\/+$/g, "");
   if ((slug.match(/-/g) ?? []).length < 2) return false;
   return !slug.split("-").some((part) => BLOCKED_ROOT_SLUG_WORDS.has(part));
+}
+
+function isFeedRootSlugArticle(link: string, siteHost: string) {
+  let url: URL;
+  try {
+    url = new URL(link);
+  } catch {
+    return false;
+  }
+  const host = url.hostname.replace(/^www\./, "").toLowerCase();
+  if (siteHost && host !== siteHost && !host.endsWith(`.${siteHost}`)) return false;
+  const path = decodeURIComponent(url.pathname.toLowerCase());
+  if (!/^\/[a-z0-9%_-]{18,}\/?$/.test(path)) return false;
+  const slug = path.replace(/^\/+|\/+$/g, "");
+  if ((slug.match(/-/g) ?? []).length < 2) return false;
+  return !slug.split("-").some((part) => BLOCKED_ROOT_SLUG_WORDS.has(part));
+}
+
+function isAcceptableArticleCandidate(candidate: ArticleCandidate, siteHost: string) {
+  return (
+    isLikelyArticleLink(candidate.url, siteHost) ||
+    (candidate.sourceContext === "rss" && isFeedRootSlugArticle(candidate.url, siteHost))
+  );
 }
 
 function isLikelyArticleLink(link: string, siteHost: string) {
