@@ -71,6 +71,8 @@ const ARTICLE_URL_PATTERNS = [
   "/2026/",
 ];
 const ARTICLE_URL_REGEX_PATTERNS = [/\/\d{4,}[-_][^/?#]+\.html$/];
+const LANG_SLUG_ARTICLE_RE = /^\/(az|en|ru|tr)\/[a-z0-9%_-]{18,}\/?$/;
+const CATEGORY_SLUG_ARTICLE_RE = /^\/[a-z0-9%_-]{3,}\/[a-z0-9%_-]{18,}\/?$/;
 const ROOT_SLUG_ARTICLE_HOSTS = new Set([
   "7times.az",
   "busaat.az",
@@ -414,6 +416,25 @@ function hasEnoughVerifiedArticles(candidates: ArticleCandidate[]) {
   return candidates.length >= MIN_REPAIR_ARTICLE_COUNT;
 }
 
+function isSlugArticlePath(path: string, pattern: RegExp) {
+  if (!pattern.test(path)) return false;
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length < 2) return false;
+  const slug = parts[parts.length - 1] || "";
+  const section = parts.length > 1 ? parts[parts.length - 2] || "" : "";
+  if ((slug.match(/-/g) ?? []).length < 2) return false;
+  if (BLOCKED_ROOT_SLUG_WORDS.has(section)) return false;
+  return !slug.split("-").some((part) => BLOCKED_ROOT_SLUG_WORDS.has(part));
+}
+
+function isLanguageSlugArticle(path: string) {
+  return isSlugArticlePath(path, LANG_SLUG_ARTICLE_RE);
+}
+
+function isCategorySlugArticle(path: string) {
+  return isSlugArticlePath(path, CATEGORY_SLUG_ARTICLE_RE);
+}
+
 function isAllowedRootSlugArticle(host: string, path: string) {
   if (!ROOT_SLUG_ARTICLE_HOSTS.has(host)) return false;
   if (!/^\/[a-z0-9%_-]{18,}\/?$/.test(path)) return false;
@@ -490,13 +511,14 @@ function isLikelyArticleLink(link: string, siteHost: string) {
   if (ARTICLE_URL_PATTERNS.some((pattern) => path.includes(pattern))) return true;
   if (ARTICLE_URL_REGEX_PATTERNS.some((pattern) => pattern.test(path))) return true;
   if (isAllowedDomainDetailArticle(host, path)) return true;
+  if (isLanguageSlugArticle(path)) return true;
+  if (isCategorySlugArticle(path)) return true;
   if (isAllowedRootSlugArticle(host, path)) return true;
 
   return (
     /\d{4}[\/-]\d{1,2}[\/-]\d{1,2}/.test(path) ||
     /\d{6,}/.test(path) ||
-    /(news|xeber|x[eə]b[eə]r|post|article|story|read|gundem|media)/i.test(path) ||
-    path.split("/").filter(Boolean).length >= 2
+    /(news|xeber|post|article|story|read|gundem|media)/i.test(path)
   );
 }
 
@@ -691,6 +713,17 @@ async function testHtml(source: SourceInput, baseUrl: string, siteHost: string):
   return null;
 }
 
+function scoreRepairResult(result: RepairResult) {
+  const methodScores: Record<string, number> = {
+    rss: 100,
+    sitemap: 90,
+    selector: 75,
+    latest_page: 65,
+    homepage: 55,
+  };
+  return (methodScores[result.method] ?? 40) + Math.min(result.candidateCount, 10);
+}
+
 async function repairSource(source: SourceInput): Promise<RepairResult> {
   const baseUrl = normalizeUrl(source.latest_url) || normalizeUrl(source.base_url);
   if (!baseUrl) {
@@ -706,18 +739,33 @@ async function repairSource(source: SourceInput): Promise<RepairResult> {
   }
 
   const siteHost = hostname(baseUrl);
-  const tests = [
-    () => testRss(source, baseUrl, siteHost),
-    () => testSitemap(source, baseUrl, siteHost),
-    () => testHtml(source, baseUrl, siteHost),
+  const testPlan = [
+    { name: "rss", run: () => testRss(source, baseUrl, siteHost) },
+    { name: "sitemap", run: () => testSitemap(source, baseUrl, siteHost) },
+    { name: "html", run: () => testHtml(source, baseUrl, siteHost) },
   ];
+  const attempts: string[] = [];
+  const successful: RepairResult[] = [];
 
-  for (const test of tests) {
-    const result = await test();
-    if (result?.ok) return result;
+  for (const test of testPlan) {
+    const result = await test.run();
+    if (result?.ok) {
+      successful.push(result);
+      attempts.push(`${test.name}:ok:${result.method}:${result.candidateCount}`);
+    } else {
+      attempts.push(`${test.name}:empty`);
+    }
   }
 
-  const reason = "RSS, sitemap and HTML did not return enough verified readable article pages";
+  if (successful.length > 0) {
+    const best = successful.sort((a, b) => scoreRepairResult(b) - scoreRepairResult(a))[0];
+    const existingNotes = typeof best.update.notes === "string" ? best.update.notes : "Auto repair readable";
+    best.update.notes = `${existingNotes}; selected=${best.method}; attempts=${attempts.join(",")}`;
+    best.reason = `${best.reason}; selected best method after testing ${successful.length} method(s)`;
+    return best;
+  }
+
+  const reason = `RSS, sitemap and HTML did not return enough verified readable article pages; attempts=${attempts.join(",")}`;
   return {
     ok: false,
     method: "failed",
