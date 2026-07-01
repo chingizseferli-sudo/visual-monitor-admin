@@ -1,4 +1,4 @@
-﻿import { requireAuthenticated } from "../_shared/auth.ts";
+import { requireAuthenticated } from "../_shared/auth.ts";
 import { assertSafeUrl, safeFetch } from "../_shared/url_safety.ts";
 
 const corsHeaders = {
@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const MAX_RESPONSE_BYTES = 1_500_000;
+const SELECTOR_PROXY_VERSION = "1.1-static-preview-stability";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -16,21 +17,76 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function escapeHtmlAttr(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function sanitizeHtml(html: string, finalUrl: string) {
   let cleaned = html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<meta\b[^>]*http-equiv\s*=\s*["']?content-security-policy["']?[^>]*>/gi, "")
+    .replace(/<meta\b[^>]*http-equiv\s*=\s*["']?x-frame-options["']?[^>]*>/gi, "")
     .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "")
     .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "")
     .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "")
     .replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"');
 
-  const base = `<base href="${finalUrl}">`;
+  cleaned = wakeStaticAssets(cleaned);
+
+  const base = `<base href="${escapeHtmlAttr(finalUrl)}">`;
+  const helperStyle = `<meta name="referrer" content="no-referrer"><style>html,body{min-height:100%;background:#fff!important;}body{overflow:auto!important;}img,video,iframe{max-width:100%;}img{height:auto;}[hidden],.hidden{visibility:visible!important;opacity:1!important;}</style>`;
+  const headInject = `${base}${helperStyle}`;
 
   if (/<head[^>]*>/i.test(cleaned)) {
-    cleaned = cleaned.replace(/<head[^>]*>/i, (match) => `${match}${base}`);
+    cleaned = cleaned.replace(/<head[^>]*>/i, (match) => `${match}${headInject}`);
   } else {
-    cleaned = `${base}${cleaned}`;
+    cleaned = `${headInject}${cleaned}`;
   }
+
+  return cleaned;
+}
+
+function wakeStaticAssets(html: string) {
+  let cleaned = html;
+
+  cleaned = cleaned.replace(/<img\b([^>]*?)>/gi, (match, attrs: string) => {
+    let nextAttrs = attrs;
+    const hasSrc = /\ssrc\s*=\s*["'][^"']+["']/i.test(nextAttrs);
+    const lazySrc = nextAttrs.match(/\s(?:data-src|data-original|data-lazy-src|data-url|data-image)\s*=\s*(["'])(.*?)\1/i)?.[2];
+
+    if (!hasSrc && lazySrc) {
+      nextAttrs += ` src="${escapeHtmlAttr(lazySrc)}"`;
+    }
+
+    const hasSrcSet = /\ssrcset\s*=\s*["'][^"']+["']/i.test(nextAttrs);
+    const lazySrcSet = nextAttrs.match(/\sdata-srcset\s*=\s*(["'])(.*?)\1/i)?.[2];
+
+    if (!hasSrcSet && lazySrcSet) {
+      nextAttrs += ` srcset="${escapeHtmlAttr(lazySrcSet)}"`;
+    }
+
+    nextAttrs = nextAttrs
+      .replace(/\sloading\s*=\s*["'][^"']*["']/gi, "")
+      .replace(/\sdecoding\s*=\s*["'][^"']*["']/gi, "");
+
+    return `<img${nextAttrs}>`;
+  });
+
+  cleaned = cleaned.replace(/<source\b([^>]*?)>/gi, (match, attrs: string) => {
+    let nextAttrs = attrs;
+    const hasSrcSet = /\ssrcset\s*=\s*["'][^"']+["']/i.test(nextAttrs);
+    const lazySrcSet = nextAttrs.match(/\s(?:data-srcset|data-src)\s*=\s*(["'])(.*?)\1/i)?.[2];
+
+    if (!hasSrcSet && lazySrcSet) {
+      nextAttrs += ` srcset="${escapeHtmlAttr(lazySrcSet)}"`;
+    }
+
+    return `<source${nextAttrs}>`;
+  });
 
   return cleaned;
 }
@@ -106,23 +162,26 @@ Deno.serve(async (req) => {
 
     const contentType = upstream.headers.get("content-type") || "";
     const text = await readLimitedText(upstream, MAX_RESPONSE_BYTES);
+    const finalUrl = upstream.url || url.toString();
 
     if (!contentType.includes("text/html") && !text.includes("<html")) {
       return json({
         error: "HTML response not found. Visual selector needs a normal page, not RSS/sitemap/XML.",
         status: upstream.status,
         contentType,
-        finalUrl: upstream.url || url.toString(),
+        finalUrl,
+        version: SELECTOR_PROXY_VERSION,
       });
     }
 
     return json({
-      html: sanitizeHtml(text, upstream.url || url.toString()),
-      finalUrl: upstream.url || url.toString(),
+      html: sanitizeHtml(text, finalUrl),
+      finalUrl,
       status: upstream.status,
+      version: SELECTOR_PROXY_VERSION,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return json({ error: message }, 500);
+    return json({ error: message, version: SELECTOR_PROXY_VERSION }, 500);
   }
 });

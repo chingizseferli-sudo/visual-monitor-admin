@@ -24,8 +24,43 @@ function buildPickerHtml(html: string) {
       (() => {
         let selectorMode = false;
         const overlay = document.createElement("div");
-        overlay.style.cssText = "position:fixed;z-index:2147483647;pointer-events:none;border:3px solid #f59e0b;background:rgba(245,158,11,.14);display:none";
+        overlay.style.cssText = "position:fixed;z-index:2147483647;pointer-events:none;border:3px solid #f59e0b;background:rgba(245,158,11,.14);box-shadow:0 0 0 99999px rgba(15,23,42,.06);display:none";
         document.body.appendChild(overlay);
+
+        const wakeLazyContent = () => {
+          const assetAttrs = ["data-src", "data-original", "data-lazy-src", "data-url", "data-image", "data-bg"];
+
+          document.querySelectorAll("img, iframe").forEach((node) => {
+            for (const attr of assetAttrs) {
+              const value = node.getAttribute(attr);
+              if (value && !node.getAttribute("src")) {
+                node.setAttribute("src", value);
+                break;
+              }
+            }
+            node.removeAttribute("loading");
+            node.removeAttribute("decoding");
+          });
+
+          document.querySelectorAll("source").forEach((node) => {
+            const srcset = node.getAttribute("data-srcset") || node.getAttribute("data-src");
+            if (srcset && !node.getAttribute("srcset")) node.setAttribute("srcset", srcset);
+          });
+
+          document.querySelectorAll("[data-bg], [data-background], [data-bg-src]").forEach((node) => {
+            const value = node.getAttribute("data-bg") || node.getAttribute("data-background") || node.getAttribute("data-bg-src");
+            if (value && !node.style.backgroundImage) node.style.backgroundImage = "url('" + value + "')";
+          });
+
+          document.querySelectorAll("[data-aos], [data-animate], [data-animation], .aos-init, .wow, .animated, .fade, .fade-in, .reveal, .invisible, .lazy-hidden").forEach((node) => {
+            node.style.opacity = "1";
+            node.style.visibility = "visible";
+            node.style.transform = "none";
+          });
+
+          window.dispatchEvent(new Event("scroll"));
+          window.dispatchEvent(new Event("resize"));
+        };
 
         const cssPath = (element) => {
           if (!element) return "";
@@ -123,6 +158,11 @@ function buildPickerHtml(html: string) {
             tag: target.tagName.toLowerCase(),
           }, "*");
         };
+
+        wakeLazyContent();
+        setTimeout(wakeLazyContent, 250);
+        setTimeout(wakeLazyContent, 1000);
+        setTimeout(wakeLazyContent, 2000);
 
         window.addEventListener("message", (event) => {
           if (event.data?.type !== "visual-monitor-selector-mode") return;
@@ -242,7 +282,7 @@ function SelectorPickerPage() {
     }
 
     if (!data?.html) {
-      setMessage(data?.error || 'HTML tapılmadı.')
+      setMessage(data?.error || 'HTML tapılmadı. Saytı ayrıca açıb yoxla və ya başqa səhifə URL-i ilə yenidən cəhd et.')
       setHtml('')
       setLoadingPage(false)
       return
@@ -455,7 +495,7 @@ function SelectorPickerPage() {
         </div>
       </div>
 
-      <div className='min-h-0 bg-muted/20'>
+      <div className='min-h-[calc(100vh-260px)] overflow-hidden bg-muted/20'>
         {loadingPage ? (
           <div className='p-6'>Sayt açılır...</div>
         ) : html ? (
@@ -464,7 +504,7 @@ function SelectorPickerPage() {
             title='Selector picker'
             srcDoc={html}
             sandbox='allow-scripts allow-same-origin allow-popups'
-            className='h-full w-full bg-white'
+            className='h-full min-h-[calc(100vh-260px)] w-full bg-white'
           />
         ) : (
           <div className='p-6 text-muted-foreground'>
