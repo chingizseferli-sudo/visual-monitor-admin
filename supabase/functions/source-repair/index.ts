@@ -70,7 +70,7 @@ const ARTICLE_URL_PATTERNS = [
   "/2025/",
   "/2026/",
 ];
-const ARTICLE_URL_REGEX_PATTERNS = [/\/\d{4,}[-_][^/?#]+\.html$/];
+const ARTICLE_URL_REGEX_PATTERNS = [/\/\d{4,}[-_][^/?#]+\.html$/, /\/news\/\d{3,}\/[^/?#]{8,}\/?$/, /\/xeber\/(?:[^/?#-]+[_-]){2,}[^/?#-]+-\d{3,}\/?$/, /\/xeber\/\d{3,}\/?$/];
 const LANG_SLUG_ARTICLE_RE = /^\/(az|en|ru|tr)\/[a-z0-9%_-]{18,}\/?$/;
 const CATEGORY_SLUG_ARTICLE_RE = /^\/[a-z0-9%_-]{3,}\/[a-z0-9%_-]{18,}\/?$/;
 const ROOT_SLUG_ARTICLE_HOSTS = new Set([
@@ -226,15 +226,16 @@ function titleFromUrl(rawUrl: string) {
     const parts = decodeURIComponent(url.pathname)
       .split("/")
       .filter(Boolean);
-    const slug = parts[parts.length - 1] || "";
+    let slug = parts[parts.length - 1] || "";
+    if (/^\d{3,}$/.test(slug) && parts.length > 1) slug = parts[parts.length - 2] || slug;
     const cleaned = slug
       .replace(/\.[a-z0-9]{2,5}$/i, "")
       .replace(/[-_]+/g, " ")
-      .replace(/\b\d{4,}\b/g, "")
+      .replace(/\b\d{3,}\b/g, "")
       .replace(/\s+/g, " ")
       .trim();
-    if (cleaned.length < 12) return "";
-    if (cleaned.split(/\s+/).length < 3) return "";
+    if (cleaned.length < 10) return "";
+    if (cleaned.split(/\s+/).length < 2) return "";
     return cleaned;
   } catch {
     return "";
@@ -394,7 +395,10 @@ function extractHtmlArticleCandidates(html: string, baseUrl: string, siteHost: s
     .map((m) => {
       const attrs = `${m[1]} ${m[3]}`;
       const attrTitle = attrs.match(/(?:title|aria-label)=["']([^"']+)["']/i)?.[1];
-      const rawTitle = normalizeTitle(attrTitle || m[4]);
+      const rawTitle = normalizeTitle(attrTitle || m[4])
+        .replace(/^\d{1,2}[:.]\d{2}\s+(?:davamı\s*)?/i, "")
+        .replace(/^davamı\s*/i, "")
+        .trim();
       const url = absolutize(m[2].trim(), baseUrl);
       const title = isUsefulTitle(rawTitle) ? rawTitle : titleFromUrl(url);
       return { url, title, sourceContext: "html" as const };
