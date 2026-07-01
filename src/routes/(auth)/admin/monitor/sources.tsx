@@ -683,7 +683,6 @@ function hasSentNews(source: Source) {
 
   return Boolean(
     source.status === 'active' &&
-      !source.last_error &&
       (source.last_result === 'sent' ||
         notes.includes('[telegram_success]') ||
         notes.includes('[sent_news_sync]'))
@@ -694,10 +693,7 @@ function isHealthySource(
   source: Source,
   metrics: SourceQualityMetrics | undefined
 ) {
-  return (
-    !hasCurrentReadFailure(source) &&
-    (hasSentNews(source) || isHealthySourceQuality(metrics))
-  )
+  return source.status === 'active' && (hasSentNews(source) || isHealthySourceQuality(metrics))
 }
 
 
@@ -754,10 +750,14 @@ function isReadableNonProblemSource(source: Source) {
   )
 }
 
-function isProblemSource(source: Source) {
+function isProblemSource(
+  source: Source,
+  metrics?: SourceQualityMetrics
+) {
   const method = source.monitor_method || ''
   const failCount = source.consecutive_fail_count || 0
 
+  if (isHealthySource(source, metrics)) return false
   if (isReadableNonProblemSource(source)) return false
 
   return Boolean(
@@ -788,25 +788,6 @@ function getSourceQualityLabel(
     }
   }
 
-  if (health === 'error' || isProblemSource(source)) {
-    return {
-      label: 'İşləmir',
-      tone: 'red',
-      reason: source.last_error || source.last_result || `fail ${failCount}`,
-    }
-  }
-
-  if (isReadableNonProblemSource(source)) {
-    return {
-      label: 'Oxunur',
-      tone: 'slate',
-      reason:
-        source.last_result === 'repair_readable'
-          ? 'Oxuma metodu tapıldı; sağlam status üçün botun real nəticəsi gözlənilir'
-          : 'Mənbə oxunur, amma hələ Telegrama uyğun yeni nəticə göndərilməyib',
-    }
-  }
-
   if (isHealthySource(source, data)) {
     const deliveredCount = Math.max(data.alerts7d, data.sentNews7d)
     return {
@@ -818,6 +799,25 @@ function getSourceQualityLabel(
           : `${data.matches7d} uyğun nəticə tapılıb`,
     }
   }
+  if (isReadableNonProblemSource(source)) {
+    return {
+      label: 'Oxunur',
+      tone: 'slate',
+      reason:
+        source.last_result === 'repair_readable'
+          ? 'Oxuma metodu tapıldı; sağlam status üçün botun real nəticəsi gözlənilir'
+          : 'Mənbə oxunur, amma hələ Telegrama uyğun yeni nəticə göndərilməyib',
+    }
+  }
+
+  if (health === 'error' || isProblemSource(source, data)) {
+    return {
+      label: 'İşləmir',
+      tone: 'red',
+      reason: source.last_error || source.last_result || `fail ${failCount}`,
+    }
+  }
+
 
   return {
     label: 'Gözləmədə',
@@ -1569,6 +1569,18 @@ function SourcesPage() {
       }
     }
 
+    if (!repair.ok && isHealthySource(source, sourceQuality[source.id])) {
+      return {
+        sourceId: source.id,
+        sourceName,
+        ok: false,
+        method: repair.method,
+        reason: formatRepairReason(repair.reason),
+        candidateCount: repair.candidateCount,
+        message: `${getSourceTitle(source)} real bildiri\u015f tarix\u00e7\u0259sin\u0259 g\u00f6r\u0259 sa\u011flam saxlan\u0131ld\u0131. U\u011fursuz manual b\u0259rpa testi m\u0259nb\u0259nin statusunu d\u0259yi\u015fm\u0259di.`,
+      }
+    }
+
     const { data: updated, error: updateError } = await supabase
       .from('sources')
       .update(repair.update)
@@ -1609,7 +1621,7 @@ function SourcesPage() {
     const selectedSourceSet = new Set(selectedIds)
     const selectedSources = sources.filter((source) => selectedSourceSet.has(source.id))
     const sourcesToRepair = selectedSources.filter((source) =>
-      isProblemSource(source)
+      isProblemSource(source, sourceQuality[source.id])
     )
 
     if (selectedSources.length === 0) {
@@ -1772,7 +1784,7 @@ function SourcesPage() {
       const matchesSourceView =
         sourceView === 'all' ||
         (sourceView === 'healthy' && isHealthySource(source, qualityMetrics)) ||
-        (sourceView === 'problem' && isProblemSource(source))
+        (sourceView === 'problem' && isProblemSource(source, qualityMetrics))
 
       return (
         matchesSourceView &&
@@ -1821,7 +1833,7 @@ function SourcesPage() {
       active: sources.filter((item) => item.status === 'active').length,
       healthy: sources.filter((item) => isHealthySource(item, sourceQuality[item.id]))
         .length,
-      problems: sources.filter((item) => isProblemSource(item)).length,
+      problems: sources.filter((item) => isProblemSource(item, sourceQuality[item.id])).length,
     }
   }, [sources, sourceQuality])
 
