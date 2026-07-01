@@ -855,12 +855,6 @@ function getSourceHealthState(
   return 'checking'
 }
 
-function isProblemSource(
-  source: Source,
-  metrics?: SourceQualityMetrics
-) {
-  return getSourceHealthState(source, metrics) === 'problem'
-}
 
 function isUnhealthySource(
   source: Source,
@@ -1027,7 +1021,9 @@ function SourcesPage() {
   const [editing, setEditing] = useState<Source | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [message, setMessage] = useState('')
+  const [bulkAddMode, setBulkAddMode] = useState(false)
   const [newSourceInput, setNewSourceInput] = useState('')
+  const [bulkSourceInput, setBulkSourceInput] = useState('')
   const [addingSource, setAddingSource] = useState(false)
   const [addSourceResult, setAddSourceResult] = useState<AddSourceResult | null>(null)
   const [recovering, setRecovering] = useState(false)
