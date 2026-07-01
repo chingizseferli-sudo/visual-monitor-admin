@@ -738,6 +738,37 @@ function hasCurrentReadFailure(source: Source) {
   return CURRENT_READ_FAILURE_RESULTS.has(source.last_result || '')
 }
 
+const READABLE_NON_PROBLEM_RESULTS = new Set([
+  'repair_readable',
+  'old_news',
+  'no_monitor_match',
+  'duplicate',
+  'sent',
+])
+
+function isReadableNonProblemSource(source: Source) {
+  return Boolean(
+    source.status === 'active' &&
+      !source.last_error &&
+      READABLE_NON_PROBLEM_RESULTS.has(source.last_result || '')
+  )
+}
+
+function isProblemSource(source: Source) {
+  const method = source.monitor_method || ''
+  const failCount = source.consecutive_fail_count || 0
+
+  if (isReadableNonProblemSource(source)) return false
+
+  return Boolean(
+    source.status !== 'active' ||
+      hasCurrentReadFailure(source) ||
+      failCount >= 5 ||
+      source.last_result === 'site_error' ||
+      ['blocked', 'dead', 'failed'].includes(method)
+  )
+}
+
 
 
 function getSourceQualityLabel(
@@ -757,13 +788,7 @@ function getSourceQualityLabel(
     }
   }
 
-  if (
-    health === 'error' ||
-    hasCurrentReadFailure(source) ||
-    failCount >= 5 ||
-    source.last_result === 'site_error' ||
-    ['blocked', 'dead', 'failed'].includes(method)
-  ) {
+  if (health === 'error' || isProblemSource(source)) {
     return {
       label: 'İşləmir',
       tone: 'red',
@@ -771,11 +796,14 @@ function getSourceQualityLabel(
     }
   }
 
-  if (source.last_result === 'repair_readable') {
+  if (isReadableNonProblemSource(source)) {
     return {
-      label: 'Oxuna bilir',
-      tone: 'amber',
-      reason: 'Oxuma metodu tapıldı; sağlam status üçün botun real nəticəsi gözlənilir',
+      label: 'Oxunur',
+      tone: 'slate',
+      reason:
+        source.last_result === 'repair_readable'
+          ? 'Oxuma metodu tapıldı; sağlam status üçün botun real nəticəsi gözlənilir'
+          : 'Mənbə oxunur, amma hələ Telegrama uyğun yeni nəticə göndərilməyib',
     }
   }
 
@@ -792,14 +820,13 @@ function getSourceQualityLabel(
   }
 
   return {
-    label: 'İşləməyən mənbə',
-    tone: 'amber',
+    label: 'Gözləmədə',
+    tone: 'slate',
     reason:
       data.items7d > 0
         ? `${data.items7d} xəbər oxunub, amma Telegrama uyğun nəticə göndərilməyib`
-        : 'son 30 gündə Telegrama uyğun nəticə göndərilməyib',
-  }
-}
+        : 'Mənbə texniki problem vermir, amma hələ uyğun nəticə göndərilməyib',
+  }}
 
 function getQualityToneClass(tone: string) {
   if (tone === 'emerald') {
@@ -1581,8 +1608,8 @@ function SourcesPage() {
 
     const selectedSourceSet = new Set(selectedIds)
     const selectedSources = sources.filter((source) => selectedSourceSet.has(source.id))
-    const sourcesToRepair = selectedSources.filter(
-      (source) => !isHealthySource(source, sourceQuality[source.id])
+    const sourcesToRepair = selectedSources.filter((source) =>
+      isProblemSource(source)
     )
 
     if (selectedSources.length === 0) {
@@ -1745,7 +1772,7 @@ function SourcesPage() {
       const matchesSourceView =
         sourceView === 'all' ||
         (sourceView === 'healthy' && isHealthySource(source, qualityMetrics)) ||
-        (sourceView === 'problem' && !isHealthySource(source, qualityMetrics))
+        (sourceView === 'problem' && isProblemSource(source))
 
       return (
         matchesSourceView &&
@@ -1794,7 +1821,7 @@ function SourcesPage() {
       active: sources.filter((item) => item.status === 'active').length,
       healthy: sources.filter((item) => isHealthySource(item, sourceQuality[item.id]))
         .length,
-      problems: sources.filter((item) => !isHealthySource(item, sourceQuality[item.id])).length,
+      problems: sources.filter((item) => isProblemSource(item)).length,
     }
   }, [sources, sourceQuality])
 
