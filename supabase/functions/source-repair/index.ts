@@ -34,6 +34,7 @@ type ArticleCandidate = {
   sourceContext?: "rss" | "html" | "sitemap";
 };
 
+const SOURCE_REPAIR_VERSION = "1.3-azertag-unikal-readability";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const MAX_RESPONSE_BYTES = 1_500_000;
@@ -86,6 +87,8 @@ const ROOT_SLUG_ARTICLE_HOSTS = new Set([
   "yenicag.az",
 ]);
 const DOMAIN_DETAIL_ARTICLE_PATTERNS = new Map<string, RegExp[]>([
+  ["azertag.az", [/\/xeber\/[^/?#]{8,}-\d{3,}\/?$/]],
+  ["unikal.az", [/\/news\/\d{3,}\/[^/?#]{8,}\/?$/]],
   ["embawood.az", [/\/blog\/[^/?#]{8,}\/?$/]],
   ["deazmed.az", [/\/az\/melumat-ve-xeberler\/[^/?#]{8,}\/?$/]],
   ["bqu.edu.az", [/\/announcement_single\/\d+\/?$/]],
@@ -132,6 +135,7 @@ const COMMON_RSS_PATHS = [
   "/feed/",
   "/feed",
   "/rss",
+  "/rss/",
   "/rss.xml",
   "/feed.xml",
   "/atom.xml",
@@ -396,6 +400,7 @@ function extractHtmlArticleCandidates(html: string, baseUrl: string, siteHost: s
       const attrs = `${m[1]} ${m[3]}`;
       const attrTitle = attrs.match(/(?:title|aria-label)=["']([^"']+)["']/i)?.[1];
       const rawTitle = normalizeTitle(attrTitle || m[4])
+        .replace(/^\d{1,2}[:.]\d{2}\s+\d{1,2}[-.]\d{1,2}[-.]\d{2,4}\s*/i, "")
         .replace(/^\d{1,2}[:.]\d{2}\s+(?:davamı\s*)?/i, "")
         .replace(/^davamı\s*/i, "")
         .trim();
@@ -873,7 +878,7 @@ Deno.serve(async (req) => {
     }
 
     const result = await repairSource(source);
-    return Response.json(result, { headers: corsHeaders });
+    return Response.json({ ...result, version: SOURCE_REPAIR_VERSION }, { headers: corsHeaders });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
