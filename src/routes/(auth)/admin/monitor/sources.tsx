@@ -2054,8 +2054,8 @@ function SourcesPage() {
     return sources.filter((source) => {
       const matchesSearch =
         !q ||
-        source.name.toLowerCase().includes(q) ||
-        source.base_url.toLowerCase().includes(q) ||
+        (source.name || '').toLowerCase().includes(q) ||
+        (source.base_url || '').toLowerCase().includes(q) ||
         (source.latest_url || '').toLowerCase().includes(q) ||
         (source.rss_url || '').toLowerCase().includes(q) ||
         (source.selector || '').toLowerCase().includes(q) ||
@@ -2725,7 +2725,7 @@ function SourcesPage() {
                       {getSourceTitle(source)}
                     </div>
                     <div className='line-clamp-1 text-xs text-muted-foreground'>
-                      {source.base_url}
+                      {source.base_url || source.latest_url || '-'}
                     </div>
                     <div className='mt-2 flex min-w-0 flex-wrap items-center gap-1 text-[11px]'>
                       <span
@@ -2875,7 +2875,7 @@ function SourcesPage() {
                           </button>
 
                           <a
-                            href={source.latest_url || source.base_url}
+                            href={source.latest_url || source.base_url || '#'}
                             target='_blank'
                             rel='noreferrer'
                             onClick={() => setOpenActionId(null)}
