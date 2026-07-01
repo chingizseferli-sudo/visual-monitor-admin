@@ -34,11 +34,14 @@ type ArticleCandidate = {
   sourceContext?: "rss" | "html" | "sitemap";
 };
 
-const SOURCE_REPAIR_VERSION = "1.4-prioritized-rss-repair";
+const SOURCE_REPAIR_VERSION = "1.5-site-signal-discovery";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const MAX_RESPONSE_BYTES = 1_500_000;
 const MIN_REPAIR_ARTICLE_COUNT = 2;
+const MAX_DISCOVERED_FEEDS = 12;
+const MAX_DISCOVERED_SITEMAPS = 12;
+const MAX_HTML_PAGES_TO_TEST = 14;
 const ARTICLE_URL_PATTERNS = [
   "/news/",
   "/xeber/",
@@ -369,6 +372,10 @@ function isSameSiteUrl(rawUrl: string, siteHost: string) {
   }
 }
 
+function looksLikeFeedReference(value: string) {
+  return /(rss|atom|feed|xml|jsonfeed|rss-feed|rss_lent|rss-lent|xəbər lenti|xeber lenti|news feed)/i.test(value);
+}
+
 function extractFeedUrlsFromHtml(html: string, baseUrl: string, siteHost: string) {
   const feedUrls: string[] = [];
 
@@ -379,8 +386,8 @@ function extractFeedUrlsFromHtml(html: string, baseUrl: string, siteHost: string
     const title = getAttr(attrs, "title").toLowerCase();
     const href = getAttr(attrs, "href");
     const looksLikeFeed =
-      rel.includes("alternate") &&
-      (/(rss|atom|xml)/i.test(type) || /(rss|atom|feed)/i.test(title) || /(rss|atom|feed)/i.test(href));
+      (rel.includes("alternate") || rel.includes("service") || rel.includes("feed")) &&
+      (/(rss|atom|xml|json)/i.test(type) || looksLikeFeedReference(title) || looksLikeFeedReference(href));
     if (!href || !looksLikeFeed) continue;
     const url = absolutize(href, baseUrl);
     if (url && isSameSiteUrl(url, siteHost)) feedUrls.push(url);
@@ -388,13 +395,42 @@ function extractFeedUrlsFromHtml(html: string, baseUrl: string, siteHost: string
 
   for (const match of html.matchAll(/<a\b([^>]+)href=["']([^"'#]+)["']([^>]*)>([\s\S]*?)<\/a>/gi)) {
     const href = match[2];
-    const label = normalizeTitle(match[4]).toLowerCase();
-    if (!/(rss|atom|feed|xml)/i.test(href) && !/(rss|atom|feed)/i.test(label)) continue;
+    const attrs = `${match[1]} ${match[3]}`;
+    const label = normalizeTitle(`${getAttr(attrs, "title")} ${getAttr(attrs, "aria-label")} ${match[4]}`).toLowerCase();
+    if (!looksLikeFeedReference(href) && !looksLikeFeedReference(label)) continue;
     const url = absolutize(href, baseUrl);
     if (url && isSameSiteUrl(url, siteHost)) feedUrls.push(url);
   }
 
-  return unique(feedUrls).slice(0, 10);
+  return unique(feedUrls).slice(0, MAX_DISCOVERED_FEEDS);
+}
+
+function extractSitemapUrlsFromRobots(robots: string, baseUrl: string, siteHost: string) {
+  const urls: string[] = [];
+  for (const match of robots.matchAll(/^\s*sitemap\s*:\s*(\S+)\s*$/gim)) {
+    const url = absolutize(match[1], baseUrl);
+    if (url && isSameSiteUrl(url, siteHost)) urls.push(url);
+  }
+  return unique(urls).slice(0, MAX_DISCOVERED_SITEMAPS);
+}
+
+function looksLikeNewsListingReference(value: string) {
+  return /(news|xeber|xəbər|xeberler|xəbərlər|son-xeber|son xəbər|latest|lastnews|all-news|butun-xeber|bütün xəbər|media|gundem|gündəm)/i.test(value);
+}
+
+function extractNewsListingUrlsFromHtml(html: string, baseUrl: string, siteHost: string) {
+  const urls: string[] = [];
+  for (const match of html.matchAll(/<a\b([^>]+)href=["']([^"'#]+)["']([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const href = match[2];
+    const attrs = `${match[1]} ${match[3]}`;
+    const label = normalizeTitle(`${getAttr(attrs, "title")} ${getAttr(attrs, "aria-label")} ${match[4]}`).toLowerCase();
+    const url = absolutize(href, baseUrl);
+    if (!url || !isSameSiteUrl(url, siteHost)) continue;
+    if (isLikelyArticleLink(url, siteHost)) continue;
+    if (!looksLikeNewsListingReference(`${href} ${label}`)) continue;
+    urls.push(url);
+  }
+  return unique(urls).slice(0, 8);
 }
 
 function extractHtmlArticleCandidates(html: string, baseUrl: string, siteHost: string) {
@@ -636,7 +672,7 @@ async function testRss(source: SourceInput, baseUrl: string, siteHost: string): 
     ...preferredFeeds,
     ...discoveredFeeds,
     ...COMMON_RSS_PATHS.map((path) => new URL(path, base).toString()),
-  ].filter(Boolean) as string[]);
+  ].filter(Boolean) as string[]).slice(0, MAX_DISCOVERED_FEEDS);
 
   for (const rssUrl of candidates) {
     try {
@@ -703,12 +739,26 @@ async function collectSitemapArticleLinks(sitemapUrl: string, siteHost: string, 
   }
 }
 
-async function testSitemap(source: SourceInput, baseUrl: string, siteHost: string): Promise<RepairResult | null> {
+async function discoverSitemapCandidates(baseUrl: string, siteHost: string) {
   const base = new URL(baseUrl);
-  const sitemapCandidates = unique([
+  const candidates: string[] = [
     /sitemap|\.xml(?:$|[?#])/i.test(baseUrl) ? baseUrl : "",
     ...COMMON_SITEMAP_PATHS.map((path) => new URL(path, base).toString()),
-  ].filter(Boolean));
+  ];
+
+  try {
+    const robotsUrl = new URL("/robots.txt", base).toString();
+    const robots = await fetchText(robotsUrl, 7000);
+    if (robots.ok) candidates.unshift(...extractSitemapUrlsFromRobots(robots.text, robots.url || robotsUrl, siteHost));
+  } catch (_) {
+    // robots.txt is optional.
+  }
+
+  return unique(candidates.filter(Boolean)).slice(0, MAX_DISCOVERED_SITEMAPS);
+}
+
+async function testSitemap(source: SourceInput, baseUrl: string, siteHost: string): Promise<RepairResult | null> {
+  const sitemapCandidates = await discoverSitemapCandidates(baseUrl, siteHost);
 
   for (const sitemapUrl of sitemapCandidates) {
     const links = await collectSitemapArticleLinks(sitemapUrl, siteHost);
@@ -780,14 +830,31 @@ async function testHtmlPage(source: SourceInput, pageUrl: string, siteHost: stri
   return null;
 }
 
-async function testHtml(source: SourceInput, siteRootUrl: string, siteHost: string): Promise<RepairResult | null> {
+async function discoverHtmlPageCandidates(source: SourceInput, siteRootUrl: string, siteHost: string) {
   const root = new URL(siteRootUrl);
-  const pages = unique([
-    normalizeUrl(source.latest_url),
-    normalizeUrl(source.base_url),
+  const pages: string[] = [
+    normalizeUrl(source.latest_url) || "",
+    normalizeUrl(source.base_url) || "",
     siteRootUrl,
-    ...COMMON_LATEST_PATHS.map((path) => new URL(path, root).toString()),
-  ].filter(Boolean) as string[]);
+  ];
+
+  try {
+    const home = await fetchText(siteRootUrl, 9000);
+    const isHtml = /html/i.test(home.contentType) || /<html|<a\b/i.test(home.text);
+    if (home.ok && isHtml) {
+      pages.push(...extractNewsListingUrlsFromHtml(home.text, home.url || siteRootUrl, siteHost));
+    }
+  } catch (_) {
+    // Homepage discovery is best effort.
+  }
+
+  pages.push(...COMMON_LATEST_PATHS.map((path) => new URL(path, root).toString()));
+
+  return unique(pages.filter(Boolean)).slice(0, MAX_HTML_PAGES_TO_TEST);
+}
+
+async function testHtml(source: SourceInput, siteRootUrl: string, siteHost: string): Promise<RepairResult | null> {
+  const pages = await discoverHtmlPageCandidates(source, siteRootUrl, siteHost);
 
   for (const pageUrl of pages) {
     const result = await testHtmlPage(source, pageUrl, siteHost);
