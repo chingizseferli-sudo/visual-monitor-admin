@@ -673,6 +673,8 @@ function emptyQualityMetrics(): SourceQualityMetrics {
 
 type SourceHealthState = 'healthy' | 'checking' | 'problem'
 
+type SourceView = 'all' | 'healthy' | 'problem' | 'checking' | 'failed'
+
 function hasRealBotActivity(metrics: SourceQualityMetrics | undefined) {
   return Boolean(
     metrics?.loaded &&
@@ -787,6 +789,13 @@ function isProblemSource(
   metrics?: SourceQualityMetrics
 ) {
   return getSourceHealthState(source, metrics) === 'problem'
+}
+
+function isUnhealthySource(
+  source: Source,
+  metrics?: SourceQualityMetrics
+) {
+  return !isHealthySource(source, metrics)
 }
 
 function getSourceQualityLabel(
@@ -942,7 +951,7 @@ function SourcesPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [methodFilter, setMethodFilter] = useState('all')
-  const [sourceView, setSourceView] = useState<'all' | 'healthy' | 'problem'>('all')
+  const [sourceView, setSourceView] = useState<SourceView>('all')
   const [bulkMethod, setBulkMethod] = useState('google_news_fallback')
   const [editing, setEditing] = useState<Source | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -1629,7 +1638,7 @@ function SourcesPage() {
     const selectedSourceSet = new Set(selectedIds)
     const selectedSources = sources.filter((source) => selectedSourceSet.has(source.id))
     const sourcesToRepair = selectedSources.filter((source) =>
-      isProblemSource(source, sourceQuality[source.id])
+      isUnhealthySource(source, sourceQuality[source.id])
     )
 
     if (selectedSources.length === 0) {
@@ -1792,7 +1801,9 @@ function SourcesPage() {
       const matchesSourceView =
         sourceView === 'all' ||
         (sourceView === 'healthy' && isHealthySource(source, qualityMetrics)) ||
-        (sourceView === 'problem' && isProblemSource(source, qualityMetrics))
+        (sourceView === 'problem' && isUnhealthySource(source, qualityMetrics)) ||
+        (sourceView === 'checking' && getSourceHealthState(source, qualityMetrics) === 'checking') ||
+        (sourceView === 'failed' && getSourceHealthState(source, qualityMetrics) === 'problem')
 
       return (
         matchesSourceView &&
@@ -1836,12 +1847,26 @@ function SourcesPage() {
   }
 
   const stats = useMemo(() => {
+    let healthy = 0
+    let checking = 0
+    let failed = 0
+
+    for (const source of sources) {
+      const metrics = sourceQuality[source.id]
+      const state = getSourceHealthState(source, metrics)
+
+      if (state === 'healthy') healthy += 1
+      else if (state === 'checking') checking += 1
+      else failed += 1
+    }
+
     return {
       total: sources.length,
       active: sources.filter((item) => item.status === 'active').length,
-      healthy: sources.filter((item) => isHealthySource(item, sourceQuality[item.id]))
-        .length,
-      problems: sources.filter((item) => isProblemSource(item, sourceQuality[item.id])).length,
+      healthy,
+      checking,
+      failed,
+      problems: sources.length - healthy,
     }
   }, [sources, sourceQuality])
 
@@ -1884,7 +1909,7 @@ function SourcesPage() {
     view = 'all',
     method = 'all',
   }: {
-    view?: 'all' | 'healthy' | 'problem'
+    view?: SourceView
     method?: string
   }) {
     setSourceView(view)
@@ -1960,7 +1985,7 @@ function SourcesPage() {
             }`}
           >
             <div className='font-medium'>
-              {addSourceResult.sourceName} · {addSourceResult.ok ? 'Sağlam mənbə' : 'Yoxlama tələb edir'}
+              {addSourceResult.sourceName} · {addSourceResult.ok ? 'Yoxlanılır' : 'Yoxlama tələb edir'}
             </div>
             <div className='mt-1'>
               Metod: {addSourceResult.method} · Link sayı: {addSourceResult.candidateCount}
@@ -2001,6 +2026,39 @@ function SourcesPage() {
             {tab.label} <span className='ml-2 font-bold'>{tab.count}</span>
           </button>
         ))}
+
+        {(sourceView === 'problem' || sourceView === 'checking' || sourceView === 'failed') ? (
+          <div className='flex flex-wrap items-center gap-2 border-l pl-3'>
+            <span className='text-xs text-muted-foreground'>İşləməyən bölməsi:</span>
+            <button
+              type='button'
+              onClick={() => applySourcePreset({ view: 'problem' })}
+              className={sourceView === 'problem'
+                ? 'rounded-lg border border-amber-200 bg-amber-100 px-3 py-2 text-xs font-medium text-amber-800'
+                : 'rounded-lg border bg-background px-3 py-2 text-xs font-medium hover:bg-muted'}
+            >
+              Hamısı <span className='ml-1 font-bold'>{stats.problems}</span>
+            </button>
+            <button
+              type='button'
+              onClick={() => applySourcePreset({ view: 'checking' })}
+              className={sourceView === 'checking'
+                ? 'rounded-lg border border-sky-200 bg-sky-100 px-3 py-2 text-xs font-medium text-sky-800'
+                : 'rounded-lg border bg-background px-3 py-2 text-xs font-medium hover:bg-muted'}
+            >
+              Yoxlanılır <span className='ml-1 font-bold'>{stats.checking}</span>
+            </button>
+            <button
+              type='button'
+              onClick={() => applySourcePreset({ view: 'failed' })}
+              className={sourceView === 'failed'
+                ? 'rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-xs font-medium text-red-800'
+                : 'rounded-lg border bg-background px-3 py-2 text-xs font-medium hover:bg-muted'}
+            >
+              Real problem <span className='ml-1 font-bold'>{stats.failed}</span>
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className='grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[minmax(260px,1fr)_240px]'>
