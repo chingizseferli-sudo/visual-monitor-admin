@@ -74,7 +74,7 @@ type RepairRunItem = {
 
 type RepairRunSummary = {
   attempted: number
-  fixed: number
+  readable: number
   failed: number
   methodCounts: Record<string, number>
   reasonCounts: Record<string, number>
@@ -1333,7 +1333,7 @@ function SourcesPage() {
       discovery_status: repair.ok ? 'accepted' : 'needs_review',
       discovery_score: repair.ok ? Math.min(100, 60 + repair.candidateCount * 4) : 0,
       last_checked_at: now,
-      last_success_at: repair.ok ? now : null,
+      last_success_at: null,
       last_article_found_at: null,
       last_error: repair.ok ? null : repair.reason,
       last_result: repair.ok ? 'source_added' : 'source_review_required',
@@ -1703,7 +1703,7 @@ function SourcesPage() {
     await loadSources()
     setRepairRun({
       attempted: sourcesToRepair.length,
-      fixed: readable,
+      readable,
       failed,
       methodCounts,
       reasonCounts,
@@ -2212,11 +2212,11 @@ function SourcesPage() {
             <div className='rounded-lg border border-emerald-200 bg-emerald-50 p-3'>
               <div className='text-xs text-emerald-700'>Oxuna bilir</div>
               <div className='text-2xl font-bold text-emerald-700'>
-                {repairRun.fixed}
+                {repairRun.readable}
               </div>
             </div>
             <div className='rounded-lg border border-red-200 bg-red-50 p-3'>
-              <div className='text-xs text-red-700'>Düzəlmədi</div>
+              <div className='text-xs text-red-700'>Oxunmadı</div>
               <div className='text-2xl font-bold text-red-700'>
                 {repairRun.failed}
               </div>

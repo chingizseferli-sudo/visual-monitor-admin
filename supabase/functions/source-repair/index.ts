@@ -590,7 +590,7 @@ function buildSuccessUpdate(source: SourceInput, method: string, options: { late
     last_error: null,
     last_result: "repair_readable",
     last_checked_at: now,
-    last_success_at: now,
+    last_success_at: null,
     notes: options.notes,
   };
 }
