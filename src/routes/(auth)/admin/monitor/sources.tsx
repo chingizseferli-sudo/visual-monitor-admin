@@ -90,6 +90,11 @@ type AddSourceResult = {
   sourceName: string
 }
 
+type AddSourceOutcome = AddSourceResult & {
+  inserted: boolean
+  skipped?: boolean
+}
+
 function formatRepairReason(reason: string | null | undefined) {
   const text = String(reason || '').trim()
   if (!text) return 'Səbəb göstərilməyib.'
@@ -1272,32 +1277,58 @@ function SourcesPage() {
 
 
 
-  async function addSourceByDomain() {
-    const normalizedUrl = normalizeSourceUrl(newSourceInput)
-    const host = getHostname(normalizedUrl)
+  function getExistingSourceHosts() {
+    return new Set(
+      sources
+        .map((source) => getHostname(source.base_url) || getHostname(source.latest_url))
+        .filter(Boolean)
+    )
+  }
 
-    if (!normalizedUrl || !host) {
-      setMessage('Düzgün domen və ya URL daxil edin. Məsələn: example.az')
-      return
+  function parseBulkSourceLines(value: string) {
+    const seen = new Set<string>()
+    const parsed: Array<{ input: string; normalizedUrl: string; host: string }> = []
+    let invalid = 0
+
+    for (const raw of value.split(/[\n,;]+/)) {
+      const input = raw.trim()
+      if (!input) continue
+
+      const normalizedUrl = normalizeSourceUrl(input)
+      const host = getHostname(normalizedUrl)
+      if (!normalizedUrl || !host) {
+        invalid += 1
+        continue
+      }
+      if (seen.has(host)) continue
+
+      seen.add(host)
+      parsed.push({ input, normalizedUrl, host })
     }
 
-    const duplicate = sources.find((source) => {
-      const sourceHost = getHostname(source.base_url) || getHostname(source.latest_url)
-      return sourceHost === host
-    })
+    return { parsed, invalid }
+  }
 
-    if (duplicate) {
-      setMessage(`${host} artıq mənbələr siyahısında var.`)
-      setSearch(host)
-      return
+  async function addOneSource(
+    normalizedUrl: string,
+    host: string,
+    existingHosts: Set<string>
+  ): Promise<AddSourceOutcome> {
+    if (existingHosts.has(host)) {
+      return {
+        inserted: false,
+        skipped: true,
+        ok: false,
+        method: 'duplicate',
+        reason: 'Mənbə artıq siyahıdadır.',
+        candidateCount: 0,
+        sampleLinks: [],
+        sourceName: host,
+      }
     }
-
-    setAddingSource(true)
-    setAddSourceResult(null)
-    setMessage(`${host} yoxlanılır. Sistem RSS, sitemap və səhifə linklərini analiz edir...`)
 
     const sourceDraft: Source = {
-      id: `new-${Date.now()}`,
+      id: `new-${Date.now()}-${host}`,
       name: host,
       base_url: normalizedUrl,
       latest_url: normalizedUrl,
@@ -1326,11 +1357,15 @@ function SourcesPage() {
       })
 
     if (repairError || !repair) {
-      setAddingSource(false)
-      setMessage(
-        `Mənbə analiz olunmadı: ${repairError?.message || 'source-repair cavab vermədi'}`
-      )
-      return
+      return {
+        inserted: false,
+        ok: false,
+        method: 'analysis_failed',
+        reason: repairError?.message || 'source-repair cavab vermədi',
+        candidateCount: 0,
+        sampleLinks: [],
+        sourceName: host,
+      }
     }
 
     const now = new Date().toISOString()
@@ -1364,29 +1399,106 @@ function SourcesPage() {
     const { error: insertError } = await supabase.from('sources').insert(insertPayload)
 
     if (insertError) {
-      setAddingSource(false)
-      setMessage(`Mənbə əlavə olunmadı: ${insertError.message}`)
-      return
+      return {
+        inserted: false,
+        ok: false,
+        method: repair.method,
+        reason: insertError.message,
+        candidateCount: repair.candidateCount,
+        sampleLinks: repair.sampleLinks || [],
+        sourceName: host,
+      }
     }
 
-    setNewSourceInput('')
-    setAddSourceResult({
+    existingHosts.add(host)
+
+    return {
+      inserted: true,
       ok: repair.ok,
       method: repair.method,
       reason: formatRepairReason(repair.reason),
       candidateCount: repair.candidateCount,
       sampleLinks: repair.sampleLinks || [],
       sourceName: host,
-    })
+    }
+  }
+
+  async function addSourceByDomain() {
+    const normalizedUrl = normalizeSourceUrl(newSourceInput)
+    const host = getHostname(normalizedUrl)
+
+    if (!normalizedUrl || !host) {
+      setMessage('Düzgün domen və ya URL daxil edin. Məsələn: example.az')
+      return
+    }
+
+    setAddingSource(true)
+    setAddSourceResult(null)
+    setMessage(`${host} yoxlanılır. Sistem RSS, sitemap və səhifə linklərini analiz edir...`)
+
+    const result = await addOneSource(normalizedUrl, host, getExistingSourceHosts())
+
+    setAddingSource(false)
+
+    if (result.skipped) {
+      setMessage(`${host} artıq mənbələr siyahısında var.`)
+      setSearch(host)
+      return
+    }
+
+    if (!result.inserted) {
+      setMessage(`${host} əlavə olunmadı: ${formatRepairReason(result.reason)}`)
+      return
+    }
+
+    setNewSourceInput('')
+    setAddSourceResult(result)
     setMessage(
-      repair.ok
-        ? `${host} əlavə olundu və ${repair.method} metodu ilə sağlam mənbələrə salındı.`
+      result.ok
+        ? `${host} əlavə olundu və ${result.method} metodu ilə yoxlanılır.`
         : `${host} əlavə olundu, amma avtomatik izləmə metodu tapılmadı. Mənbə yoxlama tələb edir.`
+    )
+    await loadSources()
+  }
+
+  async function addBulkSources() {
+    const { parsed, invalid } = parseBulkSourceLines(bulkSourceInput)
+
+    if (parsed.length === 0) {
+      setMessage('Toplu əlavə üçün ən azı bir düzgün domen və ya URL daxil edin.')
+      return
+    }
+
+    setAddingSource(true)
+    setAddSourceResult(null)
+    setMessage(`${parsed.length} mənbə yoxlanılır. Bu proses bir qədər vaxt ala bilər...`)
+
+    const existingHosts = getExistingSourceHosts()
+    const results: AddSourceOutcome[] = []
+
+    for (const item of parsed) {
+      const result = await addOneSource(item.normalizedUrl, item.host, existingHosts)
+      results.push(result)
+    }
+
+    const inserted = results.filter((item) => item.inserted).length
+    const readable = results.filter((item) => item.inserted && item.ok).length
+    const review = results.filter((item) => item.inserted && !item.ok).length
+    const skipped = results.filter((item) => item.skipped).length
+    const failed = results.filter((item) => !item.inserted && !item.skipped).length
+    const lastInserted = [...results].reverse().find((item) => item.inserted)
+
+    if (lastInserted) setAddSourceResult(lastInserted)
+
+    setBulkSourceInput('')
+    setMessage(
+      `Toplu əlavə tamamlandı: ${inserted} əlavə olundu, ${readable} oxuna bilir, ${review} yoxlama tələb edir, ${skipped} təkrar atlandı, ${failed} əlavə olunmadı${
+        invalid ? `, ${invalid} yanlış sətir atlandı` : ''
+      }.`
     )
     setAddingSource(false)
     await loadSources()
   }
-
   async function deleteSource(source: Source) {
     const ok = window.confirm(
       `"${getSourceTitle(source)}" mənbəsini silmək istəyirsən? Bu əməliyyat geri qaytarılmır.`
@@ -2096,34 +2208,82 @@ function SourcesPage() {
               Domen və ya URL daxil edin. Sistem RSS, sitemap və səhifə linklərini yoxlayıb ən uyğun izləmə metodunu seçəcək.
             </p>
           </div>
-          <span className='rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700'>
-            Avtomatik analiz
-          </span>
+          <div className='flex flex-wrap gap-2'>
+            <button
+              type='button'
+              onClick={() => setBulkAddMode(false)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                !bulkAddMode
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'bg-background text-muted-foreground'
+              }`}
+            >
+              Tək əlavə
+            </button>
+            <button
+              type='button'
+              onClick={() => setBulkAddMode(true)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                bulkAddMode
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'bg-background text-muted-foreground'
+              }`}
+            >
+              Toplu əlavə
+            </button>
+            <span className='rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700'>
+              Avtomatik analiz
+            </span>
+          </div>
         </div>
 
-        <div className='grid gap-2 md:grid-cols-[minmax(220px,1fr)_auto]'>
-          <input
-            value={newSourceInput}
-            onChange={(event) => setNewSourceInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !addingSource) {
-                event.preventDefault()
-                void addSourceByDomain()
-              }
-            }}
-            placeholder='Məsələn: apa.az və ya https://apa.az'
-            className='min-w-0 rounded-lg border bg-background px-3 py-2'
-          />
-          <button
-            type='button'
-            onClick={() => void addSourceByDomain()}
-            disabled={addingSource}
-            className='rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60'
-          >
-            {addingSource ? 'Yoxlanılır...' : 'Mənbəni yoxla və əlavə et'}
-          </button>
-        </div>
-
+        {bulkAddMode ? (
+          <div className='grid gap-2'>
+            <textarea
+              value={bulkSourceInput}
+              onChange={(event) => setBulkSourceInput(event.target.value)}
+              placeholder={'Hər sətirdə bir mənbə:\napa.az\nreport.az\nhttps://azertag.az'}
+              rows={5}
+              className='min-h-28 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm'
+            />
+            <div className='flex flex-wrap items-center justify-between gap-2'>
+              <p className='text-xs text-muted-foreground'>
+                Təkrar domenlər atlanır. Hər mənbə eyni avtomatik analizdən keçir.
+              </p>
+              <button
+                type='button'
+                onClick={() => void addBulkSources()}
+                disabled={addingSource}
+                className='rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60'
+              >
+                {addingSource ? 'Yoxlanılır...' : 'Toplu yoxla və əlavə et'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className='grid gap-2 md:grid-cols-[minmax(220px,1fr)_auto]'>
+            <input
+              value={newSourceInput}
+              onChange={(event) => setNewSourceInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !addingSource) {
+                  event.preventDefault()
+                  void addSourceByDomain()
+                }
+              }}
+              placeholder='Məsələn: apa.az və ya https://apa.az'
+              className='min-w-0 rounded-lg border bg-background px-3 py-2'
+            />
+            <button
+              type='button'
+              onClick={() => void addSourceByDomain()}
+              disabled={addingSource}
+              className='rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60'
+            >
+              {addingSource ? 'Yoxlanılır...' : 'Mənbəni yoxla və əlavə et'}
+            </button>
+          </div>
+        )}
         {addSourceResult ? (
           <div
             className={`rounded-lg border p-3 text-sm ${
