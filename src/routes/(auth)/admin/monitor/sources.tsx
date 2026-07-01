@@ -562,6 +562,9 @@ function matchItemToSourceId(
   sourceKeyIndex: Map<string, string>,
   knownSourceIds: Set<string>
 ) {
+  const sourceId = String(row.source_id || '')
+  if (sourceId && knownSourceIds.has(sourceId)) return sourceId
+
   const linkHost = getHostname(String(row.url || ''))
   if (linkHost) {
     const exact = sourceKeyIndex.get(`host:${linkHost}`)
@@ -575,8 +578,7 @@ function matchItemToSourceId(
     if (parent) return parent[1]
   }
 
-  const sourceId = String(row.source_id || '')
-  return sourceId && knownSourceIds.has(sourceId) ? sourceId : null
+  return null
 }
 
 function findSourceIdByHost(
