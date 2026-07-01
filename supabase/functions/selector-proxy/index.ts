@@ -8,7 +8,14 @@ const corsHeaders = {
 };
 
 const MAX_RESPONSE_BYTES = 1_500_000;
-const SELECTOR_PROXY_VERSION = "1.1-static-preview-stability";
+const SELECTOR_PROXY_VERSION = "1.2-canonical-domain-fallback";
+
+type ProxyFetchResult = {
+  contentType: string;
+  finalUrl: string;
+  status: number;
+  text: string;
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -126,6 +133,63 @@ async function readLimitedText(response: Response, limitBytes: number) {
   return new TextDecoder("utf-8").decode(merged);
 }
 
+function isHtmlResponse(result: ProxyFetchResult) {
+  return result.contentType.includes("text/html") || result.text.includes("<html");
+}
+
+function isCloudflareEdgeError(result: ProxyFetchResult) {
+  const text = result.text.toLowerCase();
+  return (
+    text.includes("error 1034") ||
+    text.includes("edge ip restricted") ||
+    text.includes("cloudflare ray id") && text.includes("what happened?")
+  );
+}
+
+function makeCanonicalFallbackUrl(url: URL) {
+  const next = new URL(url.toString());
+  const host = next.hostname.toLowerCase();
+
+  if (host.startsWith("www.")) {
+    next.hostname = host.slice(4);
+    return next.toString();
+  }
+
+  if (host.split(".").length >= 2) {
+    next.hostname = `www.${host}`;
+    return next.toString();
+  }
+
+  return "";
+}
+
+async function fetchSelectorPage(url: URL): Promise<ProxyFetchResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const upstream = await safeFetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "az-AZ,az;q=0.9,en-US;q=0.8",
+        Referer: "https://www.google.com/",
+      },
+    });
+
+    return {
+      contentType: upstream.headers.get("content-type") || "",
+      finalUrl: upstream.url || url.toString(),
+      status: upstream.status,
+      text: await readLimitedText(upstream, MAX_RESPONSE_BYTES),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -140,44 +204,48 @@ Deno.serve(async (req) => {
     if (!rawUrl) return json({ error: "url required" }, 400);
 
     const url = await assertSafeUrl(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`);
+    let result = await fetchSelectorPage(url);
+    let canonicalFallback = false;
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
-    let upstream: Response;
+    if (isCloudflareEdgeError(result)) {
+      const fallbackUrl = makeCanonicalFallbackUrl(url);
 
-    try {
-      upstream = await safeFetch(url, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "az-AZ,az;q=0.9,en-US;q=0.8",
-          Referer: "https://www.google.com/",
-        },
-      });
-    } finally {
-      clearTimeout(timer);
+      if (fallbackUrl) {
+        const safeFallbackUrl = await assertSafeUrl(fallbackUrl);
+        const fallbackResult = await fetchSelectorPage(safeFallbackUrl);
+
+        if (!isCloudflareEdgeError(fallbackResult) && isHtmlResponse(fallbackResult)) {
+          result = fallbackResult;
+          canonicalFallback = true;
+        }
+      }
     }
 
-    const contentType = upstream.headers.get("content-type") || "";
-    const text = await readLimitedText(upstream, MAX_RESPONSE_BYTES);
-    const finalUrl = upstream.url || url.toString();
+    if (isCloudflareEdgeError(result)) {
+      return json({
+        error: "Sayt Cloudflare/DNS səbəbilə bu domenlə açılmadı. www/non-www variantı da işlək HTML qaytarmadı.",
+        status: result.status,
+        contentType: result.contentType,
+        finalUrl: result.finalUrl,
+        version: SELECTOR_PROXY_VERSION,
+      }, 502);
+    }
 
-    if (!contentType.includes("text/html") && !text.includes("<html")) {
+    if (!isHtmlResponse(result)) {
       return json({
         error: "HTML response not found. Visual selector needs a normal page, not RSS/sitemap/XML.",
-        status: upstream.status,
-        contentType,
-        finalUrl,
+        status: result.status,
+        contentType: result.contentType,
+        finalUrl: result.finalUrl,
         version: SELECTOR_PROXY_VERSION,
       });
     }
 
     return json({
-      html: sanitizeHtml(text, finalUrl),
-      finalUrl,
-      status: upstream.status,
+      html: sanitizeHtml(result.text, result.finalUrl),
+      finalUrl: result.finalUrl,
+      status: result.status,
+      canonicalFallback,
       version: SELECTOR_PROXY_VERSION,
     });
   } catch (error) {
