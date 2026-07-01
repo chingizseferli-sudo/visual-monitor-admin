@@ -500,12 +500,13 @@ function isLikelyArticleLink(link: string, siteHost: string) {
   );
 }
 
-function buildSuccessUpdate(source: SourceInput, method: string, options: { rssUrl?: string | null; selector?: string | null; articlePattern?: string | null; notes: string }) {
+function buildSuccessUpdate(source: SourceInput, method: string, options: { latestUrl?: string | null; rssUrl?: string | null; selector?: string | null; articlePattern?: string | null; notes: string }) {
   const now = new Date().toISOString();
   return {
     name: hostname(source.base_url || source.latest_url) || source.name || "source",
     status: "active",
     monitor_method: method,
+    latest_url: options.latestUrl ?? source.latest_url ?? source.base_url ?? null,
     rss_url: options.rssUrl ?? source.rss_url ?? null,
     selector: options.selector ?? source.selector ?? null,
     article_pattern: options.articlePattern ?? source.article_pattern ?? null,
@@ -566,10 +567,11 @@ async function testRss(source: SourceInput, baseUrl: string, siteHost: string): 
           method: "rss",
           reason: `RSS verified: ${candidates.length} readable article pages`,
           candidateCount: candidates.length,
-          finalUrl: baseUrl,
+          finalUrl: res.url || rssUrl,
           rssUrl: res.url || rssUrl,
           sampleLinks: links.slice(0, 5),
           update: buildSuccessUpdate(source, "rss", {
+            latestUrl: baseUrl,
             rssUrl: res.url || rssUrl,
             notes: `Auto repair readable: RSS verified ${candidates.length} readable article pages; feed=${res.url || rssUrl}`,
           }),
@@ -622,9 +624,10 @@ async function testSitemap(source: SourceInput, baseUrl: string, siteHost: strin
         method: "sitemap",
         reason: `Sitemap verified: ${candidates.length} readable article pages`,
         candidateCount: candidates.length,
-        finalUrl: baseUrl,
+        finalUrl: sitemapUrl,
         sampleLinks: candidates.map((candidate) => candidate.url).slice(0, 5),
         update: buildSuccessUpdate(source, "sitemap", {
+          latestUrl: sitemapUrl,
           notes: `Auto repair readable: sitemap verified ${candidates.length} readable article pages; sitemap=${sitemapUrl}`,
         }),
       };
@@ -655,6 +658,7 @@ async function testHtmlPage(source: SourceInput, pageUrl: string, siteHost: stri
         finalUrl: res.url,
         sampleLinks: links.slice(0, 5),
         update: buildSuccessUpdate(source, method, {
+          latestUrl: res.url,
           selector: method === "selector" ? "article, .news-item, .post, .entry, .item" : source.selector ?? null,
           articlePattern:
             method === "selector"
