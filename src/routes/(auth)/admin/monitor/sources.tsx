@@ -130,6 +130,10 @@ const MONITOR_METHODS = [
   'recoverable',
 ]
 
+const EDITABLE_MONITOR_METHODS = MONITOR_METHODS.filter(
+  (method) => method !== 'rss_discovered'
+)
+
 const METHOD_FILTER_OPTIONS = [
   { value: 'rss', label: 'RSS' },
   { value: 'latest_page', label: 'Son xəbərlər səhifəsi' },
@@ -2138,7 +2142,7 @@ function SourcesPage() {
                 onChange={(e) => setBulkMethod(e.target.value)}
                 className='min-w-0 rounded-md border bg-background px-3 py-2 text-sm'
               >
-                {MONITOR_METHODS.map((method) => (
+                {EDITABLE_MONITOR_METHODS.map((method) => (
                   <option key={method} value={method}>
                     {formatMonitorMethod(method)}
                   </option>
@@ -3038,7 +3042,7 @@ function SourcesPage() {
                       }
                       className='rounded-lg border bg-background px-3 py-2'
                     >
-                      {MONITOR_METHODS.map((method) => (
+                      {EDITABLE_MONITOR_METHODS.map((method) => (
                         <option key={method} value={method}>
                           {formatMonitorMethod(method)}
                         </option>
