@@ -671,21 +671,24 @@ function emptyQualityMetrics(): SourceQualityMetrics {
   }
 }
 
-function isHealthySourceQuality(metrics: SourceQualityMetrics | undefined) {
+type SourceHealthState = 'healthy' | 'checking' | 'problem'
+
+function hasRealBotActivity(metrics: SourceQualityMetrics | undefined) {
   return Boolean(
     metrics?.loaded &&
       (metrics.sentNews7d > 0 || metrics.alerts7d > 0 || metrics.matches7d > 0)
   )
 }
 
-function hasSentNews(source: Source) {
+function hasTelegramSuccessNote(source: Source) {
   const notes = (source.notes || '').toLowerCase()
+  return notes.includes('[telegram_success]') || notes.includes('[sent_news_sync]')
+}
 
+function hasSentNews(source: Source) {
   return Boolean(
     source.status === 'active' &&
-      (source.last_result === 'sent' ||
-        notes.includes('[telegram_success]') ||
-        notes.includes('[sent_news_sync]'))
+      (source.last_result === 'sent' || hasTelegramSuccessNote(source))
   )
 }
 
@@ -693,10 +696,8 @@ function isHealthySource(
   source: Source,
   metrics: SourceQualityMetrics | undefined
 ) {
-  return source.status === 'active' && (hasSentNews(source) || isHealthySourceQuality(metrics))
+  return source.status === 'active' && (hasSentNews(source) || hasRealBotActivity(metrics))
 }
-
-
 
 const REPAIRABLE_SOURCE_RESULTS = new Set([
   'fallback_empty',
@@ -736,98 +737,105 @@ function hasCurrentReadFailure(source: Source) {
 
 const READABLE_NON_PROBLEM_RESULTS = new Set([
   'repair_readable',
+  'source_added',
   'old_news',
   'no_monitor_match',
   'duplicate',
+  'duplicate_url',
   'sent',
 ])
 
 function isReadableNonProblemSource(source: Source) {
   return Boolean(
     source.status === 'active' &&
-      !source.last_error &&
-      READABLE_NON_PROBLEM_RESULTS.has(source.last_result || '')
+      READABLE_NON_PROBLEM_RESULTS.has(source.last_result || '') &&
+      !HARD_SOURCE_RESULTS.has(source.last_error || '')
   )
+}
+
+function getSourceHealthState(
+  source: Source,
+  metrics?: SourceQualityMetrics
+): SourceHealthState {
+  const method = source.monitor_method || ''
+  const failCount = source.consecutive_fail_count || 0
+
+  if (isHealthySource(source, metrics)) return 'healthy'
+
+  if (
+    source.status !== 'active' ||
+    failCount >= 5 ||
+    hasNonNewsSignal(source) ||
+    HARD_SOURCE_RESULTS.has(source.last_result || '') ||
+    HARD_SOURCE_RESULTS.has(source.last_error || '') ||
+    ['blocked', 'dead', 'failed'].includes(method)
+  ) {
+    return 'problem'
+  }
+
+  if (isReadableNonProblemSource(source)) return 'checking'
+
+  if (hasCurrentReadFailure(source) || source.last_error || failCount > 0) {
+    return 'problem'
+  }
+
+  return 'checking'
 }
 
 function isProblemSource(
   source: Source,
   metrics?: SourceQualityMetrics
 ) {
-  const method = source.monitor_method || ''
-  const failCount = source.consecutive_fail_count || 0
-
-  if (isHealthySource(source, metrics)) return false
-  if (isReadableNonProblemSource(source)) return false
-
-  return Boolean(
-    source.status !== 'active' ||
-      hasCurrentReadFailure(source) ||
-      failCount >= 5 ||
-      source.last_result === 'site_error' ||
-      ['blocked', 'dead', 'failed'].includes(method)
-  )
+  return getSourceHealthState(source, metrics) === 'problem'
 }
-
-
 
 function getSourceQualityLabel(
   source: Source,
   metrics: SourceQualityMetrics | undefined,
-  health: ReturnType<typeof getSourceHealth>
+  _health: ReturnType<typeof getSourceHealth>
 ) {
   const failCount = source.consecutive_fail_count || 0
-  const method = source.monitor_method || ''
   const data = metrics || emptyQualityMetrics()
 
   if (!data.loaded) {
     return {
-      label: 'Yoxlanır',
+      label: 'Yoxlan\u0131r',
       tone: 'slate',
-      reason: '30 günlük nəticə məlumatı yüklənir',
+      reason: 'M\u0259nb\u0259 \u00fczr\u0259 real n\u0259tic\u0259 m\u0259lumat\u0131 y\u00fckl\u0259nir.',
     }
   }
 
-  if (isHealthySource(source, data)) {
+  const state = getSourceHealthState(source, data)
+
+  if (state === 'healthy') {
     const deliveredCount = Math.max(data.alerts7d, data.sentNews7d)
     return {
-      label: 'Sağlam mənbə',
+      label: 'Sa\u011flam m\u0259nb\u0259',
       tone: 'emerald',
       reason:
         deliveredCount > 0
-          ? `${deliveredCount} Telegram bildirişi · ${data.matches7d} uyğun nəticə`
-          : `${data.matches7d} uyğun nəticə tapılıb`,
+          ? `${deliveredCount} bildiri\u015f - ${data.matches7d} uy\u011fun n\u0259tic\u0259`
+          : `${data.matches7d} uy\u011fun n\u0259tic\u0259 tap\u0131l\u0131b`,
     }
   }
-  if (isReadableNonProblemSource(source)) {
+
+  if (state === 'checking') {
     return {
-      label: 'Oxunur',
+      label: 'Yoxlan\u0131r',
       tone: 'slate',
       reason:
-        source.last_result === 'repair_readable'
-          ? 'Oxuma metodu tapıldı; sağlam status üçün botun real nəticəsi gözlənilir'
-          : 'Mənbə oxunur, amma hələ Telegrama uyğun yeni nəticə göndərilməyib',
+        source.last_result === 'repair_readable' || source.last_result === 'source_added'
+          ? 'Oxuma metodu tap\u0131l\u0131b. Sa\u011flam status bot real n\u0259tic\u0259 ver\u0259nd\u0259 t\u0259sdiql\u0259n\u0259c\u0259k.'
+          : 'M\u0259nb\u0259 texniki oxunur, amma h\u0259l\u0259 real uy\u011fun n\u0259tic\u0259 t\u0259sdiql\u0259nm\u0259yib.',
     }
   }
-
-  if (health === 'error' || isProblemSource(source, data)) {
-    return {
-      label: 'İşləmir',
-      tone: 'red',
-      reason: source.last_error || source.last_result || `fail ${failCount}`,
-    }
-  }
-
 
   return {
-    label: 'Gözləmədə',
-    tone: 'slate',
-    reason:
-      data.items7d > 0
-        ? `${data.items7d} xəbər oxunub, amma Telegrama uyğun nəticə göndərilməyib`
-        : 'Mənbə texniki problem vermir, amma hələ uyğun nəticə göndərilməyib',
-  }}
-
+    label: '\u0130\u015fl\u0259mir',
+    tone: 'red',
+    reason: source.last_error || source.last_result || `fail ${failCount}`,
+  }
+}
 function getQualityToneClass(tone: string) {
   if (tone === 'emerald') {
     return 'border-emerald-200 bg-emerald-100 text-emerald-700'
@@ -2280,14 +2288,20 @@ function SourcesPage() {
               const issues = getSimpleProblemReasons(source, sources)
               const isFailing = (source.consecutive_fail_count || 0) >= 5
               const isNonNews = hasNonNewsSignal(source)
-              const health = getSourceHealth(source, sources)
-              const quality = getSourceQualityLabel(
-                source,
-                sourceQuality[source.id],
-                health
-              )
               const qualityMetrics =
                 sourceQuality[source.id] || emptyQualityMetrics()
+              const healthState = getSourceHealthState(source, qualityMetrics)
+              const health =
+                healthState === 'healthy'
+                  ? 'ok'
+                  : healthState === 'checking'
+                    ? 'warning'
+                    : 'error'
+              const quality = getSourceQualityLabel(
+                source,
+                qualityMetrics,
+                health
+              )
               const botConfirmation = getBotConfirmationLabel(
                 source,
                 qualityMetrics
@@ -2328,17 +2342,6 @@ function SourcesPage() {
                       {source.base_url}
                     </div>
                     <div className='mt-2 flex min-w-0 flex-wrap items-center gap-1 text-[11px]'>
-                      <span
-                        className={`inline-flex rounded-full border px-1.5 py-0.5 ${
-                          health === 'ok'
-                            ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
-                            : health === 'warning'
-                              ? 'border-amber-200 bg-amber-100 text-amber-700'
-                              : 'border-red-200 bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {getSourceHealthLabel(source, sources)}
-                      </span>
                       <span
                         className={`inline-flex rounded-full border px-1.5 py-0.5 font-medium ${getQualityToneClass(
                             quality.tone
