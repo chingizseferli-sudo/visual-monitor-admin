@@ -157,6 +157,17 @@ function normalizeUrl(raw: string | null | undefined) {
   }
 }
 
+function normalizeSiteRoot(raw: string | null | undefined) {
+  const normalized = normalizeUrl(raw);
+  if (!normalized) return null;
+  try {
+    const url = new URL(normalized);
+    return url.origin + "/";
+  } catch {
+    return normalized;
+  }
+}
+
 function hostname(raw: string | null | undefined) {
   const url = normalizeUrl(raw);
   if (!url) return "";
@@ -721,12 +732,13 @@ async function testHtmlPage(source: SourceInput, pageUrl: string, siteHost: stri
   return null;
 }
 
-async function testHtml(source: SourceInput, baseUrl: string, siteHost: string): Promise<RepairResult | null> {
-  const base = new URL(baseUrl);
+async function testHtml(source: SourceInput, siteRootUrl: string, siteHost: string): Promise<RepairResult | null> {
+  const root = new URL(siteRootUrl);
   const pages = unique([
     normalizeUrl(source.latest_url),
-    baseUrl,
-    ...COMMON_LATEST_PATHS.map((path) => new URL(path, base).toString()),
+    normalizeUrl(source.base_url),
+    siteRootUrl,
+    ...COMMON_LATEST_PATHS.map((path) => new URL(path, root).toString()),
   ].filter(Boolean) as string[]);
 
   for (const pageUrl of pages) {
@@ -749,8 +761,9 @@ function scoreRepairResult(result: RepairResult) {
 }
 
 async function repairSource(source: SourceInput): Promise<RepairResult> {
-  const baseUrl = normalizeUrl(source.latest_url) || normalizeUrl(source.base_url);
-  if (!baseUrl) {
+  const candidateUrl = normalizeUrl(source.latest_url) || normalizeUrl(source.base_url);
+  const siteRootUrl = normalizeSiteRoot(source.base_url) || normalizeSiteRoot(source.latest_url);
+  if (!candidateUrl || !siteRootUrl) {
     const reason = "valid base_url/latest_url not found";
     return {
       ok: false,
@@ -762,11 +775,11 @@ async function repairSource(source: SourceInput): Promise<RepairResult> {
     };
   }
 
-  const siteHost = hostname(baseUrl);
+  const siteHost = hostname(siteRootUrl);
   const testPlan = [
-    { name: "rss", run: () => testRss(source, baseUrl, siteHost) },
-    { name: "sitemap", run: () => testSitemap(source, baseUrl, siteHost) },
-    { name: "html", run: () => testHtml(source, baseUrl, siteHost) },
+    { name: "rss", run: () => testRss(source, siteRootUrl, siteHost) },
+    { name: "sitemap", run: () => testSitemap(source, siteRootUrl, siteHost) },
+    { name: "html", run: () => testHtml(source, siteRootUrl, siteHost) },
   ];
   const attempts: string[] = [];
   const successful: RepairResult[] = [];
