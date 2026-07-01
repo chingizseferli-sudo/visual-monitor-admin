@@ -1,4 +1,4 @@
-﻿-- Backfill Telegram-delivered news to source_id more reliably.
+-- Backfill Telegram-delivered news to source_id more reliably.
 -- This is intentionally conservative: it only fills missing source_id values.
 
 alter table public.sent_news
