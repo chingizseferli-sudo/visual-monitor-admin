@@ -38,7 +38,57 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const MAX_RESPONSE_BYTES = 1_500_000;
 const MIN_REPAIR_ARTICLE_COUNT = 2;
-const ROOT_SLUG_ARTICLE_HOSTS = new Set(["muallim.edu.az"]);
+const ARTICLE_URL_PATTERNS = [
+  "/news/",
+  "/xeber/",
+  "/xeberler/",
+  "/xəbərlər/",
+  "/az/news/",
+  "/az/xeber/",
+  "/az/xeberler/",
+  "/az/xəbərlər/",
+  "/post/",
+  "/article/",
+  "/articles/view/",
+  "/read/",
+  "/item/",
+  "/posts/detail/",
+  "/writers/detail/",
+  "/single_news/",
+  "/kheberler/",
+  "/son-xeber/",
+  "/sosial/",
+  "/resmi-xeber/",
+  "/hadise/",
+  "/politic/",
+  "/world/",
+  "/economy/",
+  "/education/",
+  "/elm/",
+  "/tehsil/",
+  "/2024/",
+  "/2025/",
+  "/2026/",
+];
+const ARTICLE_URL_REGEX_PATTERNS = [/\/\d{4,}[-_][^/?#]+\.html$/];
+const ROOT_SLUG_ARTICLE_HOSTS = new Set([
+  "7times.az",
+  "busaat.az",
+  "editor.az",
+  "globalinfo.az",
+  "muallim.edu.az",
+  "ekosu.az",
+  "aem.az",
+  "ayna.az",
+  "ulusal.az",
+  "yenicag.az",
+]);
+const DOMAIN_DETAIL_ARTICLE_PATTERNS = new Map<string, RegExp[]>([
+  ["embawood.az", [/\/blog\/[^/?#]{8,}\/?$/]],
+  ["deazmed.az", [/\/az\/melumat-ve-xeberler\/[^/?#]{8,}\/?$/]],
+  ["bqu.edu.az", [/\/announcement_single\/\d+\/?$/]],
+  ["airport.az", [/\/press-release\/[^/?#]{8,}\/?$/]],
+]);
 const BLOCKED_ROOT_SLUG_WORDS = new Set([
   "about",
   "haqqimizda",
@@ -52,6 +102,11 @@ const BLOCKED_ROOT_SLUG_WORDS = new Set([
   "arxiv",
   "search",
   "author",
+  "login",
+  "register",
+  "profile",
+  "rss",
+  "feed",
 ]);
 const COMMON_LATEST_PATHS = [
   "/news",
@@ -390,6 +445,33 @@ function isAcceptableArticleCandidate(candidate: ArticleCandidate, siteHost: str
   );
 }
 
+function isProbablySectionUrl(path: string) {
+  const badSectionWords = [
+    "news",
+    "xeber",
+    "xeberler",
+    "xəbərlər",
+    "category",
+    "kateqoriya",
+    "archive",
+    "arxiv",
+    "latest",
+    "lastnews",
+    "allnews",
+    "all-news",
+    "son-xeberler",
+    "media",
+  ];
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length <= 1 && badSectionWords.some((word) => path.includes(word))) return true;
+  if (parts.length <= 2 && badSectionWords.some((word) => path.endsWith(word))) return true;
+  return false;
+}
+
+function isAllowedDomainDetailArticle(host: string, path: string) {
+  return (DOMAIN_DETAIL_ARTICLE_PATTERNS.get(host) || []).some((pattern) => pattern.test(path));
+}
+
 function isLikelyArticleLink(link: string, siteHost: string) {
   let url: URL;
   try {
@@ -404,6 +486,10 @@ function isLikelyArticleLink(link: string, siteHost: string) {
   if (path.length < 8) return false;
   if (/\.(jpg|jpeg|png|gif|webp|svg|pdf|zip|rar|mp4|mp3)$/i.test(path)) return false;
   if (/(login|register|contact|about|privacy|category|tag|author|search)/i.test(path)) return false;
+  if (isProbablySectionUrl(path)) return false;
+  if (ARTICLE_URL_PATTERNS.some((pattern) => path.includes(pattern))) return true;
+  if (ARTICLE_URL_REGEX_PATTERNS.some((pattern) => pattern.test(path))) return true;
+  if (isAllowedDomainDetailArticle(host, path)) return true;
   if (isAllowedRootSlugArticle(host, path)) return true;
 
   return (
@@ -436,7 +522,6 @@ function buildSuccessUpdate(source: SourceInput, method: string, options: { rssU
 function buildFailUpdate(source: SourceInput, reason: string) {
   return {
     name: hostname(source.base_url || source.latest_url) || source.name || "source",
-    status: "inactive",
     last_error: reason,
     last_result: "repair_failed",
     last_checked_at: new Date().toISOString(),
