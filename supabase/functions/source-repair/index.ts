@@ -118,6 +118,11 @@ const COMMON_LATEST_PATHS = [
   "/az/xeberler",
   "/az/xeber",
   "/son-xeberler",
+  "/az/son-xeberler",
+  "/all",
+  "/az/all",
+  "/all-news",
+  "/az/all-news",
   "/latest",
   "/lastnews",
   "/gundem",
@@ -215,6 +220,27 @@ function isUsefulTitle(title: string) {
   return true;
 }
 
+function titleFromUrl(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl);
+    const parts = decodeURIComponent(url.pathname)
+      .split("/")
+      .filter(Boolean);
+    const slug = parts[parts.length - 1] || "";
+    const cleaned = slug
+      .replace(/\.[a-z0-9]{2,5}$/i, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\d{4,}\b/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (cleaned.length < 12) return "";
+    if (cleaned.split(/\s+/).length < 3) return "";
+    return cleaned;
+  } catch {
+    return "";
+  }
+}
+
 function uniqueCandidates(candidates: ArticleCandidate[]) {
   const seen = new Set<string>();
   return candidates.filter((candidate) => {
@@ -308,11 +334,12 @@ function extractXmlArticleCandidates(xml: string, baseUrl: string, siteHost: str
   const blocks = Array.from(xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)).map((m) => m[0]);
   const candidates = blocks
     .map((block) => {
-      const title = normalizeTitle(block.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]);
+      const rawTitle = normalizeTitle(block.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]);
       const hrefLink = block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1];
       const textLink = block.match(/<link[^>]*>([\s\S]*?)<\/link>/i)?.[1];
       const permalink = block.match(/<guid[^>]+isPermaLink=["']true["'][^>]*>([\s\S]*?)<\/guid>/i)?.[1];
       const url = absolutize(unwrapCdata(hrefLink || textLink || permalink), baseUrl);
+      const title = isUsefulTitle(rawTitle) ? rawTitle : titleFromUrl(url);
       return { url, title, sourceContext: "rss" as const };
     })
     .filter((candidate) => isUsefulTitle(candidate.title) && isAcceptableArticleCandidate(candidate, siteHost));
@@ -367,11 +394,12 @@ function extractHtmlArticleCandidates(html: string, baseUrl: string, siteHost: s
     .map((m) => {
       const attrs = `${m[1]} ${m[3]}`;
       const attrTitle = attrs.match(/(?:title|aria-label)=["']([^"']+)["']/i)?.[1];
-      const title = normalizeTitle(attrTitle || m[4]);
+      const rawTitle = normalizeTitle(attrTitle || m[4]);
       const url = absolutize(m[2].trim(), baseUrl);
-      return { url, title };
+      const title = isUsefulTitle(rawTitle) ? rawTitle : titleFromUrl(url);
+      return { url, title, sourceContext: "html" as const };
     })
-    .filter((candidate) => isUsefulTitle(candidate.title) && isLikelyArticleLink(candidate.url, siteHost));
+    .filter((candidate) => isUsefulTitle(candidate.title) && isAcceptableArticleCandidate(candidate, siteHost));
 
   return uniqueCandidates(candidates);
 }
@@ -474,10 +502,16 @@ function isFeedRootSlugArticle(link: string, siteHost: string) {
   return !slug.split("-").some((part) => BLOCKED_ROOT_SLUG_WORDS.has(part));
 }
 
+function isTitledRootSlugArticle(candidate: ArticleCandidate, siteHost: string) {
+  if (!isUsefulTitle(candidate.title)) return false;
+  return isFeedRootSlugArticle(candidate.url, siteHost);
+}
+
 function isAcceptableArticleCandidate(candidate: ArticleCandidate, siteHost: string) {
   return (
     isLikelyArticleLink(candidate.url, siteHost) ||
-    (candidate.sourceContext === "rss" && isFeedRootSlugArticle(candidate.url, siteHost))
+    ((candidate.sourceContext === "rss" || candidate.sourceContext === "html") &&
+      isTitledRootSlugArticle(candidate, siteHost))
   );
 }
 
