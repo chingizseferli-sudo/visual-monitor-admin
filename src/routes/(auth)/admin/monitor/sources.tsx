@@ -756,7 +756,7 @@ function isHealthySource(
   source: Source,
   metrics: SourceQualityMetrics | undefined
 ) {
-  return source.status === 'active' && (hasSentNews(source) || hasRealBotActivity(metrics))
+  return hasRealBotActivity(metrics) || hasSentNews(source)
 }
 
 function isDiscoveryCandidateSource(source: Source) {
