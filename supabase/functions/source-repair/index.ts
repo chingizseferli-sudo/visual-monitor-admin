@@ -34,7 +34,7 @@ type ArticleCandidate = {
   sourceContext?: "rss" | "html" | "sitemap";
 };
 
-const SOURCE_REPAIR_VERSION = "1.3-azertag-unikal-readability";
+const SOURCE_REPAIR_VERSION = "1.4-prioritized-rss-repair";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const MAX_RESPONSE_BYTES = 1_500_000;
@@ -146,6 +146,9 @@ const COMMON_RSS_PATHS = [
   "/xeberler/rss",
   "/news/rss",
 ];
+const DOMAIN_PREFERRED_RSS_URLS = new Map<string, string[]>([
+  ["azertag.az", ["https://azertag.az/rss", "https://azertag.az/rss.xml"]],
+]);
 const COMMON_SITEMAP_PATHS = [
   "/sitemap.xml",
   "/sitemap_index.xml",
@@ -627,8 +630,10 @@ async function discoverFeedCandidates(baseUrl: string, siteHost: string) {
 async function testRss(source: SourceInput, baseUrl: string, siteHost: string): Promise<RepairResult | null> {
   const base = new URL(baseUrl);
   const discoveredFeeds = await discoverFeedCandidates(baseUrl, siteHost);
+  const preferredFeeds = DOMAIN_PREFERRED_RSS_URLS.get(siteHost) || [];
   const candidates = unique([
     normalizeUrl(source.rss_url),
+    ...preferredFeeds,
     ...discoveredFeeds,
     ...COMMON_RSS_PATHS.map((path) => new URL(path, base).toString()),
   ].filter(Boolean) as string[]);
@@ -646,7 +651,7 @@ async function testRss(source: SourceInput, baseUrl: string, siteHost: string): 
           ? uniqueCandidates(feedCandidates).slice(0, 8)
           : [];
       const links = acceptedCandidates.map((candidate) => candidate.url);
-      if (hasEnoughVerifiedArticles(acceptedCandidates)) {
+      if (acceptedCandidates.length >= MIN_REPAIR_ARTICLE_COUNT) {
         const detailVerified = candidates.length >= MIN_REPAIR_ARTICLE_COUNT;
         return {
           ok: true,
