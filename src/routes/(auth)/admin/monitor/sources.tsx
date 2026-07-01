@@ -1351,17 +1351,25 @@ function SourcesPage() {
       notes: null,
     }
 
-    const { data: repair, error: repairError } =
-      await supabase.functions.invoke<RepairResponse>('source-repair', {
+    let repair: RepairResponse | null = null
+    let repairErrorMessage = ''
+
+    try {
+      const response = await supabase.functions.invoke<RepairResponse>('source-repair', {
         body: { source: sourceDraft },
       })
+      repair = response.data ?? null
+      repairErrorMessage = response.error?.message || ''
+    } catch (error) {
+      repairErrorMessage = error instanceof Error ? error.message : 'source-repair xətası'
+    }
 
-    if (repairError || !repair) {
+    if (repairErrorMessage || !repair) {
       return {
         inserted: false,
         ok: false,
         method: 'analysis_failed',
-        reason: repairError?.message || 'source-repair cavab vermədi',
+        reason: repairErrorMessage || 'source-repair cavab vermədi',
         candidateCount: 0,
         sampleLinks: [],
         sourceName: host,
@@ -1436,31 +1444,35 @@ function SourcesPage() {
     setAddSourceResult(null)
     setMessage(`${host} yoxlanılır. Sistem RSS, sitemap və səhifə linklərini analiz edir...`)
 
-    const result = await addOneSource(normalizedUrl, host, getExistingSourceHosts())
+    try {
+      const result = await addOneSource(normalizedUrl, host, getExistingSourceHosts())
 
-    setAddingSource(false)
+      if (result.skipped) {
+        setMessage(`${host} artıq mənbələr siyahısında var.`)
+        setSearch(host)
+        return
+      }
 
-    if (result.skipped) {
-      setMessage(`${host} artıq mənbələr siyahısında var.`)
-      setSearch(host)
-      return
+      if (!result.inserted) {
+        setMessage(`${host} əlavə olunmadı: ${formatRepairReason(result.reason)}`)
+        return
+      }
+
+      setNewSourceInput('')
+      setAddSourceResult(result)
+      setMessage(
+        result.ok
+          ? `${host} əlavə olundu və ${result.method} metodu ilə yoxlanılır.`
+          : `${host} əlavə olundu, amma avtomatik izləmə metodu tapılmadı. Mənbə yoxlama tələb edir.`
+      )
+      await loadSources()
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'naməlum xəta'
+      setMessage(`${host} əlavə olunmadı: ${reason}`)
+    } finally {
+      setAddingSource(false)
     }
-
-    if (!result.inserted) {
-      setMessage(`${host} əlavə olunmadı: ${formatRepairReason(result.reason)}`)
-      return
-    }
-
-    setNewSourceInput('')
-    setAddSourceResult(result)
-    setMessage(
-      result.ok
-        ? `${host} əlavə olundu və ${result.method} metodu ilə yoxlanılır.`
-        : `${host} əlavə olundu, amma avtomatik izləmə metodu tapılmadı. Mənbə yoxlama tələb edir.`
-    )
-    await loadSources()
   }
-
   async function addBulkSources() {
     const { parsed, invalid } = parseBulkSourceLines(bulkSourceInput)
 
@@ -1473,31 +1485,37 @@ function SourcesPage() {
     setAddSourceResult(null)
     setMessage(`${parsed.length} mənbə yoxlanılır. Bu proses bir qədər vaxt ala bilər...`)
 
-    const existingHosts = getExistingSourceHosts()
-    const results: AddSourceOutcome[] = []
+    try {
+      const existingHosts = getExistingSourceHosts()
+      const results: AddSourceOutcome[] = []
 
-    for (const item of parsed) {
-      const result = await addOneSource(item.normalizedUrl, item.host, existingHosts)
-      results.push(result)
+      for (const item of parsed) {
+        const result = await addOneSource(item.normalizedUrl, item.host, existingHosts)
+        results.push(result)
+      }
+
+      const inserted = results.filter((item) => item.inserted).length
+      const readable = results.filter((item) => item.inserted && item.ok).length
+      const review = results.filter((item) => item.inserted && !item.ok).length
+      const skipped = results.filter((item) => item.skipped).length
+      const failed = results.filter((item) => !item.inserted && !item.skipped).length
+      const lastInserted = [...results].reverse().find((item) => item.inserted)
+
+      if (lastInserted) setAddSourceResult(lastInserted)
+
+      setBulkSourceInput('')
+      setMessage(
+        `Toplu əlavə tamamlandı: ${inserted} əlavə olundu, ${readable} oxuna bilir, ${review} yoxlama tələb edir, ${skipped} təkrar atlandı, ${failed} əlavə olunmadı${
+          invalid ? `, ${invalid} yanlış sətir atlandı` : ''
+        }.`
+      )
+      await loadSources()
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'naməlum xəta'
+      setMessage(`Toplu əlavə tamamlanmadı: ${reason}`)
+    } finally {
+      setAddingSource(false)
     }
-
-    const inserted = results.filter((item) => item.inserted).length
-    const readable = results.filter((item) => item.inserted && item.ok).length
-    const review = results.filter((item) => item.inserted && !item.ok).length
-    const skipped = results.filter((item) => item.skipped).length
-    const failed = results.filter((item) => !item.inserted && !item.skipped).length
-    const lastInserted = [...results].reverse().find((item) => item.inserted)
-
-    if (lastInserted) setAddSourceResult(lastInserted)
-
-    setBulkSourceInput('')
-    setMessage(
-      `Toplu əlavə tamamlandı: ${inserted} əlavə olundu, ${readable} oxuna bilir, ${review} yoxlama tələb edir, ${skipped} təkrar atlandı, ${failed} əlavə olunmadı${
-        invalid ? `, ${invalid} yanlış sətir atlandı` : ''
-      }.`
-    )
-    setAddingSource(false)
-    await loadSources()
   }
   async function deleteSource(source: Source) {
     const ok = window.confirm(
