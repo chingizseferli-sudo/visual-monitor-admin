@@ -1,4 +1,4 @@
-﻿-- Link Telegram-delivered news to the exact source that produced it.
+-- Link Telegram-delivered news to the exact source that produced it.
 -- This makes source health depend on real delivered news instead of host/title guessing.
 
 alter table public.sent_news
