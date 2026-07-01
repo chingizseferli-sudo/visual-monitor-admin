@@ -2730,7 +2730,7 @@ function SourcesPage() {
 
           <tbody>
             {paginatedSources.map((source, index) => {
-              const issues = getSimpleProblemReasons(source, sources)
+              const rawIssues = getSimpleProblemReasons(source, sources)
               const isFailing = (source.consecutive_fail_count || 0) >= 5
               const isNonNews = hasNonNewsSignal(source)
               const qualityMetrics =
@@ -2770,6 +2770,10 @@ function SourcesPage() {
                   : source.last_result === 'sent'
                     ? 'border-green-200 text-green-700'
                     : 'text-muted-foreground'
+              const issues = isHealthConfirmed ? [] : rawIssues
+              const displayFailCount = isHealthConfirmed
+                ? 0
+                : source.consecutive_fail_count || 0
 
               return (
                 <tr
@@ -2900,12 +2904,12 @@ function SourcesPage() {
                   <td className='p-3'>
                     <span
                       className={`rounded-full border px-2 py-1 text-xs ${
-                        (source.consecutive_fail_count || 0) >= 5
+                        displayFailCount >= 5
                           ? 'border-red-200 text-red-700'
                           : 'text-muted-foreground'
                       }`}
                     >
-                      {source.consecutive_fail_count || 0}
+                      {displayFailCount}
                     </span>
                   </td>
 
