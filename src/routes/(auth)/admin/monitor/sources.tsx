@@ -679,7 +679,7 @@ function emptyQualityMetrics(): SourceQualityMetrics {
 
 type SourceHealthState = 'healthy' | 'checking' | 'problem'
 
-type SourceView = 'all' | 'healthy' | 'problem' | 'checking' | 'failed'
+type SourceView = 'all' | 'candidate' | 'healthy' | 'problem' | 'checking' | 'failed'
 
 function hasRealBotActivity(metrics: SourceQualityMetrics | undefined) {
   return Boolean(
@@ -705,6 +705,17 @@ function isHealthySource(
   metrics: SourceQualityMetrics | undefined
 ) {
   return source.status === 'active' && (hasSentNews(source) || hasRealBotActivity(metrics))
+}
+
+function isDiscoveryCandidateSource(source: Source) {
+  const discoveryStatus = source.discovery_status || ''
+  return Boolean(
+    source.status === 'inactive' &&
+      !hasNonNewsSignal(source) &&
+      ['accepted', 'manual_needed', 'needs_review', 'pending'].includes(discoveryStatus) &&
+      !source.last_checked_at &&
+      !source.last_result
+  )
 }
 
 const REPAIRABLE_SOURCE_RESULTS = new Set([
@@ -770,6 +781,8 @@ function getSourceHealthState(
 
   if (isHealthySource(source, metrics)) return 'healthy'
 
+  if (isDiscoveryCandidateSource(source)) return 'checking'
+
   if (
     source.status !== 'active' ||
     failCount >= 5 ||
@@ -801,7 +814,7 @@ function isUnhealthySource(
   source: Source,
   metrics?: SourceQualityMetrics
 ) {
-  return !isHealthySource(source, metrics)
+  return !isHealthySource(source, metrics) && !isDiscoveryCandidateSource(source)
 }
 
 function getSourceQualityLabel(
@@ -1421,9 +1434,95 @@ function SourcesPage() {
     await loadSources()
   }
 
+  async function activateSelectedSourcesWithRepair() {
+    if (selectedIds.length === 0) {
+      alert('Mənbə seçilməyib.')
+      return
+    }
+
+    const selectedSourceSet = new Set(selectedIds)
+    const selectedSources = sources.filter((source) => selectedSourceSet.has(source.id))
+    const sourcesToActivate = selectedSources.filter((source) => source.status !== 'active')
+
+    if (selectedSources.length === 0) {
+      alert('Seçilmiş mənbə siyahıda tapılmadı. Səhifəni yeniləyib yenidən seçin.')
+      return
+    }
+
+    if (sourcesToActivate.length === 0) {
+      alert('Seçilmiş mənbələr artıq aktivdir.')
+      return
+    }
+
+    const skippedCount = selectedSources.length - sourcesToActivate.length
+    const ok = window.confirm(
+      `${sourcesToActivate.length} passiv/yeni mənbə real oxuma testi ilə aktivləşdiriləcək${
+        skippedCount > 0 ? `; ${skippedCount} artıq aktiv olduğu üçün ötürüləcək` : ''
+      }. Davam edək?`
+    )
+
+    if (!ok) return
+
+    setRecovering(true)
+    setMessage(
+      `${sourcesToActivate.length} mənbə aktivləşdirmədən əvvəl real oxuma testi ilə yoxlanır...`
+    )
+    setRepairRun(null)
+
+    let readable = 0
+    let failed = 0
+    const methodCounts: Record<string, number> = {}
+    const reasonCounts: Record<string, number> = {}
+    const items: RepairRunItem[] = []
+
+    for (const source of sourcesToActivate) {
+      const result = await runAutoRepair(source)
+      if (result.ok) readable += 1
+      else failed += 1
+
+      const method = result.method || 'unknown'
+      const reason = formatRepairReason(result.reason || result.message || 'Naməlum səbəb')
+
+      if (result.ok) {
+        methodCounts[method] = (methodCounts[method] || 0) + 1
+      } else {
+        reasonCounts[reason] = (reasonCounts[reason] || 0) + 1
+      }
+
+      items.push({
+        sourceId: result.sourceId,
+        sourceName: result.sourceName,
+        ok: result.ok,
+        method: result.method,
+        reason,
+        candidateCount: result.candidateCount,
+      })
+    }
+
+    setRecovering(false)
+    setSelectedIds([])
+    await loadSources()
+    setRepairRun({
+      attempted: sourcesToActivate.length,
+      readable,
+      failed,
+      methodCounts,
+      reasonCounts,
+      items,
+    })
+    setMessage(
+      `Aktivləşdirmə testi bitdi: ${readable} mənbə oxuna bilir və yoxlanılan mənbələrə keçdi, ${failed} mənbə aktiv edilmədi. Sağlam statusu bot real nəticə/Telegram sübutu verdikdən sonra təsdiqlənəcək.`
+    )
+  }
+
   async function bulkSetStatus(status: 'active' | 'inactive') {
     if (selectedIds.length === 0) {
       alert('Mənbə seçilməyib.')
+      return
+    }
+
+    if (status === 'active') {
+      await activateSelectedSourcesWithRepair()
       return
     }
 
@@ -1719,11 +1818,49 @@ function SourcesPage() {
   }
 
   async function toggleStatus(source: Source) {
-    const nextStatus = source.status === 'active' ? 'inactive' : 'active'
+    if (source.status !== 'active') {
+      const ok = window.confirm(
+        `${getSourceTitle(source)} aktivləşdirilməzdən əvvəl real oxuma testi ilə yoxlanacaq. Davam edək?`
+      )
+
+      if (!ok) return
+
+      setRecovering(true)
+      setMessage(`${getSourceTitle(source)} real oxuma testi ilə yoxlanır...`)
+      setRepairRun(null)
+
+      const result = await runAutoRepair(source)
+      setRecovering(false)
+      await loadSources()
+
+      setRepairRun({
+        attempted: 1,
+        readable: result.ok ? 1 : 0,
+        failed: result.ok ? 0 : 1,
+        methodCounts: result.ok && result.method ? { [result.method]: 1 } : {},
+        reasonCounts: result.ok
+          ? {}
+          : { [formatRepairReason(result.reason || result.message || 'Naməlum səbəb')]: 1 },
+        items: [{
+          sourceId: result.sourceId,
+          sourceName: result.sourceName,
+          ok: result.ok,
+          method: result.method,
+          reason: formatRepairReason(result.reason || result.message || 'Naməlum səbəb'),
+          candidateCount: result.candidateCount,
+        }],
+      })
+      setMessage(
+        result.ok
+          ? `${getSourceTitle(source)} oxuna bilir və yoxlanılan mənbələrə keçdi. Sağlam statusu bot real nəticə/Telegram sübutu verdikdən sonra təsdiqlənəcək.`
+          : `${getSourceTitle(source)} aktiv edilmədi: ${formatRepairReason(result.reason || result.message || 'Naməlum səbəb')}`
+      )
+      return
+    }
 
     const { error } = await supabase
       .from('sources')
-      .update({ status: nextStatus })
+      .update({ status: 'inactive' })
       .eq('id', source.id)
 
     if (error) {
@@ -1806,6 +1943,7 @@ function SourcesPage() {
       const qualityMetrics = sourceQuality[source.id]
       const matchesSourceView =
         sourceView === 'all' ||
+        (sourceView === 'candidate' && isDiscoveryCandidateSource(source)) ||
         (sourceView === 'healthy' && isHealthySource(source, qualityMetrics)) ||
         (sourceView === 'problem' && isUnhealthySource(source, qualityMetrics)) ||
         (sourceView === 'checking' && getSourceHealthState(source, qualityMetrics) === 'checking') ||
@@ -1853,6 +1991,7 @@ function SourcesPage() {
   }
 
   const stats = useMemo(() => {
+    let candidates = 0
     let healthy = 0
     let checking = 0
     let failed = 0
@@ -1861,7 +2000,8 @@ function SourcesPage() {
       const metrics = sourceQuality[source.id]
       const state = getSourceHealthState(source, metrics)
 
-      if (state === 'healthy') healthy += 1
+      if (isDiscoveryCandidateSource(source)) candidates += 1
+      else if (state === 'healthy') healthy += 1
       else if (state === 'checking') checking += 1
       else failed += 1
     }
@@ -1869,10 +2009,11 @@ function SourcesPage() {
     return {
       total: sources.length,
       active: sources.filter((item) => item.status === 'active').length,
+      candidates,
       healthy,
       checking,
       failed,
-      problems: sources.length - healthy,
+      problems: sources.length - candidates - healthy,
     }
   }, [sources, sourceQuality])
 
@@ -1926,6 +2067,7 @@ function SourcesPage() {
 
   const sourceViewTabs = [
     { key: 'all', label: 'Bütün mənbələr', count: stats.total },
+    { key: 'candidate', label: 'Yeni mənbələr', count: stats.candidates },
     { key: 'healthy', label: 'Sağlam mənbələr', count: stats.healthy },
     { key: 'problem', label: 'İşləməyən mənbələr', count: stats.problems },
   ] as const
@@ -2023,6 +2165,8 @@ function SourcesPage() {
               sourceView === tab.key && methodFilter === 'all'
                 ? tab.key === 'healthy'
                   ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                  : tab.key === 'candidate'
+                    ? 'border-blue-200 bg-blue-100 text-blue-800'
                   : tab.key === 'problem'
                     ? 'border-amber-200 bg-amber-100 text-amber-800'
                       : 'border-sky-200 bg-sky-100 text-sky-800'
