@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const MAX_RESPONSE_BYTES = 1_500_000;
-const SELECTOR_PROXY_VERSION = "1.2-canonical-domain-fallback";
+const SELECTOR_PROXY_VERSION = "1.3-selector-readable-errors";
 
 type ProxyFetchResult = {
   contentType: string;
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
         contentType: result.contentType,
         finalUrl: result.finalUrl,
         version: SELECTOR_PROXY_VERSION,
-      }, 502);
+      });
     }
 
     if (!isHtmlResponse(result)) {

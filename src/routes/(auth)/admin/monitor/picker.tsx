@@ -282,16 +282,26 @@ function SelectorPickerPage() {
     }
 
     if (!data?.html) {
-      setMessage(data?.error || 'HTML tapılmadı. Saytı ayrıca açıb yoxla və ya başqa səhifə URL-i ilə yenidən cəhd et.')
+      setMessage(
+        data?.error ||
+          'HTML tapılmadı. Saytı ayrıca açıb yoxla və ya başqa səhifə URL-i ilə yenidən cəhd et.'
+      )
       setHtml('')
       setLoadingPage(false)
       return
     }
 
+    if (data.finalUrl) {
+      setCurrentUrl(data.finalUrl)
+    }
+
+    if (data.canonicalFallback) {
+      setMessage('Sayt canonical domenlə açıldı. İşlək ünvan: ' + data.finalUrl)
+    }
+
     setHtml(buildPickerHtml(data.html))
     setLoadingPage(false)
   }
-
   async function saveSelector(picked = selection, redirectAfterSave = false) {
     if (!source || !picked?.selector) return
 
