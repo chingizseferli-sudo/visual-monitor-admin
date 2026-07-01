@@ -416,6 +416,10 @@ function hasEnoughVerifiedArticles(candidates: ArticleCandidate[]) {
   return candidates.length >= MIN_REPAIR_ARTICLE_COUNT;
 }
 
+function hasEnoughListedArticles(candidates: ArticleCandidate[], minimum = 5) {
+  return uniqueCandidates(candidates).length >= minimum;
+}
+
 function isSlugArticlePath(path: string, pattern: RegExp) {
   if (!pattern.test(path)) return false;
   const parts = path.split("/").filter(Boolean);
@@ -582,20 +586,30 @@ async function testRss(source: SourceInput, baseUrl: string, siteHost: string): 
       if (!res.ok || !isXml) continue;
       const feedCandidates = extractXmlArticleCandidates(res.text, res.url, siteHost);
       const candidates = await validateArticleCandidates(feedCandidates, siteHost, 8);
-      const links = candidates.map((candidate) => candidate.url);
-      if (hasEnoughVerifiedArticles(candidates)) {
+      const acceptedCandidates = hasEnoughVerifiedArticles(candidates)
+        ? candidates
+        : hasEnoughListedArticles(feedCandidates, MIN_REPAIR_ARTICLE_COUNT)
+          ? uniqueCandidates(feedCandidates).slice(0, 8)
+          : [];
+      const links = acceptedCandidates.map((candidate) => candidate.url);
+      if (hasEnoughVerifiedArticles(acceptedCandidates)) {
+        const detailVerified = candidates.length >= MIN_REPAIR_ARTICLE_COUNT;
         return {
           ok: true,
           method: "rss",
-          reason: `RSS verified: ${candidates.length} readable article pages`,
-          candidateCount: candidates.length,
+          reason: detailVerified
+            ? `RSS verified: ${acceptedCandidates.length} readable article pages`
+            : `RSS feed verified: ${acceptedCandidates.length} readable article entries`,
+          candidateCount: acceptedCandidates.length,
           finalUrl: res.url || rssUrl,
           rssUrl: res.url || rssUrl,
           sampleLinks: links.slice(0, 5),
           update: buildSuccessUpdate(source, "rss", {
             latestUrl: baseUrl,
             rssUrl: res.url || rssUrl,
-            notes: `Auto repair readable: RSS verified ${candidates.length} readable article pages; feed=${res.url || rssUrl}`,
+            notes: detailVerified
+              ? `Auto repair readable: RSS verified ${acceptedCandidates.length} readable article pages; feed=${res.url || rssUrl}`
+              : `Auto repair readable: RSS feed verified ${acceptedCandidates.length} article entries; detail pages were not required; feed=${res.url || rssUrl}`,
           }),
         };
       }
@@ -667,16 +681,24 @@ async function testHtmlPage(source: SourceInput, pageUrl: string, siteHost: stri
     if (!isHtml) return null;
     const extractedCandidates = extractHtmlArticleCandidates(res.text, res.url, siteHost);
     const candidates = await validateArticleCandidates(extractedCandidates, siteHost, 8);
-    const links = candidates.map((candidate) => candidate.url);
-    if (hasEnoughVerifiedArticles(candidates)) {
+    const acceptedCandidates = hasEnoughVerifiedArticles(candidates)
+      ? candidates
+      : hasEnoughListedArticles(extractedCandidates)
+        ? uniqueCandidates(extractedCandidates).slice(0, 8)
+        : [];
+    const links = acceptedCandidates.map((candidate) => candidate.url);
+    if (hasEnoughVerifiedArticles(acceptedCandidates)) {
       const hasArticle = /<article\b/i.test(res.text);
       const hasNewsClass = /class=["'][^"']*(news|post|item|article|entry)/i.test(res.text);
       const method = hasArticle || hasNewsClass ? "selector" : "latest_page";
+      const detailVerified = candidates.length >= MIN_REPAIR_ARTICLE_COUNT;
       return {
         ok: true,
         method,
-        reason: `HTML verified: ${candidates.length} readable article pages`,
-        candidateCount: candidates.length,
+        reason: detailVerified
+          ? `HTML verified: ${acceptedCandidates.length} readable article pages`
+          : `HTML listing verified: ${acceptedCandidates.length} article links with titles`,
+        candidateCount: acceptedCandidates.length,
         finalUrl: res.url,
         sampleLinks: links.slice(0, 5),
         update: buildSuccessUpdate(source, method, {
@@ -686,7 +708,9 @@ async function testHtmlPage(source: SourceInput, pageUrl: string, siteHost: stri
             method === "selector"
               ? "article a[href], .news-item a[href], .post a[href], .entry a[href], .item a[href], h2 a[href], h3 a[href]"
               : source.article_pattern ?? null,
-          notes: `Auto repair readable: HTML verified ${candidates.length} readable article pages; page=${res.url}`,
+          notes: detailVerified
+            ? `Auto repair readable: HTML verified ${acceptedCandidates.length} readable article pages; page=${res.url}`
+            : `Auto repair readable: HTML listing verified ${acceptedCandidates.length} article links with titles; detail pages were not required; page=${res.url}`,
         }),
       };
     }
