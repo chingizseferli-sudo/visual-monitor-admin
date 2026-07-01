@@ -877,6 +877,13 @@ function isUnhealthySource(
   return !isHealthySource(source, metrics) && !isDiscoveryCandidateSource(source)
 }
 
+function isRepairTargetSource(
+  source: Source,
+  metrics?: SourceQualityMetrics
+) {
+  return getSourceHealthState(source, metrics) === 'problem'
+}
+
 function getSourceQualityLabel(
   source: Source,
   metrics: SourceQualityMetrics | undefined,
@@ -1932,7 +1939,7 @@ function SourcesPage() {
     const selectedSourceSet = new Set(selectedIds)
     const selectedSources = sources.filter((source) => selectedSourceSet.has(source.id))
     const sourcesToRepair = selectedSources.filter((source) =>
-      isUnhealthySource(source, sourceQuality[source.id])
+      isRepairTargetSource(source, sourceQuality[source.id])
     )
 
     if (selectedSources.length === 0) {
@@ -2508,7 +2515,7 @@ function SourcesPage() {
               Seçilmişləri bərpa et
             </button>
             <span className='max-w-md text-xs text-muted-foreground'>
-              Yalnız seçilmiş işləməyən mənbələr real oxuma testi ilə yoxlanır. Bot qəbul edilən xəbər linki tapmasa mənbə sağlam yazılmır.
+              Yalnız real problemli mənbələr bərpa testinə gedir. Oxuna bilən mənbə “Yoxlanılır” qalır; “Sağlam” statusu bot real nəticə/bildiriş verdikdən sonra təsdiqlənir.
             </span>
           </div>
 
