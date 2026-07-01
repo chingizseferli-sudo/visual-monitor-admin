@@ -369,6 +369,53 @@ function getSourceTitle(source: Source) {
     '-'
   )
 }
+function asSourceText(value: unknown) {
+  if (value === null || value === undefined) return ''
+  return String(value)
+}
+
+function asSourceNullableText(value: unknown) {
+  const text = asSourceText(value).trim()
+  return text || null
+}
+
+function asSourceNumber(value: unknown, fallback: number | null = null) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function sanitizeSourceRow(row: Partial<Source> | Record<string, unknown>, index: number): Source {
+  const value = row as Partial<Source> & Record<string, unknown>
+  const baseUrl = asSourceText(value.base_url).trim()
+  const latestUrl = asSourceNullableText(value.latest_url)
+  const fallbackUrl = baseUrl || latestUrl || ''
+  const host = getHostname(fallbackUrl)
+
+  return {
+    id: asSourceText(value.id).trim() || `missing-source-${index}`,
+    name: asSourceText(value.name).trim() || host || `Mənbə ${index + 1}`,
+    base_url: baseUrl || fallbackUrl,
+    latest_url: latestUrl,
+    rss_url: asSourceNullableText(value.rss_url),
+    source_type: asSourceNullableText(value.source_type),
+    status: asSourceNullableText(value.status) || 'inactive',
+    trust_level: asSourceNullableText(value.trust_level),
+    monitor_method: asSourceNullableText(value.monitor_method),
+    selector: asSourceNullableText(value.selector),
+    article_pattern: asSourceNullableText(value.article_pattern),
+    discovery_status: asSourceNullableText(value.discovery_status),
+    discovery_score: asSourceNumber(value.discovery_score),
+    last_checked_at: asSourceNullableText(value.last_checked_at),
+    last_success_at: asSourceNullableText(value.last_success_at),
+    last_article_found_at: asSourceNullableText(value.last_article_found_at),
+    last_error: asSourceNullableText(value.last_error),
+    last_result: asSourceNullableText(value.last_result),
+    consecutive_fail_count: asSourceNumber(value.consecutive_fail_count, 0),
+    last_discovered_at: asSourceNullableText(value.last_discovered_at),
+    notes: asSourceNullableText(value.notes),
+  }
+}
 
 function findParentDomain(source: Source, sources: Source[]) {
   const host = getHostname(source.base_url)
@@ -1267,7 +1314,9 @@ function SourcesPage() {
       setMessage(`Mənbələr oxunmadı: ${error.message}`)
       setSources([])
     } else {
-      const nextSources = data || []
+      const nextSources = (data || []).map((row, index) =>
+        sanitizeSourceRow(row, index)
+      )
       setSources(nextSources)
       await loadSourceQuality(nextSources)
     }
