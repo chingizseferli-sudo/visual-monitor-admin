@@ -2762,7 +2762,7 @@ function SourcesPage() {
               const displayMethod =
                 isHealthConfirmed &&
                 ['blocked', 'dead', 'failed'].includes(source.monitor_method || '')
-                  ? 'Oxunur'
+                  ? 'Metod yenilənməlidir'
                   : formatMonitorMethod(source.monitor_method || 'auto')
               const displayDiscoveryStatus = isHealthConfirmed
                 ? 'Təsdiqlənib'
