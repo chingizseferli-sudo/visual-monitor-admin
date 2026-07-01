@@ -361,6 +361,20 @@ function getHostname(url: string | null) {
   }
 }
 
+function isValidSourceHost(host: string) {
+  const normalized = host.replace(/^www\./, '').toLowerCase().trim()
+  const parts = normalized.split('.')
+
+  if (parts.length < 2) return false
+  if (PROTECTED_PARENT_DOMAINS.has(normalized)) return false
+  if (parts.some((part) => !part || part.length > 63 || part.includes('_'))) return false
+
+  const tld = parts[parts.length - 1]
+  if (!/^[a-z]{2,24}$/.test(tld)) return false
+
+  return /^[a-z0-9.-]+$/.test(normalized)
+}
+
 function getSourceTitle(source: Source) {
   return (
     getHostname(source.base_url) ||
@@ -1341,7 +1355,7 @@ function SourcesPage() {
 
       const normalizedUrl = normalizeSourceUrl(input)
       const host = getHostname(normalizedUrl)
-      if (!normalizedUrl || !host) {
+      if (!normalizedUrl || !host || !isValidSourceHost(host)) {
         invalid += 1
         continue
       }
@@ -1480,7 +1494,7 @@ function SourcesPage() {
     const normalizedUrl = normalizeSourceUrl(newSourceInput)
     const host = getHostname(normalizedUrl)
 
-    if (!normalizedUrl || !host) {
+    if (!normalizedUrl || !host || !isValidSourceHost(host)) {
       setMessage('Düzgün domen və ya URL daxil edin. Məsələn: example.az')
       return
     }
