@@ -2751,6 +2751,25 @@ function SourcesPage() {
                 source,
                 qualityMetrics
               )
+              const isHealthConfirmed = healthState === 'healthy'
+              const displayMethod =
+                isHealthConfirmed &&
+                ['blocked', 'dead', 'failed'].includes(source.monitor_method || '')
+                  ? 'Oxunur'
+                  : formatMonitorMethod(source.monitor_method || 'auto')
+              const displayDiscoveryStatus = isHealthConfirmed
+                ? 'Təsdiqlənib'
+                : formatDiscoveryStatus(source.discovery_status)
+              const displayBotResult = isHealthConfirmed
+                ? botConfirmation.label
+                : formatResult(source.last_result)
+              const displayBotResultClass = isHealthConfirmed
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : source.last_result === 'site_error'
+                  ? 'border-red-200 text-red-700'
+                  : source.last_result === 'sent'
+                    ? 'border-green-200 text-green-700'
+                    : 'text-muted-foreground'
 
               return (
                 <tr
@@ -2834,13 +2853,13 @@ function SourcesPage() {
 
                   <td className='p-3'>
                     <span className='rounded-full border px-2 py-1 text-xs'>
-                      {formatMonitorMethod(source.monitor_method || 'auto')}
+                      {displayMethod}
                     </span>
                   </td>
 
                   <td className='p-3'>
                     <span className='rounded-full border px-2 py-1 text-xs'>
-                      {formatDiscoveryStatus(source.discovery_status)}
+                      {displayDiscoveryStatus}
                     </span>
                   </td>
 
@@ -2866,17 +2885,11 @@ function SourcesPage() {
                   <td className='p-3'>
                     <div className='grid gap-1'>
                       <span
-                        className={`w-fit rounded-full border px-2 py-1 text-xs ${
-                          source.last_result === 'site_error'
-                            ? 'border-red-200 text-red-700'
-                            : source.last_result === 'sent'
-                              ? 'border-green-200 text-green-700'
-                              : 'text-muted-foreground'
-                        }`}
+                        className={`w-fit rounded-full border px-2 py-1 text-xs ${displayBotResultClass}`}
                       >
-                        {formatResult(source.last_result)}
+                        {displayBotResult}
                       </span>
-                      {source.last_error ? (
+                      {!isHealthConfirmed && source.last_error ? (
                         <span className='line-clamp-1 text-xs text-red-600'>
                           {source.last_error}
                         </span>
