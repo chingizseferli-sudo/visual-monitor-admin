@@ -1084,7 +1084,6 @@ function SourcesPage() {
       return
     }
 
-    setSourceQuality(Object.fromEntries(initialQuality))
     setQualityLoading(true)
 
     const since = new Date(Date.now() - SOURCE_QUALITY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString()
@@ -1347,7 +1346,7 @@ function SourcesPage() {
         sanitizeSourceRow(row, index)
       )
       setSources(nextSources)
-      void loadSourceQuality(nextSources)
+      await loadSourceQuality(nextSources)
     }
 
     setLoading(false)
