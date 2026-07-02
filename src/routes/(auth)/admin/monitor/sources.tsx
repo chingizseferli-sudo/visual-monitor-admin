@@ -61,6 +61,7 @@ type RepairResponse = {
   finalUrl?: string
   sampleLinks: string[]
   update: Record<string, unknown>
+  version?: string
 }
 
 type RepairRunItem = {
@@ -70,6 +71,7 @@ type RepairRunItem = {
   method?: string
   reason: string
   candidateCount?: number
+  version?: string
 }
 
 type RepairRunSummary = {
@@ -1935,6 +1937,7 @@ function SourcesPage() {
       method: repair.method,
       reason: formatRepairReason(repair.reason),
       candidateCount: repair.candidateCount,
+      version: repair.version,
       message: repair.ok
         ? `${getSourceTitle(source)} oxuna bilir: ${repair.method}, ${repair.candidateCount} link tapıldı. Bot təsdiqi gözlənilir.`
         : `${getSourceTitle(source)} bərpa olunmadı: ${formatRepairReason(repair.reason)}`,
@@ -2675,6 +2678,14 @@ function SourcesPage() {
               )}
             </div>
           </div>
+          {repairRun.items.some((item) => item.version) ? (
+            <div className='rounded-lg border bg-background p-3 text-xs text-muted-foreground'>
+              Bərpa mühərriki:{' '}
+              <span className='font-medium text-foreground'>
+                {repairRun.items.find((item) => item.version)?.version}
+              </span>
+            </div>
+          ) : null}
 
           <details className='rounded-lg border bg-background p-3'>
             <summary className='cursor-pointer text-sm font-medium'>
