@@ -34,7 +34,7 @@ type ArticleCandidate = {
   sourceContext?: "rss" | "html" | "sitemap";
 };
 
-const SOURCE_REPAIR_VERSION = "1.5-site-signal-discovery";
+const SOURCE_REPAIR_VERSION = "1.6-bot-aligned-repair";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const MAX_RESPONSE_BYTES = 1_500_000;
@@ -52,9 +52,16 @@ const ARTICLE_URL_PATTERNS = [
   "/az/xeberler/",
   "/az/xəbərlər/",
   "/post/",
+  "/posts/",
+  "/az/post/",
+  "/az/posts/",
   "/article/",
+  "/articles/",
+  "/az/article/",
+  "/az/articles/",
   "/articles/view/",
   "/read/",
+  "/az/read/",
   "/item/",
   "/posts/detail/",
   "/writers/detail/",
@@ -74,7 +81,15 @@ const ARTICLE_URL_PATTERNS = [
   "/2025/",
   "/2026/",
 ];
-const ARTICLE_URL_REGEX_PATTERNS = [/\/\d{4,}[-_][^/?#]+\.html$/, /\/news\/\d{3,}\/[^/?#]{8,}\/?$/, /\/xeber\/(?:[^/?#-]+[_-]){2,}[^/?#-]+-\d{3,}\/?$/, /\/xeber\/\d{3,}\/?$/];
+const ARTICLE_URL_REGEX_PATTERNS = [
+  /\/\d{4,}[-_][^/?#]+\.html$/,
+  /\/(?:az|en|ru|tr)\/news\/\d{3,}\/[^/?#]{8,}\/?$/,
+  /\/news\/\d{3,}\/[^/?#]{8,}\/?$/,
+  /\/xeber\/(?:[^/?#-]+[_-]){2,}[^/?#-]+-\d{3,}\/?$/,
+  /\/xeber\/[^/?#]{8,}-\d{3,}\/?$/,
+  /\/xeber\/\d{3,}\/?$/,
+  /\/[a-z0-9_-]+\/\d{4,}[-_][^/?#]{8,}\/?$/,
+];
 const LANG_SLUG_ARTICLE_RE = /^\/(az|en|ru|tr)\/[a-z0-9%_-]{18,}\/?$/;
 const CATEGORY_SLUG_ARTICLE_RE = /^\/[a-z0-9%_-]{3,}\/[a-z0-9%_-]{18,}\/?$/;
 const ROOT_SLUG_ARTICLE_HOSTS = new Set([
