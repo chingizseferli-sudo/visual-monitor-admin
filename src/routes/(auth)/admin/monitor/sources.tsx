@@ -511,7 +511,7 @@ function getSourceIssues(source: Source, sources: Source[]) {
     issues.push('selector yoxdur')
   }
 
-  if (['blocked', 'dead', 'failed'].includes(source.monitor_method || '')) {
+  if (hasStaleReadMethod(source)) {
     issues.push(source.monitor_method || 'problem')
   }
 
@@ -877,11 +877,16 @@ function isUnhealthySource(
   return !isHealthySource(source, metrics) && !isDiscoveryCandidateSource(source)
 }
 
+function hasStaleReadMethod(source: Source) {
+  return ['blocked', 'dead', 'failed'].includes(source.monitor_method || '')
+}
+
 function isRepairTargetSource(
   source: Source,
   metrics?: SourceQualityMetrics
 ) {
-  return getSourceHealthState(source, metrics) === 'problem'
+  const state = getSourceHealthState(source, metrics)
+  return state === 'problem' || (state === 'healthy' && hasStaleReadMethod(source))
 }
 
 function getSourceQualityLabel(
@@ -1948,7 +1953,7 @@ function SourcesPage() {
     }
 
     if (sourcesToRepair.length === 0) {
-      alert('Seçilmiş mənbələr artıq sağlam görünür. İşləməyən mənbələrdən seçim edin.')
+      alert('Seçilmiş mənbələr arasında real problemli və ya metodu yenilənməli mənbə tapılmadı.')
       return
     }
 
@@ -2515,7 +2520,7 @@ function SourcesPage() {
               Seçilmişləri bərpa et
             </button>
             <span className='max-w-md text-xs text-muted-foreground'>
-              Yalnız real problemli mənbələr bərpa testinə gedir. Oxuna bilən mənbə “Yoxlanılır” qalır; “Sağlam” statusu bot real nəticə/bildiriş verdikdən sonra təsdiqlənir.
+              Real problemli və ya metodu köhnə qalan sağlam mənbələr bərpa testinə gedir. Oxuna bilən mənbə “Yoxlanılır” qalır; “Sağlam” statusu bot real nəticə/bildiriş verdikdən sonra təsdiqlənir.
             </span>
           </div>
 
@@ -2761,7 +2766,7 @@ function SourcesPage() {
               const isHealthConfirmed = healthState === 'healthy'
               const displayMethod =
                 isHealthConfirmed &&
-                ['blocked', 'dead', 'failed'].includes(source.monitor_method || '')
+                hasStaleReadMethod(source)
                   ? 'Metod yenilənməlidir'
                   : formatMonitorMethod(source.monitor_method || 'auto')
               const displayDiscoveryStatus = isHealthConfirmed
