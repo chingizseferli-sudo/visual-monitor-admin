@@ -770,7 +770,13 @@ function isHealthySource(
   source: Source,
   metrics: SourceQualityMetrics | undefined
 ) {
-  return hasRealBotActivity(metrics) || hasSentNews(source)
+  return Boolean(
+    source.status === 'active' &&
+      !hasStaleReadMethod(source) &&
+      !hasCurrentReadFailure(source) &&
+      !HARD_SOURCE_RESULTS.has(source.last_error || '') &&
+      (hasRealBotActivity(metrics) || hasSentNews(source))
+  )
 }
 
 function isDiscoveryCandidateSource(source: Source) {
